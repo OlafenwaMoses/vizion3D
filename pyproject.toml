@@ -4,14 +4,15 @@ build-backend = "hatchling.build"
 
 [project]
 name = "vision3d"
-version = "0.1.0"
-description = "Unified 3D Computer Vision Library"
+version = "1.0.0"
+description = "U3D Capability and Intelligence for the real world. "
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.12"
 keywords = [
     "3d", "computer-vision", "depth-estimation", "point-cloud",
-    "mesh", "reconstruction", "nerf", "slam", "lidar",
+    "mesh", "reconstruction", "nerf", "slam", "lidar", "ai", 
+    "artificial intelligence", "llm"
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -22,6 +23,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Scientific/Engineering :: Image Processing",
+    "Topic :: Multimedia :: Graphics :: 3D Rendering",
     "Typing :: Typed",
 ]
 dependencies = [
