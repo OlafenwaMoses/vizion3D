@@ -1,0 +1,97 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "vision3d"
+version = "0.1.0"
+description = "Unified 3D Computer Vision Library"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.12"
+keywords = [
+    "3d", "computer-vision", "depth-estimation", "point-cloud",
+    "mesh", "reconstruction", "nerf", "slam", "lidar",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Image Processing",
+    "Typing :: Typed",
+]
+dependencies = [
+    "fastapi>=0.115.0",
+    "clean-ioc>=1.3.0",
+    "pydantic>=2.0.0",
+    "grpcio>=1.60.0",
+    "grpcio-tools>=1.60.0",
+    "uvicorn>=0.23.0",
+    "python-multipart>=0.0.6",
+    "transformers>=5.6.2",
+    "torch>=2.11.0",
+    "torchvision>=0.26.0",
+    "pillow>=12.2.0",
+    "open3d>=0.18.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/OlafenwaMoses/vision3D"
+Documentation = "https://olafenwamoses.github.io/vision3D"
+Repository = "https://github.com/OlafenwaMoses/vision3D"
+Issues = "https://github.com/OlafenwaMoses/vision3D/issues"
+
+[project.scripts]
+vision3d-serve-rest = "vision3d.server.rest.app:run"
+vision3d-serve-grpc = "vision3d.server.grpc.server:serve"
+
+[dependency-groups]
+dev = [
+    "mkdocs-material>=9.7.6",
+    "mkdocstrings[python]>=1.0.4",
+    "pytest>=9.0.3",
+    "ruff>=0.9.0",
+]
+
+# ---------------------------------------------------------------------------
+# Hatch build — wheel & sdist
+# ---------------------------------------------------------------------------
+
+[tool.hatch.build.targets.wheel]
+packages = ["vision3d"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "vision3d/",
+    "tests/",
+    "docs/",
+    "mkdocs.yml",
+    "README.md",
+    "pyproject.toml",
+]
+
+# ---------------------------------------------------------------------------
+# Pytest
+# ---------------------------------------------------------------------------
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts   = "-v"
+
+# ---------------------------------------------------------------------------
+# Ruff
+# ---------------------------------------------------------------------------
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["*_pb2*.py"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = []
+

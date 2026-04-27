@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package vision3d.reconstruction;
+
+service ReconstructionService {
+  rpc RunSfM (SfMRequest) returns (SfMResponse);
+}
+
+message ImageInput {
+  string image_id = 1;
+  bytes image_bytes = 2;
+}
+
+message SfMRequest {
+  repeated ImageInput images = 1;
+  string model_backend = 2;
+}
+
+message Point3D {
+  float x = 1;
+  float y = 2;
+  float z = 3;
+  int32 r = 4;
+  int32 g = 5;
+  int32 b = 6;
+}
+
+message CameraPose {
+  string image_id = 1;
+  repeated FloatRow rotation_matrix = 2;
+  repeated float translation_vector = 3;
+}
+
+message FloatRow {
+  repeated float values = 1;
+}
+
+message SfMResponse {
+  repeated Point3D sparse_point_cloud = 1;
+  repeated CameraPose camera_poses = 2;
+  string backend_used = 3;
+}
