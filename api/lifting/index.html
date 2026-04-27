@@ -1,0 +1,1359 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Unified 3D Computer Vision Library">
+      
+      
+      
+      
+        <link rel="prev" href="../../features/depth_estimation/">
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Lifting (2D → 3D) - vision3d</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#lifting-api-reference" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="vision3d" class="md-header__button md-logo" aria-label="vision3d" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            vision3d
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Lifting (2D → 3D)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../features/depth_estimation/" class="md-tabs__link">
+          
+  
+  
+  Features
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="./" class="md-tabs__link">
+          
+  
+  
+  API Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+  
+
+<nav class="md-nav md-nav--primary md-nav--lifted md-nav--integrated" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="vision3d" class="md-nav__button md-logo" aria-label="vision3d" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    vision3d
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Features
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Features
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../features/depth_estimation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Depth Estimation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lifting (2D → 3D)
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lifting (2D → 3D)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#depthestimation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DepthEstimation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#vision3d.lifting.DepthEstimation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DepthEstimation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="DepthEstimation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#vision3d.lifting.DepthEstimation.run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        run
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#depthestimationcommand" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DepthEstimationCommand
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#vision3d.lifting.commands.DepthEstimationCommand" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DepthEstimationCommand
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#depthestimationresult" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DepthEstimationResult
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#vision3d.lifting.models.DepthEstimationResult" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DepthEstimationResult
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="lifting-api-reference">Lifting API Reference</h1>
+<p>The <code>lifting</code> module exposes tasks that convert 2D image data into 3D representations — depth maps, point clouds, and meshes.</p>
+<hr />
+<h2 id="depthestimation">DepthEstimation</h2>
+<p>The primary entry point for the depth estimation task. Instantiate once and call <code>.run()</code> with a <code>DepthEstimationCommand</code>.</p>
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="vision3d.lifting.DepthEstimation" class="doc doc-heading">
+            <code>vision3d.lifting.DepthEstimation</code>
+
+
+</h2>
+
+
+    <div class="doc doc-contents first">
+
+
+
+        <p>Facade for the Depth Estimation task.</p>
+<p>This class serves as the primary entry point for triggering monocular depth
+estimation inference via direct Python import.</p>
+
+
+<details class="example" open>
+  <summary>Example</summary>
+  <pre><code class="language-python">cmd = DepthEstimationCommand(image_input=b&quot;...&quot;, return_mesh=True)
+task = DepthEstimation()
+result = task.run(cmd)
+</code></pre>
+</details>
+
+
+
+
+
+
+
+              <details class="mkdocstrings-source">
+                <summary>Source code in <code>vision3d/lifting/__init__.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span>
+<span class="normal">34</span>
+<span class="normal">35</span>
+<span class="normal">36</span>
+<span class="normal">37</span>
+<span class="normal">38</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">DepthEstimation</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Facade for the Depth Estimation task.</span>
+
+<span class="sd">    This class serves as the primary entry point for triggering monocular depth</span>
+<span class="sd">    estimation inference via direct Python import.</span>
+
+<span class="sd">    Example:</span>
+<span class="sd">        ```python</span>
+<span class="sd">        cmd = DepthEstimationCommand(image_input=b&quot;...&quot;, return_mesh=True)</span>
+<span class="sd">        task = DepthEstimation()</span>
+<span class="sd">        result = task.run(cmd)</span>
+<span class="sd">        ```</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">experimental</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">command</span><span class="p">:</span> <span class="n">DepthEstimationCommand</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DepthEstimationResult</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Dispatches the provided command through the CQRS bus to the registered handler.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            command (DepthEstimationCommand): The inference parameters and flags.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            DepthEstimationResult: The resultant depth map and optional generated files.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">command_bus</span><span class="o">.</span><span class="n">dispatch</span><span class="p">(</span><span class="n">command</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="vision3d.lifting.DepthEstimation.run" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">run</span><span class="p">(</span><span class="n">command</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Dispatches the provided command through the CQRS bus to the registered handler.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>command</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="vision3d.lifting.commands.DepthEstimationCommand
+
+
+  
+      dataclass
+  " href="#vision3d.lifting.commands.DepthEstimationCommand">DepthEstimationCommand</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The inference parameters and flags.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+<th>Name</th>          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+<td><code>DepthEstimationResult</code></td>            <td>
+                  <code><a class="autorefs autorefs-internal" title="vision3d.lifting.models.DepthEstimationResult" href="#vision3d.lifting.models.DepthEstimationResult">DepthEstimationResult</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The resultant depth map and optional generated files.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>vision3d/lifting/__init__.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span>
+<span class="normal">34</span>
+<span class="normal">35</span>
+<span class="normal">36</span>
+<span class="normal">37</span>
+<span class="normal">38</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">command</span><span class="p">:</span> <span class="n">DepthEstimationCommand</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DepthEstimationResult</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Dispatches the provided command through the CQRS bus to the registered handler.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        command (DepthEstimationCommand): The inference parameters and flags.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        DepthEstimationResult: The resultant depth map and optional generated files.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">command_bus</span><span class="o">.</span><span class="n">dispatch</span><span class="p">(</span><span class="n">command</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div><hr />
+<h2 id="depthestimationcommand">DepthEstimationCommand</h2>
+<p>Input contract for the depth estimation task. All inference parameters are declared here.</p>
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="vision3d.lifting.commands.DepthEstimationCommand" class="doc doc-heading">
+            <code>vision3d.lifting.commands.DepthEstimationCommand</code>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+</h2>
+
+
+    <div class="doc doc-contents first">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="vision3d.core.cqrs.Command">Command</span>[<a class="autorefs autorefs-internal" title="vision3d.lifting.models.DepthEstimationResult" href="#vision3d.lifting.models.DepthEstimationResult">DepthEstimationResult</a>]</code></p>
+
+
+
+        <p>Command payload to trigger a depth estimation inference task.</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><span title="vision3d.lifting.commands.DepthEstimationCommand.image_input">image_input</span></code></td>
+            <td>
+                  <code><span title="str">str</span> | <span title="bytes">bytes</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The input image. Pass a file-path string or raw image bytes.
+The handler auto-detects which form is supplied.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="vision3d.lifting.commands.DepthEstimationCommand.model_backend">model_backend</span></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Model backend to use for inference.</p>
+<ul>
+<li>Default value (<code>"depth-anything/Depth-Anything-V2-Base-hf"</code>) resolves to
+  the vision3D release checkpoint (<code>depth_anything_v2_vitb.pth</code>), which is
+  downloaded on first use and cached under <code>~/.cache/vision3d/models/</code>.
+  Set <code>VISION3D_MODEL_CACHE</code> to override the cache directory.</li>
+<li>A local <code>.pth</code> or <code>.pt</code> path is loaded directly as a Depth Anything V2
+  checkpoint — no download occurs.</li>
+<li>Any other string is forwarded to
+  <code>transformers.pipeline(task="depth-estimation", model=...)</code>.</li>
+</ul>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="vision3d.lifting.commands.DepthEstimationCommand.return_depth_image">return_depth_image</span></code></td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>When <code>True</code>, the result includes a 16-bit grayscale
+<code>open3d.geometry.Image</code> (dtype <code>uint16</code>) mapping <code>[min_depth, max_depth]</code>
+to the full 0–65535 range. Requires Open3D (Python 3.12).</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="vision3d.lifting.commands.DepthEstimationCommand.return_point_cloud">return_point_cloud</span></code></td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>When <code>True</code>, the result includes an
+<code>open3d.geometry.PointCloud</code> unprojected from the RGB-D image using
+PrimeSense default camera intrinsics. Point coordinates are in metres.
+Requires Open3D (Python 3.12).</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="vision3d.lifting.commands.DepthEstimationCommand.return_mesh">return_mesh</span></code></td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>When <code>True</code>, the result includes an
+<code>open3d.geometry.TriangleMesh</code> reconstructed from the point cloud via
+ball-pivoting. Includes vertex colours. Requires Open3D (Python 3.12).</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+
+
+
+              <details class="mkdocstrings-source">
+                <summary>Source code in <code>vision3d/lifting/commands.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span>
+<span class="normal">34</span>
+<span class="normal">35</span>
+<span class="normal">36</span>
+<span class="normal">37</span>
+<span class="normal">38</span>
+<span class="normal">39</span>
+<span class="normal">40</span>
+<span class="normal">41</span>
+<span class="normal">42</span>
+<span class="normal">43</span>
+<span class="normal">44</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">DepthEstimationCommand</span><span class="p">(</span><span class="n">Command</span><span class="p">[</span><span class="n">DepthEstimationResult</span><span class="p">]):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Command payload to trigger a depth estimation inference task.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        image_input: The input image. Pass a file-path string or raw image bytes.</span>
+<span class="sd">            The handler auto-detects which form is supplied.</span>
+<span class="sd">        model_backend: Model backend to use for inference.</span>
+
+<span class="sd">            - Default value (`&quot;depth-anything/Depth-Anything-V2-Base-hf&quot;`) resolves to</span>
+<span class="sd">              the vision3D release checkpoint (`depth_anything_v2_vitb.pth`), which is</span>
+<span class="sd">              downloaded on first use and cached under `~/.cache/vision3d/models/`.</span>
+<span class="sd">              Set `VISION3D_MODEL_CACHE` to override the cache directory.</span>
+<span class="sd">            - A local `.pth` or `.pt` path is loaded directly as a Depth Anything V2</span>
+<span class="sd">              checkpoint — no download occurs.</span>
+<span class="sd">            - Any other string is forwarded to</span>
+<span class="sd">              `transformers.pipeline(task=&quot;depth-estimation&quot;, model=...)`.</span>
+
+<span class="sd">        return_depth_image: When `True`, the result includes a 16-bit grayscale</span>
+<span class="sd">            `open3d.geometry.Image` (dtype `uint16`) mapping `[min_depth, max_depth]`</span>
+<span class="sd">            to the full 0–65535 range. Requires Open3D (Python 3.12).</span>
+<span class="sd">        return_point_cloud: When `True`, the result includes an</span>
+<span class="sd">            `open3d.geometry.PointCloud` unprojected from the RGB-D image using</span>
+<span class="sd">            PrimeSense default camera intrinsics. Point coordinates are in metres.</span>
+<span class="sd">            Requires Open3D (Python 3.12).</span>
+<span class="sd">        return_mesh: When `True`, the result includes an</span>
+<span class="sd">            `open3d.geometry.TriangleMesh` reconstructed from the point cloud via</span>
+<span class="sd">            ball-pivoting. Includes vertex colours. Requires Open3D (Python 3.12).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">image_input</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">bytes</span>
+    <span class="n">model_backend</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DEFAULT_DEPTH_MODEL_BACKEND</span>
+    <span class="n">return_depth_image</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">return_point_cloud</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">return_mesh</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div><hr />
+<h2 id="depthestimationresult">DepthEstimationResult</h2>
+<p>Output contract returned by <code>DepthEstimation.run()</code>. All fields are always present; optional geometry fields are <code>None</code> when the corresponding <code>return_*</code> flag was not set.</p>
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="vision3d.lifting.models.DepthEstimationResult" class="doc doc-heading">
+            <code>vision3d.lifting.models.DepthEstimationResult</code>
+
+
+</h2>
+
+
+    <div class="doc doc-contents first">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="pydantic.BaseModel">BaseModel</span></code></p>
+
+
+
+        <p>Result payload returned after a depth estimation inference task.</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><span title="vision3d.lifting.models.DepthEstimationResult.depth_map">depth_map</span></code></td>
+            <td>
+                  <code><span title="list">list</span>[<span title="list">list</span>[<span title="float">float</span>]]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Raw floating-point depth array, shape <code>[H][W]</code>. Values are
+relative (not metric) for monocular models — closer objects have
+higher values for inverse-depth outputs.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="vision3d.lifting.models.DepthEstimationResult.min_depth">min_depth</span></code></td>
+            <td>
+                  <code><span title="float">float</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Minimum value in <code>depth_map</code>.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="vision3d.lifting.models.DepthEstimationResult.max_depth">max_depth</span></code></td>
+            <td>
+                  <code><span title="float">float</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Maximum value in <code>depth_map</code>. Guaranteed <code>max_depth &gt;= min_depth</code>.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="vision3d.lifting.models.DepthEstimationResult.backend_used">backend_used</span></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Resolved model identifier that processed the request
+(local file path or Hugging Face model ID).</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="vision3d.lifting.models.DepthEstimationResult.depth_image">depth_image</span></code></td>
+            <td>
+                  <code><span title="open3d.geometry.Image">Image</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>16-bit grayscale <code>open3d.geometry.Image</code> (dtype <code>uint16</code>),
+present when <code>return_depth_image=True</code> was set on the command.
+The full 0–65535 range maps linearly to <code>[min_depth, max_depth]</code>.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="vision3d.lifting.models.DepthEstimationResult.point_cloud">point_cloud</span></code></td>
+            <td>
+                  <code><span title="open3d.geometry.PointCloud">PointCloud</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Coloured <code>open3d.geometry.PointCloud</code> unprojected from the
+RGB-D image, present when <code>return_point_cloud=True</code>. Coordinates are
+in metres — multiply distances by <code>point_cloud_scale</code> (always <code>1.0</code>)
+to confirm the unit.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="vision3d.lifting.models.DepthEstimationResult.mesh">mesh</span></code></td>
+            <td>
+                  <code><span title="open3d.geometry.TriangleMesh">TriangleMesh</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p><code>open3d.geometry.TriangleMesh</code> reconstructed via ball-pivoting,
+present when <code>return_mesh=True</code>. Includes vertex colours.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="vision3d.lifting.models.DepthEstimationResult.point_cloud_scale">point_cloud_scale</span></code></td>
+            <td>
+                  <code><span title="float">float</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Scale factor for the point cloud coordinate space.
+Multiply any distance measured between two points in the returned
+point cloud by this value to get the equivalent distance in metres.
+Always <code>1.0</code> — Open3D produces point cloud coordinates directly in metres.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+
+
+
+              <details class="mkdocstrings-source">
+                <summary>Source code in <code>vision3d/lifting/models.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span>
+<span class="normal">34</span>
+<span class="normal">35</span>
+<span class="normal">36</span>
+<span class="normal">37</span>
+<span class="normal">38</span>
+<span class="normal">39</span>
+<span class="normal">40</span>
+<span class="normal">41</span>
+<span class="normal">42</span>
+<span class="normal">43</span>
+<span class="normal">44</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">DepthEstimationResult</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Result payload returned after a depth estimation inference task.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        depth_map: Raw floating-point depth array, shape `[H][W]`. Values are</span>
+<span class="sd">            relative (not metric) for monocular models — closer objects have</span>
+<span class="sd">            higher values for inverse-depth outputs.</span>
+<span class="sd">        min_depth: Minimum value in `depth_map`.</span>
+<span class="sd">        max_depth: Maximum value in `depth_map`. Guaranteed `max_depth &gt;= min_depth`.</span>
+<span class="sd">        backend_used: Resolved model identifier that processed the request</span>
+<span class="sd">            (local file path or Hugging Face model ID).</span>
+<span class="sd">        depth_image: 16-bit grayscale `open3d.geometry.Image` (dtype `uint16`),</span>
+<span class="sd">            present when `return_depth_image=True` was set on the command.</span>
+<span class="sd">            The full 0–65535 range maps linearly to `[min_depth, max_depth]`.</span>
+<span class="sd">        point_cloud: Coloured `open3d.geometry.PointCloud` unprojected from the</span>
+<span class="sd">            RGB-D image, present when `return_point_cloud=True`. Coordinates are</span>
+<span class="sd">            in metres — multiply distances by `point_cloud_scale` (always `1.0`)</span>
+<span class="sd">            to confirm the unit.</span>
+<span class="sd">        mesh: `open3d.geometry.TriangleMesh` reconstructed via ball-pivoting,</span>
+<span class="sd">            present when `return_mesh=True`. Includes vertex colours.</span>
+<span class="sd">        point_cloud_scale: Scale factor for the point cloud coordinate space.</span>
+<span class="sd">            Multiply any distance measured between two points in the returned</span>
+<span class="sd">            point cloud by this value to get the equivalent distance in metres.</span>
+<span class="sd">            Always `1.0` — Open3D produces point cloud coordinates directly in metres.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">depth_map</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]]</span>
+    <span class="n">min_depth</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">max_depth</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">backend_used</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">depth_image</span><span class="p">:</span> <span class="n">O3dImage</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">point_cloud</span><span class="p">:</span> <span class="n">O3dPointCloud</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">mesh</span><span class="p">:</span> <span class="n">O3dTriangleMesh</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">point_cloud_scale</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span>
+
+    <span class="n">model_config</span> <span class="o">=</span> <span class="n">ConfigDict</span><span class="p">(</span><span class="n">arbitrary_types_allowed</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "toc.integrate", "search.suggest", "search.highlight", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
