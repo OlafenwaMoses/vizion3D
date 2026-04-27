@@ -1,0 +1,29 @@
+site_name: vision3d
+site_description: Unified 3D Computer Vision Library
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - toc.integrate
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [.]
+          options:
+            docstring_style: google
+            show_root_heading: true
+            show_source: true
+
+nav:
+  - Home: index.md
+  - Features:
+      - Depth Estimation: features/depth_estimation.md
+  - API Reference:
+      - Lifting (2D → 3D): api/lifting.md

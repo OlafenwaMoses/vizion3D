@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package vision3d.lifting;
+
+service LiftingService {
+  rpc RunDepthEstimation (DepthEstimationRequest) returns (DepthEstimationResponse);
+}
+
+message DepthEstimationRequest {
+  bytes image_bytes = 1;
+  string model_backend = 2;
+  bool return_depth_image = 3;
+  bool return_point_cloud = 4;
+  bool return_mesh = 5;
+  optional string local_model_path = 6;
+}
+
+message FloatRow {
+  repeated float values = 1;
+}
+
+message DepthEstimationResponse {
+  repeated FloatRow depth_map = 1;
+  float min_depth = 2;
+  float max_depth = 3;
+  string backend_used = 4;
+  bytes depth_image = 5;
+  bytes point_cloud_ply = 6;
+  bytes mesh_ply = 7;
+}

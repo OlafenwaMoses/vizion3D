@@ -1,0 +1,25 @@
+name: Deploy docs
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dev dependencies
+        run: uv sync --group dev
+
+      - name: Build and deploy to GitHub Pages
+        run: uv run mkdocs gh-deploy --force

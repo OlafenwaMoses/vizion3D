@@ -216,3 +216,24 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# ── vision3d project-specific ─────────────────────────────────────────────
+
+# Claude Code
+.claude/
+
+# macOS
+.DS_Store
+
+# Model weight files (downloaded at runtime — not committed)
+*.pth
+*.pt
+
+# Local scratch / output files
+*.ply
+image.png
+image2.png
+sample.py
+
+# uv python pin (library — consumers choose their own Python)
+.python-version
