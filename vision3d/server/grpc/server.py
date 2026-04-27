@@ -9,13 +9,7 @@ from PIL import Image
 from vision3d.lifting import DepthEstimation, DepthEstimationCommand
 from vision3d.lifting.defaults import DEFAULT_DEPTH_MODEL_BACKEND
 from vision3d.lifting.utils import create_mesh_ply_binary, create_ply_binary
-from vision3d.proto import (
-    lifting_pb2,
-    lifting_pb2_grpc,
-    reconstruction_pb2,
-    reconstruction_pb2_grpc,
-)
-from vision3d.reconstruction import SfMCommand, StructureFromMotion
+from vision3d.proto import lifting_pb2, lifting_pb2_grpc
 
 
 def _o3d_depth_image_to_png_bytes(o3d_image) -> bytes:
@@ -70,37 +64,9 @@ class LiftingServiceServicer(lifting_pb2_grpc.LiftingServiceServicer):
         return response
 
 
-class ReconstructionServiceServicer(reconstruction_pb2_grpc.ReconstructionServiceServicer):
-    def RunSfM(self, request, context):
-        images = {img.image_id: img.image_bytes for img in request.images}
-
-        cmd = SfMCommand(images=images, model_backend=request.model_backend or "colmap")
-        result = StructureFromMotion().run(cmd)
-
-        response = reconstruction_pb2.SfMResponse(backend_used=result.backend_used)
-
-        for pt in result.sparse_point_cloud:
-            response.sparse_point_cloud.append(
-                reconstruction_pb2.Point3D(x=pt.x, y=pt.y, z=pt.z, r=pt.r, g=pt.g, b=pt.b)
-            )
-
-        for pose in result.camera_poses:
-            cam_pose = reconstruction_pb2.CameraPose(
-                image_id=pose.image_id, translation_vector=pose.translation_vector
-            )
-            for row in pose.rotation_matrix:
-                cam_pose.rotation_matrix.append(reconstruction_pb2.FloatRow(values=row))
-            response.camera_poses.append(cam_pose)
-
-        return response
-
-
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     lifting_pb2_grpc.add_LiftingServiceServicer_to_server(LiftingServiceServicer(), server)
-    reconstruction_pb2_grpc.add_ReconstructionServiceServicer_to_server(
-        ReconstructionServiceServicer(), server
-    )
     server.add_insecure_port("[::]:50051")
     server.start()
     logging.info("gRPC server running on port 50051")

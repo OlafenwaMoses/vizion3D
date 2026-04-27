@@ -4,7 +4,6 @@ from PIL import Image
 from vision3d.lifting import DepthEstimation, DepthEstimationCommand
 from vision3d.lifting.defaults import DEFAULT_DEPTH_MODEL_FILENAME
 from vision3d.lifting.handlers import DepthEstimationHandler
-from vision3d.reconstruction import SfMCommand, StructureFromMotion
 
 o3d = pytest.importorskip(
     "open3d",
@@ -115,24 +114,3 @@ def test_depth_estimation_accepts_file_path(tmp_path):
 
     assert isinstance(res.depth_map, list)
     assert res.max_depth >= res.min_depth
-
-
-def test_sfm_returns_correct_mock_data():
-    res = StructureFromMotion().run(SfMCommand(images={"img1": b"fake", "img2": b"fake2"}))
-
-    assert len(res.sparse_point_cloud) == 2
-    assert len(res.camera_poses) == 2
-    assert res.backend_used == "colmap-mock"
-    assert {p.image_id for p in res.camera_poses} == {"img1", "img2"}
-
-    for pose in res.camera_poses:
-        assert len(pose.rotation_matrix) == 3
-        assert len(pose.rotation_matrix[0]) == 3
-        assert len(pose.translation_vector) == 3
-
-
-def test_sfm_single_image():
-    res = StructureFromMotion().run(SfMCommand(images={"only_img": b"data"}))
-
-    assert len(res.camera_poses) == 1
-    assert res.camera_poses[0].image_id == "only_img"

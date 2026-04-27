@@ -1,5 +1,4 @@
 import io
-from typing import List
 
 import numpy as np
 import uvicorn
@@ -9,12 +8,10 @@ from PIL import Image
 from vision3d.lifting import DepthEstimation, DepthEstimationCommand
 from vision3d.lifting.defaults import DEFAULT_DEPTH_MODEL_BACKEND
 from vision3d.lifting.utils import create_mesh_ply_binary, create_ply_binary
-from vision3d.reconstruction import SfMCommand, StructureFromMotion
 
 app = FastAPI(title="vision3d REST API", version="1.0.0")
 
 lifting_router = APIRouter(prefix="/lifting", tags=["Lifting (2D -> 3D)"])
-reconstruction_router = APIRouter(prefix="/reconstruction", tags=["Reconstruction"])
 
 
 def _o3d_depth_image_to_png_bytes(o3d_image) -> bytes:
@@ -56,7 +53,7 @@ async def depth_estimation(
 
     result = DepthEstimation().run(cmd)
 
-    response = {
+    return {
         "depth_map": result.depth_map,
         "min_depth": result.min_depth,
         "max_depth": result.max_depth,
@@ -75,23 +72,9 @@ async def depth_estimation(
             _o3d_mesh_to_ply_bytes(result.mesh) if result.mesh is not None else None
         ),
     }
-    return response
-
-
-@reconstruction_router.post("/sfm")
-async def sfm(images: List[UploadFile] = File(...), model_backend: str = "colmap"):
-    image_dict = {}
-    for img in images:
-        image_dict[img.filename] = await img.read()
-
-    cmd = SfMCommand(images=image_dict, model_backend=model_backend)
-    result = StructureFromMotion().run(cmd)
-
-    return result.model_dump()
 
 
 app.include_router(lifting_router)
-app.include_router(reconstruction_router)
 
 
 def run():

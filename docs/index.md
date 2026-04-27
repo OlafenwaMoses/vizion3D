@@ -81,8 +81,3 @@ Each task lives in its own module under `vision3d/<category>/` and exposes exact
 |---|---|---|
 | Monocular depth estimation | Stable | [Depth Estimation](features/depth_estimation.md) |
 
-### Reconstruction
-
-| Task | Status | Docs |
-|---|---|---|
-| Structure from Motion (SfM) | Stub | [SfM](features/structure_from_motion.md) |
