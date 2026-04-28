@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "vision3d"
+name = "vizion3d"
 version = "1.0.0"
 description = "U3D Capability and Intelligence for the real world. "
 readme = "README.md"
@@ -42,14 +42,14 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/OlafenwaMoses/vision3D"
-Documentation = "https://olafenwamoses.github.io/vision3D"
-Repository = "https://github.com/OlafenwaMoses/vision3D"
-Issues = "https://github.com/OlafenwaMoses/vision3D/issues"
+Homepage = "https://github.com/OlafenwaMoses/vizion3D"
+Documentation = "https://olafenwamoses.github.io/vizion3D"
+Repository = "https://github.com/OlafenwaMoses/vizion3D"
+Issues = "https://github.com/OlafenwaMoses/vizion3D/issues"
 
 [project.scripts]
-vision3d-serve-rest = "vision3d.server.rest.app:run"
-vision3d-serve-grpc = "vision3d.server.grpc.server:serve"
+vizion3d-serve-rest = "vizion3d.server.rest.app:run"
+vizion3d-serve-grpc = "vizion3d.server.grpc.server:serve"
 
 [dependency-groups]
 dev = [
@@ -57,6 +57,7 @@ dev = [
     "mkdocstrings[python]>=1.0.4",
     "pytest>=9.0.3",
     "ruff>=0.9.0",
+    "twine>=6.0.0",
 ]
 
 # ---------------------------------------------------------------------------
@@ -64,11 +65,11 @@ dev = [
 # ---------------------------------------------------------------------------
 
 [tool.hatch.build.targets.wheel]
-packages = ["vision3d"]
+packages = ["vizion3d"]
 
 [tool.hatch.build.targets.sdist]
 include = [
-    "vision3d/",
+    "vizion3d/",
     "tests/",
     "docs/",
     "mkdocs.yml",

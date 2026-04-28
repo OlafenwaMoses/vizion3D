@@ -1,9 +1,9 @@
 import pytest
 from PIL import Image
 
-from vision3d.lifting import DepthEstimation, DepthEstimationCommand
-from vision3d.lifting.defaults import DEFAULT_DEPTH_MODEL_FILENAME
-from vision3d.lifting.handlers import DepthEstimationHandler
+from vizion3d.lifting import DepthEstimation, DepthEstimationCommand
+from vizion3d.lifting.defaults import DEFAULT_DEPTH_MODEL_FILENAME
+from vizion3d.lifting.handlers import DepthEstimationHandler
 
 o3d = pytest.importorskip(
     "open3d",

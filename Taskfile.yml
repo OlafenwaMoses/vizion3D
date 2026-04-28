@@ -6,11 +6,11 @@ tasks:
 
   serve-rest:
     desc: Start the REST API (FastAPI / uvicorn, port 8000)
-    cmd: uv run python -m vision3d.server.rest.app
+    cmd: uv run python -m vizion3d.server.rest.app
 
   serve-grpc:
     desc: Start the gRPC server (port 50051)
-    cmd: uv run python -m vision3d.server.grpc.server
+    cmd: uv run python -m vizion3d.server.grpc.server
 
   # ── Tests ─────────────────────────────────────────────────────────────────
 
@@ -61,12 +61,15 @@ tasks:
       -I.
       --python_out=.
       --grpc_python_out=.
-      vision3d/proto/lifting.proto
-      vision3d/proto/reconstruction.proto
+      vizion3d/proto/lifting.proto
 
   build:
     desc: Build wheel + sdist into dist/
     cmd: uv build
+
+  publish:
+    desc: Upload dist/ to PyPI using twine
+    cmd: uv run twine upload dist/*
 
   clean:
     desc: Remove all build and cache artefacts

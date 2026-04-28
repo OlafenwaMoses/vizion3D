@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from vision3d.core.cqrs import Command
+from vizion3d.core.cqrs import Command
 
 from .defaults import DEFAULT_DEPTH_MODEL_BACKEND
 from .models import DepthEstimationResult
@@ -17,8 +17,8 @@ class DepthEstimationCommand(Command[DepthEstimationResult]):
         model_backend: Model backend to use for inference.
 
             - Default value (`"depth-anything/Depth-Anything-V2-Base-hf"`) resolves to
-              the vision3D release checkpoint (`depth_anything_v2_vitb.pth`), which is
-              downloaded on first use and cached under `~/.cache/vision3d/models/`.
+              the vizion3D release checkpoint (`depth_anything_v2_vitb.pth`), which is
+              downloaded on first use and cached under `~/.cache/vizion3d/models/`.
               Set `VISION3D_MODEL_CACHE` to override the cache directory.
             - A local `.pth` or `.pt` path is loaded directly as a Depth Anything V2
               checkpoint — no download occurs.

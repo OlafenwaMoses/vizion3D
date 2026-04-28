@@ -9,7 +9,7 @@ import urllib.request
 from pathlib import Path
 
 DEFAULT_DEPTH_MODEL_URL = (
-    "https://github.com/OlafenwaMoses/vision3D/releases/download/"
+    "https://github.com/OlafenwaMoses/vizion3D/releases/download/"
     "essentials-v1/depth_anything_v2_vitb.pth"
 )
 DEFAULT_DEPTH_MODEL_FILENAME = "depth_anything_v2_vitb.pth"
@@ -21,7 +21,7 @@ def default_model_cache_dir() -> Path:
     configured = os.environ.get("VISION3D_MODEL_CACHE")
     if configured:
         return Path(configured).expanduser()
-    return Path.home() / ".cache" / "vision3d" / "models"
+    return Path.home() / ".cache" / "vizion3d" / "models"
 
 
 def is_url(value: str) -> bool:

@@ -1,11 +1,11 @@
-from vision3d.lifting import defaults
-from vision3d.lifting.defaults import (
+from vizion3d.lifting import defaults
+from vizion3d.lifting.defaults import (
     DEFAULT_DEPTH_MODEL_BACKEND,
     DEFAULT_DEPTH_MODEL_FILENAME,
     DEFAULT_DEPTH_MODEL_URL,
     resolve_model_backend,
 )
-from vision3d.lifting.handlers import DepthEstimationHandler
+from vizion3d.lifting.handlers import DepthEstimationHandler
 
 
 def test_default_backend_downloads_to_cache(tmp_path, monkeypatch):

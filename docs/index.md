@@ -1,6 +1,6 @@
-# vision3d
+# vizion3d
 
-**vision3d** is an open-source Python library for 3D computer vision that gives ML/CV researchers a single, unified interface for running inference across the full spectrum of 3D vision tasks — from depth estimation and point cloud generation to NeRF reconstruction and pose estimation.
+**vizion3d** is an open-source Python library for 3D computer vision that gives ML/CV researchers a single, unified interface for running inference across the full spectrum of 3D vision tasks — from depth estimation and point cloud generation to NeRF reconstruction and pose estimation.
 
 Every task is accessible through three consumption modes driven by one shared CQRS architecture:
 
@@ -29,7 +29,7 @@ Get a depth map, point cloud, and mesh from a single image in under 10 lines.
 
 ```python
 import open3d as o3d
-from vision3d.lifting import DepthEstimation, DepthEstimationCommand
+from vizion3d.lifting import DepthEstimation, DepthEstimationCommand
 
 result = DepthEstimation().run(
     DepthEstimationCommand(
@@ -63,13 +63,13 @@ uv run task serve-grpc
 
 ## Architecture
 
-vision3d uses a [CQRS](https://martinfowler.com/bliki/CQRS.html) pattern throughout:
+vizion3d uses a [CQRS](https://martinfowler.com/bliki/CQRS.html) pattern throughout:
 
 - **Commands** carry inference parameters and trigger side-effecting handlers.
 - **Queries** retrieve results or metadata without side effects.
 - All handlers are registered through a [`clean_ioc`](https://github.com/peter-daly/clean-ioc) container — no direct handler instantiation anywhere in the public API.
 
-Each task lives in its own module under `vision3d/<category>/` and exposes exactly `commands.py`, `handlers.py`, and `models.py`. Adding a new task means adding one module and one container registration — nothing else changes.
+Each task lives in its own module under `vizion3d/<category>/` and exposes exactly `commands.py`, `handlers.py`, and `models.py`. Adding a new task means adding one module and one container registration — nothing else changes.
 
 ---
 

@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-from vision3d.core.cqrs import CommandHandler
+from vizion3d.core.cqrs import CommandHandler
 
 from .commands import DepthEstimationCommand
 from .defaults import resolve_model_backend

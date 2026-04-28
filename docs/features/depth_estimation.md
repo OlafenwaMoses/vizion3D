@@ -3,7 +3,7 @@
 **Category:** Lifting (2D → 3D)  
 **Experimental:** No
 
-Depth estimation predicts the per-pixel distance from the camera for every pixel in a 2D RGB image, producing a depth map and optionally unprojecting it into a 3D point cloud or surface mesh. vision3d uses [Depth Anything V2](https://github.com/DepthAnything/Depth-Anything-V2) as its default backend.
+Depth estimation predicts the per-pixel distance from the camera for every pixel in a 2D RGB image, producing a depth map and optionally unprojecting it into a 3D point cloud or surface mesh. vizion3d uses [Depth Anything V2](https://github.com/DepthAnything/Depth-Anything-V2) as its default backend.
 
 ---
 
@@ -11,7 +11,7 @@ Depth estimation predicts the per-pixel distance from the camera for every pixel
 
 | Value | What happens |
 |---|---|
-| `"depth-anything/Depth-Anything-V2-Base-hf"` *(default)* | Downloads the vision3D release checkpoint (`depth_anything_v2_vitb.pth`) to `~/.cache/vision3d/models/` on first use, then loads it directly |
+| `"depth-anything/Depth-Anything-V2-Base-hf"` *(default)* | Downloads the vizion3D release checkpoint (`depth_anything_v2_vitb.pth`) to `~/.cache/vizion3d/models/` on first use, then loads it directly |
 | Any other string | Passed through to Hugging Face `transformers.pipeline(task="depth-estimation", model=...)` |
 | A local `.pth` or `.pt` file path | Loaded directly as a Depth Anything V2 checkpoint — never downloaded |
 
@@ -57,7 +57,7 @@ Set `VISION3D_MODEL_CACHE` in your environment to change the default cache direc
 The most common usage: read an image file into bytes and dispatch the command.
 
 ```python
-from vision3d.lifting import DepthEstimation, DepthEstimationCommand
+from vizion3d.lifting import DepthEstimation, DepthEstimationCommand
 
 with open("scene.png", "rb") as f:
     img_bytes = f.read()
@@ -77,7 +77,7 @@ print(f"Backend used    : {result.backend_used}")
 Pass a file path string instead of bytes; the handler opens it automatically.
 
 ```python
-from vision3d.lifting import DepthEstimation, DepthEstimationCommand
+from vizion3d.lifting import DepthEstimation, DepthEstimationCommand
 
 cmd = DepthEstimationCommand(image_input="scene.png")
 result = DepthEstimation().run(cmd)
@@ -94,7 +94,7 @@ Request a 16-bit grayscale Open3D Image of the depth map for visualization or do
 ```python
 import numpy as np
 from PIL import Image as PILImage
-from vision3d.lifting import DepthEstimation, DepthEstimationCommand
+from vizion3d.lifting import DepthEstimation, DepthEstimationCommand
 
 cmd = DepthEstimationCommand(
     image_input="scene.png",
@@ -119,7 +119,7 @@ Request a coloured 3D point cloud unprojected from the RGB-D image. Distances be
 ```python
 import numpy as np
 import open3d as o3d
-from vision3d.lifting import DepthEstimation, DepthEstimationCommand
+from vizion3d.lifting import DepthEstimation, DepthEstimationCommand
 
 cmd = DepthEstimationCommand(
     image_input="scene.png",
@@ -150,7 +150,7 @@ Request a triangulated mesh reconstructed from the point cloud via ball-pivoting
 
 ```python
 import open3d as o3d
-from vision3d.lifting import DepthEstimation, DepthEstimationCommand
+from vizion3d.lifting import DepthEstimation, DepthEstimationCommand
 
 cmd = DepthEstimationCommand(
     image_input="scene.png",
@@ -175,7 +175,7 @@ All three optional outputs can be requested in a single inference pass.
 ```python
 import numpy as np
 import open3d as o3d
-from vision3d.lifting import DepthEstimation, DepthEstimationCommand
+from vizion3d.lifting import DepthEstimation, DepthEstimationCommand
 
 cmd = DepthEstimationCommand(
     image_input="scene.png",
@@ -206,7 +206,7 @@ o3d.io.write_triangle_mesh("scene_mesh.ply", result.mesh)
 Use any Hugging Face depth estimation model or a local `.pth` checkpoint.
 
 ```python
-from vision3d.lifting import DepthEstimation, DepthEstimationCommand
+from vizion3d.lifting import DepthEstimation, DepthEstimationCommand
 
 # Hugging Face model
 cmd = DepthEstimationCommand(
@@ -260,7 +260,7 @@ Call from any gRPC client using the generated stubs:
 
 ```python
 import grpc
-from vision3d.proto import lifting_pb2, lifting_pb2_grpc
+from vizion3d.proto import lifting_pb2, lifting_pb2_grpc
 
 channel = grpc.insecure_channel("localhost:50051")
 stub = lifting_pb2_grpc.LiftingServiceStub(channel)
