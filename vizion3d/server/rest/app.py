@@ -5,11 +5,11 @@ import uvicorn
 from fastapi import APIRouter, FastAPI, File, Form, UploadFile
 from PIL import Image
 
-from vision3d.lifting import DepthEstimation, DepthEstimationCommand
-from vision3d.lifting.defaults import DEFAULT_DEPTH_MODEL_BACKEND
-from vision3d.lifting.utils import create_mesh_ply_binary, create_ply_binary
+from vizion3d.lifting import DepthEstimation, DepthEstimationCommand
+from vizion3d.lifting.defaults import DEFAULT_DEPTH_MODEL_BACKEND
+from vizion3d.lifting.utils import create_mesh_ply_binary, create_ply_binary
 
-app = FastAPI(title="vision3d REST API", version="1.0.0")
+app = FastAPI(title="vizion3d REST API", version="1.0.0")
 
 lifting_router = APIRouter(prefix="/lifting", tags=["Lifting (2D -> 3D)"])
 

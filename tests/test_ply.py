@@ -1,6 +1,6 @@
 import numpy as np
 
-from vision3d.lifting.utils import create_mesh_ply_binary, create_ply_binary
+from vizion3d.lifting.utils import create_mesh_ply_binary, create_ply_binary
 
 
 def test_create_ply_binary_starts_with_header():

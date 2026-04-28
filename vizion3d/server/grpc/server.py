@@ -6,10 +6,10 @@ import grpc
 import numpy as np
 from PIL import Image
 
-from vision3d.lifting import DepthEstimation, DepthEstimationCommand
-from vision3d.lifting.defaults import DEFAULT_DEPTH_MODEL_BACKEND
-from vision3d.lifting.utils import create_mesh_ply_binary, create_ply_binary
-from vision3d.proto import lifting_pb2, lifting_pb2_grpc
+from vizion3d.lifting import DepthEstimation, DepthEstimationCommand
+from vizion3d.lifting.defaults import DEFAULT_DEPTH_MODEL_BACKEND
+from vizion3d.lifting.utils import create_mesh_ply_binary, create_ply_binary
+from vizion3d.proto import lifting_pb2, lifting_pb2_grpc
 
 
 def _o3d_depth_image_to_png_bytes(o3d_image) -> bytes:

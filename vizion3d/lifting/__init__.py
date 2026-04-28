@@ -1,4 +1,4 @@
-from vision3d.core.container import command_bus, register_command_handler
+from vizion3d.core.container import command_bus, register_command_handler
 
 from .commands import DepthEstimationCommand
 from .handlers import DepthEstimationHandler

@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package vision3d.lifting;
+package vizion3d.lifting;
 
 service LiftingService {
   rpc RunDepthEstimation (DepthEstimationRequest) returns (DepthEstimationResponse);
