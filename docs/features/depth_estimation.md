@@ -17,7 +17,7 @@ Depth estimation predicts the per-pixel distance from the camera for every pixel
 
 Models are kept in memory after the first inference in the current process. Subsequent calls to any `DepthEstimation` instance reuse the loaded weights.
 
-Set `VISION3D_MODEL_CACHE` in your environment to change the default cache directory.
+Set `VIZION3D_MODEL_CACHE` in your environment to change the default cache directory.
 
 ---
 
@@ -231,8 +231,14 @@ print(f"Backend: {result.backend_used}")
 
 Start the server:
 
+**pip / Poetry**
 ```bash
-uv run task serve-rest
+vizion3d-serve-rest
+```
+
+**uv**
+```bash
+uv run vizion3d-serve-rest
 ```
 
 Send a request with `multipart/form-data`:
@@ -252,8 +258,14 @@ The response is a JSON-serialised `DepthEstimationResult`. Binary fields (`depth
 
 Start the server:
 
+**pip / Poetry**
 ```bash
-uv run task serve-grpc
+vizion3d-serve-grpc
+```
+
+**uv**
+```bash
+uv run vizion3d-serve-grpc
 ```
 
 Call from any gRPC client using the generated stubs:

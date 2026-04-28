@@ -18,7 +18,7 @@ _DOWNLOAD_LOCK = threading.Lock()
 
 
 def default_model_cache_dir() -> Path:
-    configured = os.environ.get("VISION3D_MODEL_CACHE")
+    configured = os.environ.get("VIZION3D_MODEL_CACHE")
     if configured:
         return Path(configured).expanduser()
     return Path.home() / ".cache" / "vizion3d" / "models"
