@@ -631,9 +631,14 @@
 </table>
 <hr />
 <h2 id="installation">Installation</h2>
+<p>Requires <strong>Python 3.12</strong> (Open3D constraint).</p>
+<p><strong>pip</strong></p>
 <pre><code class="language-bash">pip install vizion3d
 </code></pre>
-<p>Requires <strong>Python 3.12</strong> (Open3D constraint). If you're using <code>uv</code>:</p>
+<p><strong>Poetry</strong></p>
+<pre><code class="language-bash">poetry add vizion3d
+</code></pre>
+<p><strong>uv</strong></p>
 <pre><code class="language-bash">uv python pin 3.12
 uv add vizion3d
 </code></pre>
@@ -660,11 +665,19 @@ o3d.io.write_triangle_mesh(&quot;scene_mesh.ply&quot;, result.mesh)
 </code></pre>
 <hr />
 <h2 id="starting-the-servers">Starting the servers</h2>
+<p><strong>pip / Poetry</strong></p>
 <pre><code class="language-bash"># REST API (FastAPI, default port 8000)
 vizion3d-serve-rest
 
 # gRPC API (default port 50051)
 vizion3d-serve-grpc
+</code></pre>
+<p><strong>uv</strong></p>
+<pre><code class="language-bash"># REST API (FastAPI, default port 8000)
+uv run vizion3d-serve-rest
+
+# gRPC API (default port 50051)
+uv run vizion3d-serve-grpc
 </code></pre>
 <hr />
 <h2 id="architecture">Architecture</h2>

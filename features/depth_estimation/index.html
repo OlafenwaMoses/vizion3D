@@ -969,7 +969,11 @@ print(f&quot;Backend: {result.backend_used}&quot;)
 <hr />
 <h2 id="8-rest-api">8. REST API</h2>
 <p>Start the server:</p>
+<p><strong>pip / Poetry</strong></p>
 <pre><code class="language-bash">vizion3d-serve-rest
+</code></pre>
+<p><strong>uv</strong></p>
+<pre><code class="language-bash">uv run vizion3d-serve-rest
 </code></pre>
 <p>Send a request with <code>multipart/form-data</code>:</p>
 <pre><code class="language-bash">curl -X POST &quot;http://localhost:8000/lifting/depth-estimation&quot; \
@@ -981,7 +985,11 @@ print(f&quot;Backend: {result.backend_used}&quot;)
 <hr />
 <h2 id="9-grpc-api">9. gRPC API</h2>
 <p>Start the server:</p>
+<p><strong>pip / Poetry</strong></p>
 <pre><code class="language-bash">vizion3d-serve-grpc
+</code></pre>
+<p><strong>uv</strong></p>
+<pre><code class="language-bash">uv run vizion3d-serve-grpc
 </code></pre>
 <p>Call from any gRPC client using the generated stubs:</p>
 <pre><code class="language-python">import grpc
