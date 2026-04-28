@@ -1,4 +1,5 @@
 site_name: vizion3d
+site_url: https://olafenwamoses.github.io/vizion3D/
 site_description: Unified 3D Computer Vision Library
 theme:
   name: material
