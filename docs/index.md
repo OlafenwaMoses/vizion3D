@@ -16,9 +16,20 @@ Every task is accessible through three consumption modes driven by one shared CQ
 
 Requires **Python 3.12** (Open3D constraint).
 
+**pip**
+```bash
+pip install vizion3d
+```
+
+**Poetry**
+```bash
+poetry add vizion3d
+```
+
+**uv**
 ```bash
 uv python pin 3.12
-uv sync
+uv add vizion3d
 ```
 
 ---
@@ -51,12 +62,22 @@ o3d.io.write_triangle_mesh("scene_mesh.ply", result.mesh)
 
 ## Starting the servers
 
+**pip / Poetry**
 ```bash
 # REST API (FastAPI, default port 8000)
-uv run task serve-rest
+vizion3d-serve-rest
 
 # gRPC API (default port 50051)
-uv run task serve-grpc
+vizion3d-serve-grpc
+```
+
+**uv**
+```bash
+# REST API (FastAPI, default port 8000)
+uv run vizion3d-serve-rest
+
+# gRPC API (default port 50051)
+uv run vizion3d-serve-grpc
 ```
 
 ---
