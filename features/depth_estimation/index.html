@@ -711,7 +711,7 @@
 </tbody>
 </table>
 <p>Models are kept in memory after the first inference in the current process. Subsequent calls to any <code>DepthEstimation</code> instance reuse the loaded weights.</p>
-<p>Set <code>VISION3D_MODEL_CACHE</code> in your environment to change the default cache directory.</p>
+<p>Set <code>VIZION3D_MODEL_CACHE</code> in your environment to change the default cache directory.</p>
 <hr />
 <h2 id="command-parameters">Command parameters</h2>
 <p><code>DepthEstimationCommand</code> is the input contract for this task.</p>
@@ -969,7 +969,7 @@ print(f&quot;Backend: {result.backend_used}&quot;)
 <hr />
 <h2 id="8-rest-api">8. REST API</h2>
 <p>Start the server:</p>
-<pre><code class="language-bash">uv run task serve-rest
+<pre><code class="language-bash">vizion3d-serve-rest
 </code></pre>
 <p>Send a request with <code>multipart/form-data</code>:</p>
 <pre><code class="language-bash">curl -X POST &quot;http://localhost:8000/lifting/depth-estimation&quot; \
@@ -981,7 +981,7 @@ print(f&quot;Backend: {result.backend_used}&quot;)
 <hr />
 <h2 id="9-grpc-api">9. gRPC API</h2>
 <p>Start the server:</p>
-<pre><code class="language-bash">uv run task serve-grpc
+<pre><code class="language-bash">vizion3d-serve-grpc
 </code></pre>
 <p>Call from any gRPC client using the generated stubs:</p>
 <pre><code class="language-python">import grpc
