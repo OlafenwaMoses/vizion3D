@@ -10,6 +10,8 @@
       
       
       
+        <link rel="canonical" href="https://olafenwamoses.github.io/vizion3D/">
+      
       
       
         <link rel="next" href="features/depth_estimation/">
@@ -23,7 +25,7 @@
     
     
       
-        <title>vision3d</title>
+        <title>vizion3d</title>
       
     
     
@@ -66,7 +68,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#vision3d" class="md-skip">
+        <a href="#vizion3d" class="md-skip">
           Skip to content
         </a>
       
@@ -80,7 +82,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="." title="vision3d" class="md-header__button md-logo" aria-label="vision3d" data-md-component="logo">
+    <a href="." title="vizion3d" class="md-header__button md-logo" aria-label="vizion3d" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -94,7 +96,7 @@
       <div class="md-header__ellipsis">
         <div class="md-header__topic">
           <span class="md-ellipsis">
-            vision3d
+            vizion3d
           </span>
         </div>
         <div class="md-header__topic" data-md-component="header-topic">
@@ -254,13 +256,13 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted md-nav--integrated" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="." title="vision3d" class="md-nav__button md-logo" aria-label="vision3d" data-md-component="logo">
+    <a href="." title="vizion3d" class="md-nav__button md-logo" aria-label="vizion3d" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
 
     </a>
-    vision3d
+    vizion3d
   </label>
   
   <ul class="md-nav__list" data-md-scrollfix>
@@ -602,8 +604,8 @@
 
 
 
-<h1 id="vision3d">vision3d</h1>
-<p><strong>vision3d</strong> is an open-source Python library for 3D computer vision that gives ML/CV researchers a single, unified interface for running inference across the full spectrum of 3D vision tasks — from depth estimation and point cloud generation to NeRF reconstruction and pose estimation.</p>
+<h1 id="vizion3d">vizion3d</h1>
+<p><strong>vizion3d</strong> is an open-source Python library for 3D computer vision that gives ML/CV researchers a single, unified interface for running inference across the full spectrum of 3D vision tasks — from depth estimation and point cloud generation to NeRF reconstruction and pose estimation.</p>
 <p>Every task is accessible through three consumption modes driven by one shared CQRS architecture:</p>
 <table>
 <thead>
@@ -637,7 +639,7 @@ uv sync
 <h2 id="quick-start-depth-estimation">Quick start — depth estimation</h2>
 <p>Get a depth map, point cloud, and mesh from a single image in under 10 lines.</p>
 <pre><code class="language-python">import open3d as o3d
-from vision3d.lifting import DepthEstimation, DepthEstimationCommand
+from vizion3d.lifting import DepthEstimation, DepthEstimationCommand
 
 result = DepthEstimation().run(
     DepthEstimationCommand(
@@ -664,13 +666,13 @@ uv run task serve-grpc
 </code></pre>
 <hr />
 <h2 id="architecture">Architecture</h2>
-<p>vision3d uses a <a href="https://martinfowler.com/bliki/CQRS.html">CQRS</a> pattern throughout:</p>
+<p>vizion3d uses a <a href="https://martinfowler.com/bliki/CQRS.html">CQRS</a> pattern throughout:</p>
 <ul>
 <li><strong>Commands</strong> carry inference parameters and trigger side-effecting handlers.</li>
 <li><strong>Queries</strong> retrieve results or metadata without side effects.</li>
 <li>All handlers are registered through a <a href="https://github.com/peter-daly/clean-ioc"><code>clean_ioc</code></a> container — no direct handler instantiation anywhere in the public API.</li>
 </ul>
-<p>Each task lives in its own module under <code>vision3d/&lt;category&gt;/</code> and exposes exactly <code>commands.py</code>, <code>handlers.py</code>, and <code>models.py</code>. Adding a new task means adding one module and one container registration — nothing else changes.</p>
+<p>Each task lives in its own module under <code>vizion3d/&lt;category&gt;/</code> and exposes exactly <code>commands.py</code>, <code>handlers.py</code>, and <code>models.py</code>. Adding a new task means adding one module and one container registration — nothing else changes.</p>
 <hr />
 <h2 id="tasks">Tasks</h2>
 <h3 id="lifting-2d-3d">Lifting (2D → 3D)</h3>

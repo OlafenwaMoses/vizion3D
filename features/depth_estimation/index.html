@@ -10,6 +10,8 @@
       
       
       
+        <link rel="canonical" href="https://olafenwamoses.github.io/vizion3D/features/depth_estimation/">
+      
       
         <link rel="prev" href="../..">
       
@@ -25,7 +27,7 @@
     
     
       
-        <title>Depth Estimation - vision3d</title>
+        <title>Depth Estimation - vizion3d</title>
       
     
     
@@ -82,7 +84,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../.." title="vision3d" class="md-header__button md-logo" aria-label="vision3d" data-md-component="logo">
+    <a href="../.." title="vizion3d" class="md-header__button md-logo" aria-label="vizion3d" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -96,7 +98,7 @@
       <div class="md-header__ellipsis">
         <div class="md-header__topic">
           <span class="md-ellipsis">
-            vision3d
+            vizion3d
           </span>
         </div>
         <div class="md-header__topic" data-md-component="header-topic">
@@ -256,13 +258,13 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted md-nav--integrated" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../.." title="vision3d" class="md-nav__button md-logo" aria-label="vision3d" data-md-component="logo">
+    <a href="../.." title="vizion3d" class="md-nav__button md-logo" aria-label="vizion3d" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
 
     </a>
-    vision3d
+    vizion3d
   </label>
   
   <ul class="md-nav__list" data-md-scrollfix>
@@ -683,7 +685,7 @@
 <h1 id="depth-estimation">Depth Estimation</h1>
 <p><strong>Category:</strong> Lifting (2D → 3D)<br />
 <strong>Experimental:</strong> No</p>
-<p>Depth estimation predicts the per-pixel distance from the camera for every pixel in a 2D RGB image, producing a depth map and optionally unprojecting it into a 3D point cloud or surface mesh. vision3d uses <a href="https://github.com/DepthAnything/Depth-Anything-V2">Depth Anything V2</a> as its default backend.</p>
+<p>Depth estimation predicts the per-pixel distance from the camera for every pixel in a 2D RGB image, producing a depth map and optionally unprojecting it into a 3D point cloud or surface mesh. vizion3d uses <a href="https://github.com/DepthAnything/Depth-Anything-V2">Depth Anything V2</a> as its default backend.</p>
 <hr />
 <h2 id="model-backends">Model backends</h2>
 <table>
@@ -696,7 +698,7 @@
 <tbody>
 <tr>
 <td><code>"depth-anything/Depth-Anything-V2-Base-hf"</code> <em>(default)</em></td>
-<td>Downloads the vision3D release checkpoint (<code>depth_anything_v2_vitb.pth</code>) to <code>~/.cache/vision3d/models/</code> on first use, then loads it directly</td>
+<td>Downloads the vizion3D release checkpoint (<code>depth_anything_v2_vitb.pth</code>) to <code>~/.cache/vizion3d/models/</code> on first use, then loads it directly</td>
 </tr>
 <tr>
 <td>Any other string</td>
@@ -827,7 +829,7 @@
 <hr />
 <h2 id="1-direct-python-import-image-bytes">1. Direct Python import — image bytes</h2>
 <p>The most common usage: read an image file into bytes and dispatch the command.</p>
-<pre><code class="language-python">from vision3d.lifting import DepthEstimation, DepthEstimationCommand
+<pre><code class="language-python">from vizion3d.lifting import DepthEstimation, DepthEstimationCommand
 
 with open(&quot;scene.png&quot;, &quot;rb&quot;) as f:
     img_bytes = f.read()
@@ -842,7 +844,7 @@ print(f&quot;Backend used    : {result.backend_used}&quot;)
 <hr />
 <h2 id="2-direct-python-import-file-path">2. Direct Python import — file path</h2>
 <p>Pass a file path string instead of bytes; the handler opens it automatically.</p>
-<pre><code class="language-python">from vision3d.lifting import DepthEstimation, DepthEstimationCommand
+<pre><code class="language-python">from vizion3d.lifting import DepthEstimation, DepthEstimationCommand
 
 cmd = DepthEstimationCommand(image_input=&quot;scene.png&quot;)
 result = DepthEstimation().run(cmd)
@@ -854,7 +856,7 @@ print(f&quot;Depth range: {result.min_depth:.4f} → {result.max_depth:.4f}&quot
 <p>Request a 16-bit grayscale Open3D Image of the depth map for visualization or downstream processing.</p>
 <pre><code class="language-python">import numpy as np
 from PIL import Image as PILImage
-from vision3d.lifting import DepthEstimation, DepthEstimationCommand
+from vizion3d.lifting import DepthEstimation, DepthEstimationCommand
 
 cmd = DepthEstimationCommand(
     image_input=&quot;scene.png&quot;,
@@ -874,7 +876,7 @@ PILImage.fromarray(depth_array).save(&quot;depth.png&quot;)
 <p>Request a coloured 3D point cloud unprojected from the RGB-D image. Distances between points are in metres (<code>point_cloud_scale == 1.0</code>).</p>
 <pre><code class="language-python">import numpy as np
 import open3d as o3d
-from vision3d.lifting import DepthEstimation, DepthEstimationCommand
+from vizion3d.lifting import DepthEstimation, DepthEstimationCommand
 
 cmd = DepthEstimationCommand(
     image_input=&quot;scene.png&quot;,
@@ -900,7 +902,7 @@ o3d.io.write_point_cloud(&quot;scene.ply&quot;, pcd)
 <h2 id="5-surface-mesh">5. Surface mesh</h2>
 <p>Request a triangulated mesh reconstructed from the point cloud via ball-pivoting. Includes vertex colours.</p>
 <pre><code class="language-python">import open3d as o3d
-from vision3d.lifting import DepthEstimation, DepthEstimationCommand
+from vizion3d.lifting import DepthEstimation, DepthEstimationCommand
 
 cmd = DepthEstimationCommand(
     image_input=&quot;scene.png&quot;,
@@ -920,7 +922,7 @@ o3d.io.write_triangle_mesh(&quot;scene_mesh.ply&quot;, mesh)
 <p>All three optional outputs can be requested in a single inference pass.</p>
 <pre><code class="language-python">import numpy as np
 import open3d as o3d
-from vision3d.lifting import DepthEstimation, DepthEstimationCommand
+from vizion3d.lifting import DepthEstimation, DepthEstimationCommand
 
 cmd = DepthEstimationCommand(
     image_input=&quot;scene.png&quot;,
@@ -946,7 +948,7 @@ o3d.io.write_triangle_mesh(&quot;scene_mesh.ply&quot;, result.mesh)
 <hr />
 <h2 id="7-custom-model-backend">7. Custom model backend</h2>
 <p>Use any Hugging Face depth estimation model or a local <code>.pth</code> checkpoint.</p>
-<pre><code class="language-python">from vision3d.lifting import DepthEstimation, DepthEstimationCommand
+<pre><code class="language-python">from vizion3d.lifting import DepthEstimation, DepthEstimationCommand
 
 # Hugging Face model
 cmd = DepthEstimationCommand(
@@ -983,7 +985,7 @@ print(f&quot;Backend: {result.backend_used}&quot;)
 </code></pre>
 <p>Call from any gRPC client using the generated stubs:</p>
 <pre><code class="language-python">import grpc
-from vision3d.proto import lifting_pb2, lifting_pb2_grpc
+from vizion3d.proto import lifting_pb2, lifting_pb2_grpc
 
 channel = grpc.insecure_channel(&quot;localhost:50051&quot;)
 stub = lifting_pb2_grpc.LiftingServiceStub(channel)
