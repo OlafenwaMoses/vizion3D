@@ -96,16 +96,16 @@ def _run_group(
     assert len(DepthEstimationHandler._depth_anything_models) > 0, \
         "Model should be stored in DepthEstimationHandler._depth_anything_models after first inference"
 
-    # ── speedup assertion ─────────────────────────────────────────────────────
-    warm_avg = sum(timings[1:]) / (N_RUNS - 1)
-    assert timings[1] < timings[0], (
+    # ── timing assertions ─────────────────────────────────────────────────────
+    assert timings[0] < 10.0, (
         f"[{entry_point} / {scenario}] "
-        f"Warm inference ({timings[1]:.3f}s) should be faster than cold load "
-        f"({timings[0]:.3f}s).  In-memory model caching may not be working."
+        f"Cold load took {timings[0]:.3f}s — expected < 10s"
     )
-    # Warm runs should be consistent (no wild variance)
-    assert max(timings[1:]) < warm_avg * 3, \
-        "Warm inference times are inconsistent — possible resource contention"
+    for i, t in enumerate(timings[1:], start=2):
+        assert t < 1.0, (
+            f"[{entry_point} / {scenario}] "
+            f"Run {i} took {t:.3f}s — expected < 1s (model should be cached in memory)"
+        )
 
     return timings
 

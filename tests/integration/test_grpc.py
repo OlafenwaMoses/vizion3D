@@ -92,11 +92,15 @@ def _run_group(
     assert len(DepthEstimationHandler._depth_anything_models) > 0, \
         "Model should be cached in memory after first gRPC inference"
 
-    assert timings[1] < timings[0], (
+    assert timings[0] < 10.0, (
         f"[gRPC / {scenario}] "
-        f"Warm inference ({timings[1]:.3f}s) should be faster than cold load "
-        f"({timings[0]:.3f}s)."
+        f"Cold load took {timings[0]:.3f}s — expected < 10s"
     )
+    for i, t in enumerate(timings[1:], start=2):
+        assert t < 1.0, (
+            f"[gRPC / {scenario}] "
+            f"Run {i} took {t:.3f}s — expected < 1s (model should be cached in memory)"
+        )
 
     return timings
 
