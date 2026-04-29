@@ -12,6 +12,7 @@ simulate a cold start, then runs N_RUNS iterations.  We assert:
 from __future__ import annotations
 
 import json
+import os
 import time
 from pathlib import Path
 
@@ -27,6 +28,8 @@ from vizion3d.lifting.handlers import DepthEstimationHandler  # noqa: E402
 from vizion3d.lifting.utils import create_ply_binary  # noqa: E402
 
 N_RUNS = 5
+COLD_LIMIT = float(os.environ.get("VIZION3D_TEST_COLD_LIMIT", "10.0"))
+WARM_LIMIT = float(os.environ.get("VIZION3D_TEST_WARM_LIMIT", "1.0"))
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -96,14 +99,14 @@ def _run_group(
         "Model should be in DepthEstimationHandler._depth_anything_models after first inference"
 
     # ── timing assertions ─────────────────────────────────────────────────────
-    assert timings[0] < 10.0, (
+    assert timings[0] < COLD_LIMIT, (
         f"[{entry_point} / {scenario}] "
-        f"Cold load took {timings[0]:.3f}s — expected < 10s"
+        f"Cold load took {timings[0]:.3f}s — expected < {COLD_LIMIT}s"
     )
     for i, t in enumerate(timings[1:], start=2):
-        assert t < 1.0, (
+        assert t < WARM_LIMIT, (
             f"[{entry_point} / {scenario}] "
-            f"Run {i} took {t:.3f}s — expected < 1s (model should be cached in memory)"
+            f"Run {i} took {t:.3f}s — expected < {WARM_LIMIT}s (model should be cached)"
         )
 
     return timings

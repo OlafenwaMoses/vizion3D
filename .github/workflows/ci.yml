@@ -74,11 +74,13 @@ jobs:
       - name: Cache model weights
         uses: actions/cache@v4
         with:
-          path: ~/.cache/vizion3d/models
+          path: ${{ runner.home }}/.cache/vizion3d/models
           # Key is tied to the model filename — bump if the model changes
           key: depth-anything-v2-vitb-pth
 
       - name: Run integration tests
         env:
           VIZION3D_MODEL_CACHE: ${{ runner.home }}/.cache/vizion3d/models
+          # CI runners are 2-core and ~7-8x slower than a dev machine
+          VIZION3D_TEST_COLD_LIMIT: "30"
         run: uv run pytest tests/integration/ -v
