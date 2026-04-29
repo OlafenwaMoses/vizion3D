@@ -20,9 +20,9 @@ from fastapi.testclient import TestClient
 
 pytest.importorskip("open3d", reason="open3d required — run: uv python pin 3.12 && uv sync")
 
-from vizion3d.lifting.defaults import DEFAULT_DEPTH_MODEL_BACKEND   # noqa: E402
-from vizion3d.lifting.handlers import DepthEstimationHandler         # noqa: E402
-from vizion3d.server.rest.app import app                             # noqa: E402
+from vizion3d.lifting.defaults import DEFAULT_DEPTH_MODEL_BACKEND  # noqa: E402
+from vizion3d.lifting.handlers import DepthEstimationHandler  # noqa: E402
+from vizion3d.server.rest.app import app  # noqa: E402
 
 N_RUNS = 5
 

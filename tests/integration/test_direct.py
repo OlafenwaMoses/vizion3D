@@ -11,7 +11,6 @@ simulate a cold start, then runs N_RUNS iterations.  We assert:
 
 from __future__ import annotations
 
-import io
 import json
 import time
 from pathlib import Path
@@ -22,10 +21,10 @@ from PIL import Image as PILImage
 
 pytest.importorskip("open3d", reason="open3d required — run: uv python pin 3.12 && uv sync")
 
-from vizion3d.lifting import DepthEstimation, DepthEstimationCommand          # noqa: E402
-from vizion3d.lifting.defaults import DEFAULT_DEPTH_MODEL_BACKEND             # noqa: E402
-from vizion3d.lifting.handlers import DepthEstimationHandler                  # noqa: E402
-from vizion3d.lifting.utils import create_ply_binary                          # noqa: E402
+from vizion3d.lifting import DepthEstimation, DepthEstimationCommand  # noqa: E402
+from vizion3d.lifting.defaults import DEFAULT_DEPTH_MODEL_BACKEND  # noqa: E402
+from vizion3d.lifting.handlers import DepthEstimationHandler  # noqa: E402
+from vizion3d.lifting.utils import create_ply_binary  # noqa: E402
 
 N_RUNS = 5
 
@@ -94,7 +93,7 @@ def _run_group(
 
     # ── caching assertion: model must be in memory after run 1 ───────────────
     assert len(DepthEstimationHandler._depth_anything_models) > 0, \
-        "Model should be stored in DepthEstimationHandler._depth_anything_models after first inference"
+        "Model should be in DepthEstimationHandler._depth_anything_models after first inference"
 
     # ── timing assertions ─────────────────────────────────────────────────────
     assert timings[0] < 10.0, (

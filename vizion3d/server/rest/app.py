@@ -21,7 +21,7 @@ async def limit_body_size(request: Request, call_next):
     content_length = request.headers.get("content-length")
     if content_length and int(content_length) > _MAX_BODY:
         return JSONResponse(
-            {"detail": f"Request body exceeds the 500 MB limit."},
+            {"detail": "Request body exceeds the 500 MB limit."},
             status_code=413,
         )
     return await call_next(request)

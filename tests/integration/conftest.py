@@ -15,10 +15,10 @@ pytest_terminal_summary — pretty inference-timing report printed at the end
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from concurrent import futures
+from dataclasses import dataclass
 from itertools import groupby
 from pathlib import Path
-from concurrent import futures
 from typing import List
 
 import grpc
@@ -197,8 +197,8 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):   # noqa: ARG
     _row("Entry Point", "Scenario", "Run", "Duration", "Status")
     _thin()
 
-    sort_key = lambda r: (r.entry_point, r.scenario, r.run)
-    group_key = lambda r: (r.entry_point, r.scenario)
+    def sort_key(r): return (r.entry_point, r.scenario, r.run)
+    def group_key(r): return (r.entry_point, r.scenario)
 
     first_loads: list[float] = []
     warm_times:  list[float] = []

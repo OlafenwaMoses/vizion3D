@@ -1,8 +1,7 @@
-from pydantic import BaseModel, ConfigDict
-
 from open3d.geometry import Image as O3dImage  # type: ignore[import-untyped]
 from open3d.geometry import PointCloud as O3dPointCloud  # type: ignore[import-untyped]
 from open3d.geometry import TriangleMesh as O3dTriangleMesh  # type: ignore[import-untyped]
+from pydantic import BaseModel, ConfigDict
 
 
 class DepthEstimationResult(BaseModel):
