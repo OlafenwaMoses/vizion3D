@@ -71,16 +71,18 @@ jobs:
       - name: Install dependencies
         run: uv sync --frozen
 
+      - name: Set model cache path
+        run: echo "VIZION3D_MODEL_CACHE=$HOME/.cache/vizion3d/models" >> "$GITHUB_ENV"
+
       - name: Cache model weights
         uses: actions/cache@v4
         with:
-          path: ${{ runner.home }}/.cache/vizion3d/models
+          path: ${{ env.VIZION3D_MODEL_CACHE }}
           # Key is tied to the model filename — bump if the model changes
           key: depth-anything-v2-vitb-pth
 
       - name: Run integration tests
         env:
-          VIZION3D_MODEL_CACHE: ${{ runner.home }}/.cache/vizion3d/models
           VIZION3D_TEST_COLD_LIMIT: ${{ vars.VIZION3D_TEST_COLD_LIMIT }}
           VIZION3D_TEST_WARM_LIMIT: ${{ vars.VIZION3D_TEST_WARM_LIMIT }}
         run: uv run pytest tests/integration/ -v
