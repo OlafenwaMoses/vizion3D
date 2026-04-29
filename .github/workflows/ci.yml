@@ -81,6 +81,6 @@ jobs:
       - name: Run integration tests
         env:
           VIZION3D_MODEL_CACHE: ${{ runner.home }}/.cache/vizion3d/models
-          # CI runners are 2-core and ~7-8x slower than a dev machine
-          VIZION3D_TEST_COLD_LIMIT: "30"
+          VIZION3D_TEST_COLD_LIMIT: ${{ vars.VIZION3D_TEST_COLD_LIMIT }}
+          VIZION3D_TEST_WARM_LIMIT: ${{ vars.VIZION3D_TEST_WARM_LIMIT }}
         run: uv run pytest tests/integration/ -v
