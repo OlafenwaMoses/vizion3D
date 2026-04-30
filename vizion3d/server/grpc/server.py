@@ -64,8 +64,19 @@ class LiftingServiceServicer(lifting_pb2_grpc.LiftingServiceServicer):
         return response
 
 
+_MAX_MSG = 500 * 1024 * 1024   # 500 MB
+
+_GRPC_OPTIONS = [
+    ("grpc.max_send_message_length",    _MAX_MSG),
+    ("grpc.max_receive_message_length", _MAX_MSG),
+]
+
+
 def serve():
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+    server = grpc.server(
+        futures.ThreadPoolExecutor(max_workers=10),
+        options=_GRPC_OPTIONS,
+    )
     lifting_pb2_grpc.add_LiftingServiceServicer_to_server(LiftingServiceServicer(), server)
     server.add_insecure_port("[::]:50051")
     server.start()

@@ -1,15 +1,30 @@
+import base64
 import io
 
 import numpy as np
 import uvicorn
-from fastapi import APIRouter, FastAPI, File, Form, UploadFile
+from fastapi import APIRouter, FastAPI, File, Form, Request, UploadFile
+from fastapi.responses import JSONResponse
 from PIL import Image
 
 from vizion3d.lifting import DepthEstimation, DepthEstimationCommand
 from vizion3d.lifting.defaults import DEFAULT_DEPTH_MODEL_BACKEND
 from vizion3d.lifting.utils import create_mesh_ply_binary, create_ply_binary
 
+_MAX_BODY = 500 * 1024 * 1024   # 500 MB
+
 app = FastAPI(title="vizion3d REST API", version="1.0.0")
+
+
+@app.middleware("http")
+async def limit_body_size(request: Request, call_next):
+    content_length = request.headers.get("content-length")
+    if content_length and int(content_length) > _MAX_BODY:
+        return JSONResponse(
+            {"detail": "Request body exceeds the 500 MB limit."},
+            status_code=413,
+        )
+    return await call_next(request)
 
 lifting_router = APIRouter(prefix="/lifting", tags=["Lifting (2D -> 3D)"])
 
@@ -53,22 +68,25 @@ async def depth_estimation(
 
     result = DepthEstimation().run(cmd)
 
+    def _b64(data: bytes | None) -> str | None:
+        return base64.b64encode(data).decode() if data is not None else None
+
     return {
         "depth_map": result.depth_map,
         "min_depth": result.min_depth,
         "max_depth": result.max_depth,
         "backend_used": result.backend_used,
-        "depth_image": (
+        "depth_image": _b64(
             _o3d_depth_image_to_png_bytes(result.depth_image)
             if result.depth_image is not None
             else None
         ),
-        "point_cloud_ply": (
+        "point_cloud_ply": _b64(
             _o3d_point_cloud_to_ply_bytes(result.point_cloud)
             if result.point_cloud is not None
             else None
         ),
-        "mesh_ply": (
+        "mesh_ply": _b64(
             _o3d_mesh_to_ply_bytes(result.mesh) if result.mesh is not None else None
         ),
     }
