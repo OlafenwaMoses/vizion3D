@@ -2844,10 +2844,18 @@ dependencies = [
     { name = "pillow" },
     { name = "pydantic" },
     { name = "python-multipart" },
-    { name = "torch" },
-    { name = "torchvision" },
     { name = "transformers" },
     { name = "uvicorn" },
+]
+
+[package.optional-dependencies]
+cpu = [
+    { name = "torch" },
+    { name = "torchvision" },
+]
+cuda = [
+    { name = "torch" },
+    { name = "torchvision" },
 ]
 
 [package.dev-dependencies]
@@ -2870,11 +2878,14 @@ requires-dist = [
     { name = "pillow", specifier = ">=12.2.0" },
     { name = "pydantic", specifier = ">=2.0.0" },
     { name = "python-multipart", specifier = ">=0.0.6" },
-    { name = "torch", specifier = ">=2.11.0" },
-    { name = "torchvision", specifier = ">=0.26.0" },
+    { name = "torch", marker = "extra == 'cpu'", specifier = ">=2.11.0" },
+    { name = "torch", marker = "extra == 'cuda'", specifier = ">=2.11.0" },
+    { name = "torchvision", marker = "extra == 'cpu'", specifier = ">=0.26.0" },
+    { name = "torchvision", marker = "extra == 'cuda'", specifier = ">=0.26.0" },
     { name = "transformers", specifier = ">=5.6.2" },
     { name = "uvicorn", specifier = ">=0.23.0" },
 ]
+provides-extras = ["cpu", "cuda", "amd"]
 
 [package.metadata.requires-dev]
 dev = [

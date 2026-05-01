@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 from PIL import Image
 
 from vizion3d.lifting import DepthEstimation, DepthEstimationCommand
-from vizion3d.lifting.defaults import DEFAULT_DEPTH_MODEL_BACKEND
+from vizion3d.lifting.defaults import DEFAULT_DEPTH_MODEL_URL
 from vizion3d.lifting.utils import create_mesh_ply_binary, create_ply_binary
 
 _MAX_BODY = 500 * 1024 * 1024   # 500 MB
@@ -52,7 +52,7 @@ def _o3d_mesh_to_ply_bytes(mesh) -> bytes:
 @lifting_router.post("/depth-estimation")
 async def depth_estimation(
     image: UploadFile = File(...),
-    model_backend: str = Form(DEFAULT_DEPTH_MODEL_BACKEND),
+    model_backend: str = Form(DEFAULT_DEPTH_MODEL_URL),
     return_depth_image: bool = Form(False),
     return_point_cloud: bool = Form(False),
     return_mesh: bool = Form(False),
