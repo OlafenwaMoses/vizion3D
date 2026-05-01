@@ -1,0 +1,88 @@
+name: Publish to PyPI
+
+# Manual trigger only — never runs automatically.
+# Must be dispatched from the 'release' branch via the GitHub Actions UI.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version (e.g. 1.2.0)"
+        required: true
+        type: string
+
+jobs:
+  # ────────────────────────────────────────────────────────────────────────────
+  # Guard — reject if triggered from any branch other than release
+  # ────────────────────────────────────────────────────────────────────────────
+  enforce-branch:
+    name: Enforce release branch
+    runs-on: ubuntu-latest
+    steps:
+      - name: Must be triggered from the release branch
+        run: |
+          if [ "${{ github.ref }}" != "refs/heads/release" ]; then
+            echo "::error::This workflow must be triggered from the 'release' branch (got: ${{ github.ref }})"
+            exit 1
+          fi
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # Publish — build and upload to PyPI
+  # ────────────────────────────────────────────────────────────────────────────
+  publish:
+    name: Build and publish
+    runs-on: ubuntu-latest
+    needs: [enforce-branch]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+
+      # ── Validate version format: must be major.minor.patch ───────────────
+      - name: Validate version format
+        run: |
+          if ! echo "${{ github.event.inputs.version }}" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::Version '${{ github.event.inputs.version }}' is not valid. Must be major.minor.patch (e.g. 1.2.0)"
+            exit 1
+          fi
+          echo "Version format is valid: ${{ github.event.inputs.version }}"
+
+      # ── Sanity check: reject if the requested version is not strictly
+      #    greater than the version currently live on PyPI. ──────────────────
+      - name: Sanity-check version against PyPI
+        run: |
+          python3 - <<'PYEOF'
+          import sys, json, urllib.request
+          from packaging.version import Version
+
+          new_version = "${{ github.event.inputs.version }}"
+
+          try:
+              with urllib.request.urlopen("https://pypi.org/pypi/vizion3d/json") as r:
+                  data = json.loads(r.read())
+              current_version = data["info"]["version"]
+              print(f"Current PyPI version : {current_version}")
+              print(f"Requested version    : {new_version}")
+              if Version(new_version) <= Version(current_version):
+                  print(f"::error::Version {new_version} must be strictly greater than the current PyPI version {current_version}")
+                  sys.exit(1)
+              print("Version check passed.")
+          except urllib.error.HTTPError as e:
+              if e.code == 404:
+                  print("Package not yet on PyPI — first publish, skipping version check.")
+              else:
+                  raise
+          PYEOF
+
+      - name: Set version in pyproject.toml
+        run: |
+          sed -i 's/^version = .*/version = "${{ github.event.inputs.version }}"/' pyproject.toml
+          echo "Version set to ${{ github.event.inputs.version }}"
+
+      - name: Build package
+        run: uv build
+
+      - name: Publish to PyPI
+        run: uv publish --token ${{ secrets.PYPI_API_TOKEN }}

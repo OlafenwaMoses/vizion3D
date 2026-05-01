@@ -21,7 +21,7 @@ from fastapi.testclient import TestClient
 
 pytest.importorskip("open3d", reason="open3d required — run: uv python pin 3.12 && uv sync")
 
-from vizion3d.lifting.defaults import DEFAULT_DEPTH_MODEL_BACKEND  # noqa: E402
+from vizion3d.lifting.defaults import DEFAULT_DEPTH_MODEL_URL  # noqa: E402
 from vizion3d.lifting.handlers import DepthEstimationHandler  # noqa: E402
 from vizion3d.server.rest.app import app  # noqa: E402
 
@@ -123,7 +123,7 @@ def _run_group(
 def test_rest_default_model(indoor_image_bytes, tmp_path, timing_collector):
     """5 POST requests with the default model backend."""
     _run_group(
-        model_backend=DEFAULT_DEPTH_MODEL_BACKEND,
+        model_backend=DEFAULT_DEPTH_MODEL_URL,
         indoor_image_bytes=indoor_image_bytes,
         run_dir=tmp_path / "rest_default",
         scenario="Default model",

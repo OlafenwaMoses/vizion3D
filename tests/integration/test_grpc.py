@@ -20,7 +20,7 @@ import pytest
 
 pytest.importorskip("open3d", reason="open3d required — run: uv python pin 3.12 && uv sync")
 
-from vizion3d.lifting.defaults import DEFAULT_DEPTH_MODEL_BACKEND  # noqa: E402
+from vizion3d.lifting.defaults import DEFAULT_DEPTH_MODEL_URL  # noqa: E402
 from vizion3d.lifting.handlers import DepthEstimationHandler  # noqa: E402
 from vizion3d.proto import lifting_pb2  # noqa: E402
 
@@ -117,7 +117,7 @@ def test_grpc_default_model(
 ):
     """5 RPC calls with the default model backend."""
     _run_group(
-        model_backend=DEFAULT_DEPTH_MODEL_BACKEND,
+        model_backend=DEFAULT_DEPTH_MODEL_URL,
         indoor_image_bytes=indoor_image_bytes,
         run_dir=tmp_path / "grpc_default",
         scenario="Default model",

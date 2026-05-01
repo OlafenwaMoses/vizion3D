@@ -6,7 +6,7 @@ from PIL import Image
 
 pytest.importorskip("open3d", reason="open3d required — run: uv python pin 3.12 && uv sync")
 
-from vizion3d.lifting.defaults import DEFAULT_DEPTH_MODEL_BACKEND  # noqa: E402
+from vizion3d.lifting.defaults import DEFAULT_DEPTH_MODEL_URL  # noqa: E402
 from vizion3d.proto import lifting_pb2  # noqa: E402
 from vizion3d.server.grpc.server import LiftingServiceServicer  # noqa: E402
 
@@ -93,7 +93,7 @@ def test_grpc_uses_default_backend_when_model_backend_is_empty(servicer, mock_co
         mock_cls.return_value.run.return_value = _fake_result()
         servicer.RunDepthEstimation(request, mock_context)
     called_cmd = mock_cls.return_value.run.call_args[0][0]
-    assert called_cmd.model_backend == DEFAULT_DEPTH_MODEL_BACKEND
+    assert called_cmd.model_backend == DEFAULT_DEPTH_MODEL_URL
 
 
 def test_grpc_forwards_custom_model_backend(servicer, mock_context, image_bytes):

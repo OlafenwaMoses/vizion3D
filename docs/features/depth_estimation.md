@@ -11,8 +11,8 @@ Depth estimation predicts the per-pixel distance from the camera for every pixel
 
 | Value | What happens |
 |---|---|
-| `"depth-anything/Depth-Anything-V2-Base-hf"` *(default)* | Downloads the vizion3D release checkpoint (`depth_anything_v2_vitb.pth`) to `~/.cache/vizion3d/models/` on first use, then loads it directly |
-| Any other string | Passed through to Hugging Face `transformers.pipeline(task="depth-estimation", model=...)` |
+| *(default)* | Downloads the vizion3D release checkpoint (`depth_anything_v2_vitb.pth`) to `~/.cache/vizion3d/models/` on first use, then loads it directly |
+| An HTTPS URL ending in `.pth` or `.pt` | Downloaded to the cache directory on first use, then loaded as a Depth Anything V2 checkpoint |
 | A local `.pth` or `.pt` file path | Loaded directly as a Depth Anything V2 checkpoint — never downloaded |
 
 Models are kept in memory after the first inference in the current process. Subsequent calls to any `DepthEstimation` instance reuse the loaded weights.
@@ -28,7 +28,7 @@ Set `VIZION3D_MODEL_CACHE` in your environment to change the default cache direc
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `image_input` | `str \| bytes` | **Yes** | — | Image to process. Pass a file path string or raw image bytes. |
-| `model_backend` | `str` | No | `"depth-anything/Depth-Anything-V2-Base-hf"` | Model backend identifier. See [Model backends](#model-backends) above. |
+| `model_backend` | `str` | No | vizion3D release checkpoint URL | Model backend identifier. See [Model backends](#model-backends) above. |
 | `return_depth_image` | `bool` | No | `False` | If `True`, the result includes a 16-bit grayscale Open3D Image of the depth map. |
 | `return_point_cloud` | `bool` | No | `False` | If `True`, the result includes an Open3D PointCloud unprojected from the RGB-D image. |
 | `return_mesh` | `bool` | No | `False` | If `True`, the result includes an Open3D TriangleMesh reconstructed from the point cloud via ball-pivoting. |
@@ -44,7 +44,7 @@ Set `VIZION3D_MODEL_CACHE` in your environment to change the default cache direc
 | `depth_map` | `list[list[float]]` | Yes | Raw floating-point depth array, shape `[H][W]`. Values are relative (not metric) — closer objects have higher values for inverse-depth models. |
 | `min_depth` | `float` | Yes | Minimum value in `depth_map`. |
 | `max_depth` | `float` | Yes | Maximum value in `depth_map`. Guaranteed `max_depth >= min_depth`. |
-| `backend_used` | `str` | Yes | Resolved model identifier that processed the request (local file path or HuggingFace model ID). |
+| `backend_used` | `str` | Yes | Resolved model identifier that processed the request (local file path). |
 | `depth_image` | `open3d.geometry.Image \| None` | When `return_depth_image=True` | 16-bit grayscale image, dtype `uint16`, shape `(H, W)`. The full 0–65535 range maps to `[min_depth, max_depth]`. |
 | `point_cloud` | `open3d.geometry.PointCloud \| None` | When `return_point_cloud=True` | Coloured 3D point cloud unprojected from the RGB-D image using PrimeSense default intrinsics. Coordinates are in metres. |
 | `mesh` | `open3d.geometry.TriangleMesh \| None` | When `return_mesh=True` | Triangle mesh surface reconstructed from the point cloud via ball-pivoting. Includes vertex colours. |
@@ -203,23 +203,23 @@ o3d.io.write_triangle_mesh("scene_mesh.ply", result.mesh)
 
 ## 7. Custom model backend
 
-Use any Hugging Face depth estimation model or a local `.pth` checkpoint.
+Use a local `.pth` checkpoint or a remote URL to a `.pth` file.
 
 ```python
 from vizion3d.lifting import DepthEstimation, DepthEstimationCommand
-
-# Hugging Face model
-cmd = DepthEstimationCommand(
-    image_input="scene.png",
-    model_backend="Intel/dpt-large",
-)
-result = DepthEstimation().run(cmd)
-print(f"Backend: {result.backend_used}")
 
 # Local checkpoint
 cmd = DepthEstimationCommand(
     image_input="scene.png",
     model_backend="/models/depth_anything_v2_vitl.pth",
+)
+result = DepthEstimation().run(cmd)
+print(f"Backend: {result.backend_used}")
+
+# Remote checkpoint URL (downloaded and cached on first use)
+cmd = DepthEstimationCommand(
+    image_input="scene.png",
+    model_backend="https://example.com/weights/depth_anything_v2_vits.pth",
 )
 result = DepthEstimation().run(cmd)
 print(f"Backend: {result.backend_used}")
