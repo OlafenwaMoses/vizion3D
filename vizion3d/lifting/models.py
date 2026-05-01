@@ -15,7 +15,7 @@ class DepthEstimationResult(BaseModel):
         min_depth: Minimum value in `depth_map`.
         max_depth: Maximum value in `depth_map`. Guaranteed `max_depth >= min_depth`.
         backend_used: Resolved model identifier that processed the request
-            (local file path or Hugging Face model ID).
+            (local file path).
         depth_image: 16-bit grayscale `open3d.geometry.Image` (dtype `uint16`),
             present when `return_depth_image=True` was set on the command.
             The full 0–65535 range maps linearly to `[min_depth, max_depth]`.

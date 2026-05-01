@@ -1,6 +1,5 @@
 import io
 import threading
-from pathlib import Path
 
 import numpy as np
 from PIL import Image
@@ -26,7 +25,6 @@ OPEN3D_CAMERA_TO_IMAGE_VIEW_TRANSFORM = np.array(
 
 
 class DepthEstimationHandler(CommandHandler[DepthEstimationCommand, DepthEstimationResult]):
-    _pipelines = {}
     _depth_anything_models = {}
     _model_lock = threading.Lock()
 
@@ -38,12 +36,7 @@ class DepthEstimationHandler(CommandHandler[DepthEstimationCommand, DepthEstimat
         else:
             image = Image.open(io.BytesIO(command.image_input)).convert("RGB")
 
-        if self._is_depth_anything_checkpoint(model_id):
-            depth_array = self._run_depth_anything_checkpoint(model_id, image)
-        else:
-            result = self._load_hugging_face_pipeline(model_id)(image)
-            depth_tensor = result["predicted_depth"]
-            depth_array = depth_tensor.squeeze().cpu().numpy().astype(float)
+        depth_array = self._run_depth_anything_checkpoint(model_id, image)
 
         min_depth = float(np.min(depth_array))
         max_depth = float(np.max(depth_array))
@@ -115,10 +108,6 @@ class DepthEstimationHandler(CommandHandler[DepthEstimationCommand, DepthEstimat
         )
 
     @staticmethod
-    def _is_depth_anything_checkpoint(model_id: str) -> bool:
-        return Path(model_id).suffix.lower() in {".pth", ".pt"}
-
-    @staticmethod
     def _orient_point_cloud_like_image(point_cloud):
         point_cloud.transform(OPEN3D_CAMERA_TO_IMAGE_VIEW_TRANSFORM)
         return point_cloud
@@ -169,21 +158,6 @@ class DepthEstimationHandler(CommandHandler[DepthEstimationCommand, DepthEstimat
         ):
             return "mps"
         return "cpu"
-
-    def _load_hugging_face_pipeline(self, model_id: str):
-        if model_id in self._pipelines:
-            return self._pipelines[model_id]
-
-        with self._model_lock:
-            if model_id in self._pipelines:
-                return self._pipelines[model_id]
-
-            from transformers import pipeline
-
-            self._pipelines[model_id] = pipeline(
-                task="depth-estimation", model=model_id, trust_remote_code=True
-            )
-            return self._pipelines[model_id]
 
     def _load_depth_anything_checkpoint(self, model_path: str):
         if model_path in self._depth_anything_models:

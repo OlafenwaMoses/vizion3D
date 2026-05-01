@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 from vizion3d.core.cqrs import Command
 
-from .defaults import DEFAULT_DEPTH_MODEL_BACKEND
+from .defaults import DEFAULT_DEPTH_MODEL_URL
 from .models import DepthEstimationResult
 
 
@@ -16,14 +16,14 @@ class DepthEstimationCommand(Command[DepthEstimationResult]):
             The handler auto-detects which form is supplied.
         model_backend: Model backend to use for inference.
 
-            - Default value (`"depth-anything/Depth-Anything-V2-Base-hf"`) resolves to
-              the vizion3D release checkpoint (`depth_anything_v2_vitb.pth`), which is
-              downloaded on first use and cached under `~/.cache/vizion3d/models/`.
-              Set `VISION3D_MODEL_CACHE` to override the cache directory.
+            - Default value is the vizion3D release checkpoint URL
+              (`depth_anything_v2_vitb.pth`), which is downloaded on first use and
+              cached under `~/.cache/vizion3d/models/`.
+              Set `VIZION3D_MODEL_CACHE` to override the cache directory.
             - A local `.pth` or `.pt` path is loaded directly as a Depth Anything V2
               checkpoint — no download occurs.
-            - Any other string is forwarded to
-              `transformers.pipeline(task="depth-estimation", model=...)`.
+            - Any HTTPS URL is downloaded to the cache directory and loaded as a
+              checkpoint.
 
         return_depth_image: When `True`, the result includes a 16-bit grayscale
             `open3d.geometry.Image` (dtype `uint16`) mapping `[min_depth, max_depth]`
@@ -38,7 +38,7 @@ class DepthEstimationCommand(Command[DepthEstimationResult]):
     """
 
     image_input: str | bytes
-    model_backend: str = DEFAULT_DEPTH_MODEL_BACKEND
+    model_backend: str = DEFAULT_DEPTH_MODEL_URL
     return_depth_image: bool = False
     return_point_cloud: bool = False
     return_mesh: bool = False

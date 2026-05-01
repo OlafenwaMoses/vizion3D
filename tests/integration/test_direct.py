@@ -23,7 +23,7 @@ from PIL import Image as PILImage
 pytest.importorskip("open3d", reason="open3d required — run: uv python pin 3.12 && uv sync")
 
 from vizion3d.lifting import DepthEstimation, DepthEstimationCommand  # noqa: E402
-from vizion3d.lifting.defaults import DEFAULT_DEPTH_MODEL_BACKEND  # noqa: E402
+from vizion3d.lifting.defaults import DEFAULT_DEPTH_MODEL_URL  # noqa: E402
 from vizion3d.lifting.handlers import DepthEstimationHandler  # noqa: E402
 from vizion3d.lifting.utils import create_ply_binary  # noqa: E402
 
@@ -119,7 +119,7 @@ def _run_group(
 def test_direct_default_model(indoor_image_bytes, tmp_path, timing_collector):
     """5 inferences with the default model backend (downloads to vizion3d cache)."""
     _run_group(
-        model_backend=DEFAULT_DEPTH_MODEL_BACKEND,
+        model_backend=DEFAULT_DEPTH_MODEL_URL,
         indoor_image_bytes=indoor_image_bytes,
         run_dir=tmp_path / "direct_default",
         entry_point="Direct",

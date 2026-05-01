@@ -7,7 +7,7 @@ import numpy as np
 from PIL import Image
 
 from vizion3d.lifting import DepthEstimation, DepthEstimationCommand
-from vizion3d.lifting.defaults import DEFAULT_DEPTH_MODEL_BACKEND
+from vizion3d.lifting.defaults import DEFAULT_DEPTH_MODEL_URL
 from vizion3d.lifting.utils import create_mesh_ply_binary, create_ply_binary
 from vizion3d.proto import lifting_pb2, lifting_pb2_grpc
 
@@ -36,7 +36,7 @@ class LiftingServiceServicer(lifting_pb2_grpc.LiftingServiceServicer):
     def RunDepthEstimation(self, request, context):
         cmd = DepthEstimationCommand(
             image_input=request.image_bytes,
-            model_backend=request.model_backend or DEFAULT_DEPTH_MODEL_BACKEND,
+            model_backend=request.model_backend or DEFAULT_DEPTH_MODEL_URL,
             return_depth_image=request.return_depth_image,
             return_point_cloud=request.return_point_cloud,
             return_mesh=request.return_mesh,
