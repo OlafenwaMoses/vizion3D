@@ -7,7 +7,6 @@ from PIL import Image
 
 from vizion3d.lifting import defaults
 from vizion3d.lifting.defaults import (
-    DEFAULT_DEPTH_MODEL_BACKEND,
     DEFAULT_DEPTH_MODEL_FILENAME,
     DEFAULT_DEPTH_MODEL_URL,
     resolve_model_backend,
@@ -22,7 +21,7 @@ def test_default_backend_downloads_to_cache(tmp_path, monkeypatch):
 
     monkeypatch.setattr(defaults, "download_model", fake_download)
 
-    resolved = resolve_model_backend(DEFAULT_DEPTH_MODEL_BACKEND, cache_dir=tmp_path)
+    resolved = resolve_model_backend(DEFAULT_DEPTH_MODEL_URL, cache_dir=tmp_path)
 
     assert resolved == str(tmp_path / DEFAULT_DEPTH_MODEL_FILENAME)
 
@@ -51,16 +50,6 @@ def test_loaded_checkpoint_cache_is_shared_across_handler_instances():
         DepthEstimationHandler._depth_anything_models = original_cache
 
 
-def test_pth_path_is_detected_as_checkpoint():
-    assert DepthEstimationHandler._is_depth_anything_checkpoint("/models/custom.pth") is True
-    assert DepthEstimationHandler._is_depth_anything_checkpoint("/models/custom.pt") is True
-
-
-def test_non_pth_path_is_not_detected_as_checkpoint():
-    assert DepthEstimationHandler._is_depth_anything_checkpoint("depth-anything/model-hf") is False
-    assert DepthEstimationHandler._is_depth_anything_checkpoint("/models/model.bin") is False
-
-
 def test_local_pth_model_backend_runs_checkpoint_path(tmp_path):
     img = Image.new("RGB", (50, 50), color="blue")
     buf = io.BytesIO()
@@ -74,9 +63,7 @@ def test_local_pth_model_backend_runs_checkpoint_path(tmp_path):
         DepthEstimationHandler,
         "_run_depth_anything_checkpoint",
         return_value=fake_depth,
-    ) as mock_checkpoint, patch.object(
-        DepthEstimationHandler, "_load_hugging_face_pipeline"
-    ) as mock_hf:
+    ) as mock_checkpoint:
         handler = DepthEstimationHandler()
         from vizion3d.lifting.commands import DepthEstimationCommand
 
@@ -85,7 +72,6 @@ def test_local_pth_model_backend_runs_checkpoint_path(tmp_path):
         )
 
     mock_checkpoint.assert_called_once()
-    mock_hf.assert_not_called()
     assert result.backend_used == fake_model_path
     assert result.min_depth == pytest.approx(2.5)
     assert result.max_depth == pytest.approx(2.5)
