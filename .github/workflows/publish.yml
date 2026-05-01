@@ -40,6 +40,15 @@ jobs:
         with:
           python-version: "3.12"
 
+      # ── Validate version format: must be major.minor.patch ───────────────
+      - name: Validate version format
+        run: |
+          if ! echo "${{ github.event.inputs.version }}" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::Version '${{ github.event.inputs.version }}' is not valid. Must be major.minor.patch (e.g. 1.2.0)"
+            exit 1
+          fi
+          echo "Version format is valid: ${{ github.event.inputs.version }}"
+
       # ── Sanity check: reject if the requested version is not strictly
       #    greater than the version currently live on PyPI. ──────────────────
       - name: Sanity-check version against PyPI
