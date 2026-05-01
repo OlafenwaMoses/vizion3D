@@ -55,9 +55,11 @@ jobs:
         run: |
           python3 - <<'PYEOF'
           import sys, json, urllib.request
-          from packaging.version import Version
 
           new_version = "${{ github.event.inputs.version }}"
+
+          def parse(v):
+              return tuple(int(x) for x in v.split("."))
 
           try:
               with urllib.request.urlopen("https://pypi.org/pypi/vizion3d/json") as r:
@@ -65,7 +67,7 @@ jobs:
               current_version = data["info"]["version"]
               print(f"Current PyPI version : {current_version}")
               print(f"Requested version    : {new_version}")
-              if Version(new_version) <= Version(current_version):
+              if parse(new_version) <= parse(current_version):
                   print(f"::error::Version {new_version} must be strictly greater than the current PyPI version {current_version}")
                   sys.exit(1)
               print("Version check passed.")
