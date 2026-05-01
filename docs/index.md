@@ -19,7 +19,7 @@ Requires **Python 3.12** (Open3D constraint).
 PyTorch is **not bundled** in the base install — choose the extra that matches your hardware (see [Hardware acceleration](#hardware-acceleration) below). For most users the `cpu` extra is the right default; it installs the standard PyTorch wheel which covers CPU, NVIDIA CUDA, and Apple Silicon MPS automatically.
 
 **pip**
-```bash
+```bash 
 pip install "vizion3d[cpu]"
 ```
 
