@@ -4,7 +4,10 @@ package vizion3d.lifting;
 
 service LiftingService {
   rpc RunDepthEstimation (DepthEstimationRequest) returns (DepthEstimationResponse);
+  rpc RunStereoDepth (StereoDepthRequest) returns (StereoDepthResponse);
 }
+
+// ── Depth Estimation ──────────────────────────────────────────────────────────
 
 message DepthEstimationAdvanceConfig {
   optional float fx = 1;
@@ -37,4 +40,39 @@ message DepthEstimationResponse {
   bytes depth_image = 5;
   bytes point_cloud_ply = 6;
   bytes mesh_ply = 7;
+}
+
+// ── Stereo Depth ──────────────────────────────────────────────────────────────
+
+message StereoDepthAdvancedConfig {
+  optional float focal_length = 1;
+  optional float cx = 2;
+  optional float cy = 3;
+  optional float baseline = 4;
+  optional float doffs = 5;
+  optional float z_far = 6;
+  optional float conf_threshold = 7;
+  optional float occ_threshold = 8;
+  optional float scale_factor = 9;
+}
+
+message StereoDepthRequest {
+  bytes left_image_bytes = 1;
+  bytes right_image_bytes = 2;
+  string model_backend = 3;
+  bool return_depth_image = 4;
+  bool return_point_cloud = 5;
+  bool return_mesh = 6;
+  optional StereoDepthAdvancedConfig advanced_config = 7;
+}
+
+message StereoDepthResponse {
+  repeated FloatRow depth_map = 1;
+  repeated FloatRow disparity_map = 2;
+  float min_depth = 3;
+  float max_depth = 4;
+  string backend_used = 5;
+  bytes depth_image = 6;
+  bytes point_cloud_ply = 7;
+  bytes mesh_ply = 8;
 }

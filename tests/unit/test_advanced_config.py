@@ -16,6 +16,7 @@ from vizion3d.lifting.models import DepthEstimationAdvanceConfig
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
+
 @pytest.fixture
 def fake_depth():
     rng = np.random.default_rng(0)
@@ -23,6 +24,7 @@ def fake_depth():
 
 
 # ── DepthEstimationAdvanceConfig ──────────────────────────────────────────────
+
 
 class TestDepthEstimationAdvanceConfig:
     def test_defaults_match_primesense(self):
@@ -45,8 +47,12 @@ class TestDepthEstimationAdvanceConfig:
 
     def test_all_fields_overridable(self):
         cfg = DepthEstimationAdvanceConfig(
-            fx=700.0, fy=701.0, cx=320.0, cy=241.0,
-            depth_scale=500.0, depth_trunc=5.0,
+            fx=700.0,
+            fy=701.0,
+            cx=320.0,
+            cy=241.0,
+            depth_scale=500.0,
+            depth_trunc=5.0,
         )
         assert cfg.fx == 700.0
         assert cfg.fy == 701.0
@@ -61,6 +67,7 @@ class TestDepthEstimationAdvanceConfig:
 
 
 # ── DepthEstimationCommand advanced_config field ──────────────────────────────
+
 
 class TestDepthEstimationCommandAdvancedConfig:
     def test_default_advanced_config_is_correct_type(self):
@@ -91,6 +98,7 @@ class TestDepthEstimationCommandAdvancedConfig:
 
 
 # ── _depth_array_to_rgbd_depth ────────────────────────────────────────────────
+
 
 class TestDepthArrayToRgbdDepth:
     def test_output_dtype_is_uint16(self):
@@ -132,6 +140,7 @@ class TestDepthArrayToRgbdDepth:
 
 
 # ── Handler propagates config to Open3D ──────────────────────────────────────
+
 
 class TestHandlerPropagatesAdvancedConfig:
     def test_custom_intrinsics_forwarded_to_pinhole(self, dummy_image_bytes, fake_depth):
@@ -209,15 +218,15 @@ class TestHandlerPropagatesAdvancedConfig:
 
 # ── REST API propagates config form fields ────────────────────────────────────
 
+
 class TestRestAdvancedConfig:
     @pytest.fixture(autouse=True)
     def _setup(self):
-        pytest.importorskip(
-            "open3d", reason="open3d required — run: uv python pin 3.12 && uv sync"
-        )
+        pytest.importorskip("open3d", reason="open3d required — run: uv python pin 3.12 && uv sync")
         from fastapi.testclient import TestClient
 
         from vizion3d.server.rest.app import app
+
         self.client = TestClient(app)
 
     def _post(self, extra_data=None):
@@ -235,7 +244,7 @@ class TestRestAdvancedConfig:
         result.point_cloud = None
         result.mesh = None
 
-        with patch("vizion3d.server.rest.app.DepthEstimation") as mock_cls:
+        with patch("vizion3d.server.rest.depth_estimation.DepthEstimation") as mock_cls:
             mock_cls.return_value.run.return_value = result
             self.client.post(
                 "/lifting/depth-estimation",
@@ -283,14 +292,14 @@ class TestRestAdvancedConfig:
 
 # ── gRPC server propagates config proto fields ────────────────────────────────
 
+
 class TestGrpcAdvancedConfig:
     @pytest.fixture(autouse=True)
     def _setup(self):
-        pytest.importorskip(
-            "open3d", reason="open3d required — run: uv python pin 3.12 && uv sync"
-        )
+        pytest.importorskip("open3d", reason="open3d required — run: uv python pin 3.12 && uv sync")
         from vizion3d.proto import lifting_pb2
         from vizion3d.server.grpc.server import LiftingServiceServicer
+
         self.pb2 = lifting_pb2
         self.servicer = LiftingServiceServicer()
         self.context = MagicMock()
@@ -327,8 +336,12 @@ class TestGrpcAdvancedConfig:
 
     def test_full_config_forwarded(self):
         proto_cfg = self.pb2.DepthEstimationAdvanceConfig(
-            fx=615.0, fy=616.0, cx=320.0, cy=241.0,
-            depth_scale=500.0, depth_trunc=3.0,
+            fx=615.0,
+            fy=616.0,
+            cx=320.0,
+            cy=241.0,
+            depth_scale=500.0,
+            depth_trunc=3.0,
         )
         cmd = self._run(proto_cfg)
         assert cmd.advanced_config.fx == pytest.approx(615.0)
@@ -342,8 +355,8 @@ class TestGrpcAdvancedConfig:
         proto_cfg = self.pb2.DepthEstimationAdvanceConfig(fx=700.0, depth_trunc=2.0)
         cmd = self._run(proto_cfg)
         assert cmd.advanced_config.fx == pytest.approx(700.0)
-        assert cmd.advanced_config.fy == 525.0       # default
-        assert cmd.advanced_config.cx == 319.5       # default
+        assert cmd.advanced_config.fy == 525.0  # default
+        assert cmd.advanced_config.cx == 319.5  # default
         assert cmd.advanced_config.depth_scale == 1000.0  # default
         assert cmd.advanced_config.depth_trunc == pytest.approx(2.0)
 

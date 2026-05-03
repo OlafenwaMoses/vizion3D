@@ -1,119 +1,142 @@
-import base64
-import io
+"""
+FastAPI REST server for the vizion3d Lifting service.
 
-import numpy as np
+Registers feature routers under the ``/lifting`` prefix:
+- ``POST /lifting/depth-estimation`` — monocular depth from a single image.
+- ``POST /lifting/stereo-depth``     — metric depth from a rectified stereo pair.
+
+Start with::
+
+    uv run vizion3d-serve-rest
+
+    # Enable only depth estimation:
+    uv run vizion3d-serve-rest --depth_estimation
+
+    # Enable only stereo depth with a pre-loaded local model:
+    uv run vizion3d-serve-rest --stereo_depth --stereo_model /path/to/stereo-depth-s2m2-L.pth
+
+    # Both features, custom model paths (pre-loaded at startup):
+    uv run vizion3d-serve-rest \\
+        --depth_model /path/to/depth_anything_v2_vitb.pth \\
+        --stereo_model /path/to/stereo-depth-s2m2-L.pth
+"""
+
+import argparse
+
 import uvicorn
-from fastapi import APIRouter, FastAPI, File, Form, Request, UploadFile
+from fastapi import APIRouter, FastAPI, Request
 from fastapi.responses import JSONResponse
-from PIL import Image
 
-from vizion3d.lifting import DepthEstimation, DepthEstimationCommand
-from vizion3d.lifting.defaults import DEFAULT_DEPTH_MODEL_URL
-from vizion3d.lifting.models import DepthEstimationAdvanceConfig
-from vizion3d.lifting.utils import create_mesh_ply_binary, create_ply_binary
+from vizion3d.server.rest import depth_estimation, stereo_depth
 
-_MAX_BODY = 500 * 1024 * 1024   # 500 MB
-
-app = FastAPI(title="vizion3d REST API", version="1.0.0")
+_MAX_BODY = 500 * 1024 * 1024  # 500 MB
 
 
-@app.middleware("http")
-async def limit_body_size(request: Request, call_next):
-    content_length = request.headers.get("content-length")
-    if content_length and int(content_length) > _MAX_BODY:
-        return JSONResponse(
-            {"detail": "Request body exceeds the 500 MB limit."},
-            status_code=413,
-        )
-    return await call_next(request)
+def create_app(
+    *,
+    enable_depth_estimation: bool = True,
+    enable_stereo_depth: bool = True,
+) -> FastAPI:
+    """Build and return a FastAPI application with the selected feature routers.
 
-lifting_router = APIRouter(prefix="/lifting", tags=["Lifting (2D -> 3D)"])
+    Args:
+        enable_depth_estimation: When ``True``, register ``POST /lifting/depth-estimation``.
+        enable_stereo_depth: When ``True``, register ``POST /lifting/stereo-depth``.
+
+    Returns:
+        A fully configured :class:`FastAPI` instance ready to pass to ``uvicorn.run``.
+    """
+    _app = FastAPI(title="vizion3d REST API", version="1.0.0")
+
+    @_app.middleware("http")
+    async def limit_body_size(request: Request, call_next):
+        """Reject requests whose Content-Length header exceeds 500 MB."""
+        content_length = request.headers.get("content-length")
+        if content_length and int(content_length) > _MAX_BODY:
+            return JSONResponse(
+                {"detail": "Request body exceeds the 500 MB limit."},
+                status_code=413,
+            )
+        return await call_next(request)
+
+    lifting_router = APIRouter(prefix="/lifting", tags=["Lifting (2D -> 3D)"])
+    if enable_depth_estimation:
+        lifting_router.include_router(depth_estimation.router)
+    if enable_stereo_depth:
+        lifting_router.include_router(stereo_depth.router)
+    _app.include_router(lifting_router)
+
+    return _app
 
 
-def _o3d_depth_image_to_png_bytes(o3d_image) -> bytes:
-    arr = np.asarray(o3d_image)
-    buf = io.BytesIO()
-    Image.fromarray(arr).save(buf, format="PNG")
-    return buf.getvalue()
+# Module-level app with all features enabled — used by tests and direct imports.
+app = create_app()
 
 
-def _o3d_point_cloud_to_ply_bytes(pcd) -> bytes:
-    points = np.asarray(pcd.points).astype(np.float32)
-    colors = (np.asarray(pcd.colors) * 255).astype(np.uint8)
-    return create_ply_binary(points, colors)
+def _parse_args(argv=None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        prog="vizion3d-serve-rest",
+        description="Start the vizion3d REST API server.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+feature/model flags (omit all four to enable all features):
+  --depth_estimation    enable POST /lifting/depth-estimation
+  --stereo_depth        enable POST /lifting/stereo-depth
 
-
-def _o3d_mesh_to_ply_bytes(mesh) -> bytes:
-    points = np.asarray(mesh.vertices).astype(np.float32)
-    colors = (np.asarray(mesh.vertex_colors) * 255).astype(np.uint8)
-    faces = np.asarray(mesh.triangles).astype(np.int32)
-    return create_mesh_ply_binary(points, colors, faces)
-
-
-@lifting_router.post("/depth-estimation")
-async def depth_estimation(
-    image: UploadFile = File(...),
-    model_backend: str = Form(DEFAULT_DEPTH_MODEL_URL),
-    return_depth_image: bool = Form(False),
-    return_point_cloud: bool = Form(False),
-    return_mesh: bool = Form(False),
-    fx: float | None = Form(None),
-    fy: float | None = Form(None),
-    cx: float | None = Form(None),
-    cy: float | None = Form(None),
-    depth_scale: float | None = Form(None),
-    depth_trunc: float | None = Form(None),
-):
-    image_bytes = await image.read()
-    base_cfg = DepthEstimationAdvanceConfig()
-    advanced_config = DepthEstimationAdvanceConfig(
-        fx=fx if fx is not None else base_cfg.fx,
-        fy=fy if fy is not None else base_cfg.fy,
-        cx=cx if cx is not None else base_cfg.cx,
-        cy=cy if cy is not None else base_cfg.cy,
-        depth_scale=depth_scale if depth_scale is not None else base_cfg.depth_scale,
-        depth_trunc=depth_trunc if depth_trunc is not None else base_cfg.depth_trunc,
+model pre-loading (also enables that feature; downloads if a URL is given):
+  --depth_model PATH    use PATH as the default depth-estimation model;
+                        the model is loaded into memory at startup
+  --stereo_model PATH   use PATH as the default stereo-depth model;
+                        the model is loaded into memory at startup
+""",
     )
-    cmd = DepthEstimationCommand(
-        image_input=image_bytes,
-        model_backend=model_backend,
-        return_depth_image=return_depth_image,
-        return_point_cloud=return_point_cloud,
-        return_mesh=return_mesh,
-        advanced_config=advanced_config,
+    parser.add_argument(
+        "--host", default="0.0.0.0", metavar="HOST", help="Bind host (default: 0.0.0.0)"
     )
-
-    result = DepthEstimation().run(cmd)
-
-    def _b64(data: bytes | None) -> str | None:
-        return base64.b64encode(data).decode() if data is not None else None
-
-    return {
-        "depth_map": result.depth_map,
-        "min_depth": result.min_depth,
-        "max_depth": result.max_depth,
-        "backend_used": result.backend_used,
-        "depth_image": _b64(
-            _o3d_depth_image_to_png_bytes(result.depth_image)
-            if result.depth_image is not None
-            else None
-        ),
-        "point_cloud_ply": _b64(
-            _o3d_point_cloud_to_ply_bytes(result.point_cloud)
-            if result.point_cloud is not None
-            else None
-        ),
-        "mesh_ply": _b64(
-            _o3d_mesh_to_ply_bytes(result.mesh) if result.mesh is not None else None
-        ),
-    }
+    parser.add_argument(
+        "--port", type=int, default=8000, metavar="PORT", help="Bind port (default: 8000)"
+    )
+    parser.add_argument(
+        "--depth_model",
+        default=None,
+        metavar="PATH",
+        help="Local path or URL for the depth-estimation checkpoint",
+    )
+    parser.add_argument(
+        "--stereo_model",
+        default=None,
+        metavar="PATH",
+        help="Local path or URL for the stereo-depth checkpoint",
+    )
+    parser.add_argument(
+        "--depth_estimation", action="store_true", help="Enable only the depth-estimation endpoint"
+    )
+    parser.add_argument(
+        "--stereo_depth", action="store_true", help="Enable only the stereo-depth endpoint"
+    )
+    return parser.parse_args(argv)
 
 
-app.include_router(lifting_router)
+def run(argv=None) -> None:
+    """Parse CLI arguments, configure models, and start the uvicorn server."""
+    args = _parse_args(argv)
 
+    any_selector = (
+        args.depth_estimation or args.stereo_depth or args.depth_model or args.stereo_model
+    )
+    enable_depth = args.depth_estimation or bool(args.depth_model) or not any_selector
+    enable_stereo = args.stereo_depth or bool(args.stereo_model) or not any_selector
 
-def run():
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    if args.depth_model and enable_depth:
+        depth_estimation.configure_model(args.depth_model)
+    if args.stereo_model and enable_stereo:
+        stereo_depth.configure_model(args.stereo_model)
+
+    _app = create_app(
+        enable_depth_estimation=enable_depth,
+        enable_stereo_depth=enable_stereo,
+    )
+    uvicorn.run(_app, host=args.host, port=args.port)
 
 
 if __name__ == "__main__":

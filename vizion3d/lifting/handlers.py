@@ -51,8 +51,7 @@ class DepthEstimationHandler(CommandHandler[DepthEstimationCommand, DepthEstimat
                 import open3d as o3d
             except ImportError:
                 raise ImportError(
-                    "open3d is required for depth image output. "
-                    "Pin to Python 3.12 and run: uv sync"
+                    "open3d is required for depth image output. Pin to Python 3.12 and run: uv sync"
                 )
             range_depth = max_depth - min_depth
             normalized = (
@@ -154,14 +153,22 @@ class DepthEstimationHandler(CommandHandler[DepthEstimationCommand, DepthEstimat
             o3d.utility.DoubleVector([radius, radius * 2.0]),
         )
 
+    @classmethod
+    def preload(cls, model_path: str) -> None:
+        """Resolve *model_path* (downloading if a URL) and load it into the class-level cache.
+
+        Call this at server startup to ensure the model is in memory before the first request.
+        """
+        from .defaults import resolve_model_backend
+
+        resolved = resolve_model_backend(model_path)
+        cls()._load_depth_anything_checkpoint(resolved)
+
     @staticmethod
     def _torch_device(torch_module) -> str:
         if torch_module.cuda.is_available():
             return "cuda"
-        if (
-            hasattr(torch_module.backends, "mps")
-            and torch_module.backends.mps.is_available()
-        ):
+        if hasattr(torch_module.backends, "mps") and torch_module.backends.mps.is_available():
             return "mps"
         return "cpu"
 
@@ -178,8 +185,7 @@ class DepthEstimationHandler(CommandHandler[DepthEstimationCommand, DepthEstimat
                 from transformers import DepthAnythingForDepthEstimation, DPTImageProcessor
             except ImportError as exc:
                 raise ImportError(
-                    "Depth Anything V2 checkpoints require torch and transformers. "
-                    "Run: uv sync"
+                    "Depth Anything V2 checkpoints require torch and transformers. Run: uv sync"
                 ) from exc
 
             model = DepthAnythingForDepthEstimation(depth_anything_v2_config(model_path))
@@ -215,10 +221,10 @@ class DepthEstimationHandler(CommandHandler[DepthEstimationCommand, DepthEstimat
         inputs = {name: value.to(device, non_blocking=True) for name, value in inputs.items()}
 
         device_type = device if isinstance(device, str) else device.type
-        if device_type == 'cuda':
-            autocast_ctx = torch.amp.autocast(device_type='cuda', dtype=torch.float16, enabled=True)
-        elif device_type == 'mps':
-            autocast_ctx = torch.amp.autocast(device_type='mps', dtype=torch.float16, enabled=True)
+        if device_type == "cuda":
+            autocast_ctx = torch.amp.autocast(device_type="cuda", dtype=torch.float16, enabled=True)
+        elif device_type == "mps":
+            autocast_ctx = torch.amp.autocast(device_type="mps", dtype=torch.float16, enabled=True)
         else:
             autocast_ctx = contextlib.nullcontext()
 
@@ -232,7 +238,7 @@ class DepthEstimationHandler(CommandHandler[DepthEstimationCommand, DepthEstimat
         depth = post_processed[0]["predicted_depth"]
         result = depth.detach().cpu().numpy().astype(np.float32)
 
-        if device_type == 'mps':
+        if device_type == "mps":
             torch.mps.empty_cache()
 
         return result

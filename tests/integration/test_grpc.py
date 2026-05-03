@@ -33,6 +33,7 @@ WARM_LIMIT = float(os.environ.get("VIZION3D_TEST_WARM_LIMIT", "1.0"))
 # Helpers
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 def _save_outputs(response, run_dir: Path, run: int) -> None:
     run_dir.mkdir(parents=True, exist_ok=True)
     prefix = str(run_dir / f"run_{run:02d}")
@@ -69,9 +70,9 @@ def _run_group(
             return_point_cloud=True,
         )
 
-        t0       = time.perf_counter()
+        t0 = time.perf_counter()
         response = grpc_client_stub.RunDepthEstimation(request)
-        elapsed  = time.perf_counter() - t0
+        elapsed = time.perf_counter() - t0
         timings.append(elapsed)
 
         _save_outputs(response, run_dir, run)
@@ -79,25 +80,24 @@ def _run_group(
 
         # ── per-run assertions ────────────────────────────────────────────────
         assert len(response.depth_map) > 0, "depth_map rows are missing"
-        assert response.max_depth > response.min_depth, \
+        assert response.max_depth > response.min_depth, (
             "Depth variation expected for a real indoor scene"
-        assert len(response.depth_image) > 0, \
-            "depth_image was requested but empty in response"
-        assert len(response.point_cloud_ply) > 0, \
+        )
+        assert len(response.depth_image) > 0, "depth_image was requested but empty in response"
+        assert len(response.point_cloud_ply) > 0, (
             "point_cloud_ply was requested but empty in response"
+        )
 
         # Validate file-format magic bytes
-        assert response.depth_image[:4] == b"\x89PNG", \
-            "depth_image is not a valid PNG"
-        assert response.point_cloud_ply.startswith(b"ply\n"), \
-            "point_cloud_ply is not a valid PLY"
+        assert response.depth_image[:4] == b"\x89PNG", "depth_image is not a valid PNG"
+        assert response.point_cloud_ply.startswith(b"ply\n"), "point_cloud_ply is not a valid PLY"
 
-    assert len(DepthEstimationHandler._depth_anything_models) > 0, \
+    assert len(DepthEstimationHandler._depth_anything_models) > 0, (
         "Model should be cached in memory after first gRPC inference"
+    )
 
     assert timings[0] < COLD_LIMIT, (
-        f"[gRPC / {scenario}] "
-        f"Cold load took {timings[0]:.3f}s — expected < {COLD_LIMIT}s"
+        f"[gRPC / {scenario}] Cold load took {timings[0]:.3f}s — expected < {COLD_LIMIT}s"
     )
     for i, t in enumerate(timings[1:], start=2):
         assert t < WARM_LIMIT, (
@@ -112,9 +112,8 @@ def _run_group(
 # Tests
 # ──────────────────────────────────────────────────────────────────────────────
 
-def test_grpc_default_model(
-    indoor_image_bytes, grpc_client_stub, tmp_path, timing_collector
-):
+
+def test_grpc_default_model(indoor_image_bytes, grpc_client_stub, tmp_path, timing_collector):
     """5 RPC calls with the default model backend."""
     _run_group(
         model_backend=DEFAULT_DEPTH_MODEL_URL,
@@ -151,7 +150,10 @@ def test_grpc_advanced_config_custom_intrinsics_accepted(
         model_backend=local_model_path,
         return_point_cloud=True,
         advanced_config=lifting_pb2.DepthEstimationAdvanceConfig(
-            fx=615.0, fy=615.0, cx=320.0, cy=240.0,
+            fx=615.0,
+            fy=615.0,
+            cx=320.0,
+            cy=240.0,
         ),
     )
     response = grpc_client_stub.RunDepthEstimation(request)

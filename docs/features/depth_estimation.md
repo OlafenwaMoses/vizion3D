@@ -32,7 +32,7 @@ Set `VIZION3D_MODEL_CACHE` in your environment to change the default cache direc
 | `return_depth_image` | `bool` | No | `False` | If `True`, the result includes a 16-bit grayscale Open3D Image of the depth map. |
 | `return_point_cloud` | `bool` | No | `False` | If `True`, the result includes an Open3D PointCloud unprojected from the RGB-D image. |
 | `return_mesh` | `bool` | No | `False` | If `True`, the result includes an Open3D TriangleMesh reconstructed from the point cloud via ball-pivoting. |
-| `advanced_config` | `DepthEstimationAdvanceConfig` | No | PrimeSense defaults | Camera intrinsics and depth range settings. See [Advanced config](#10-advanced-config-camera-intrinsics--depth-range) below. |
+| `advanced_config` | `DepthEstimationAdvanceConfig` | No | PrimeSense defaults | Camera intrinsics and depth range settings. See [Advanced config](#10-advanced-config-camera-intrinsics-depth-range) below. |
 
 ---
 
@@ -230,7 +230,7 @@ print(f"Backend: {result.backend_used}")
 
 ## 8. REST API
 
-Start the server:
+Start the server with all REST features enabled:
 
 **pip / Poetry**
 ```bash
@@ -240,6 +240,31 @@ vizion3d-serve-rest
 **uv**
 ```bash
 uv run vizion3d-serve-rest
+```
+
+To preload a depth-estimation checkpoint into memory at startup, pass
+`--depth_model`. This also enables the depth-estimation endpoint. If this flag
+is omitted, the default vizion3D release model is downloaded on first inference
+and cached under `~/.cache/vizion3d/models/`.
+
+```bash
+uv run vizion3d-serve-rest --depth_model /models/depth_anything_v2_vitb.pth
+```
+
+The REST server can also expose only selected features. If none of
+`--depth_estimation`, `--stereo_depth`, `--depth_model`, or `--stereo_model` is
+provided, all features are enabled. If any of those flags is provided, only the
+selected features are enabled. A model path flag selects and preloads its
+feature:
+
+```bash
+# Only POST /lifting/depth-estimation
+uv run vizion3d-serve-rest --depth_estimation
+
+# Only depth estimation, with the model loaded before the first request
+uv run vizion3d-serve-rest \
+  --depth_estimation \
+  --depth_model /models/depth_anything_v2_vitb.pth
 ```
 
 Send a request with `multipart/form-data`:

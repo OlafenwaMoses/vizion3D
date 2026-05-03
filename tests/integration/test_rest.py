@@ -36,6 +36,7 @@ client = TestClient(app, raise_server_exceptions=True)
 # Helpers
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 def _save_outputs(data: dict, run_dir: Path, run: int) -> None:
     run_dir.mkdir(parents=True, exist_ok=True)
     prefix = str(run_dir / f"run_{run:02d}")
@@ -46,9 +47,7 @@ def _save_outputs(data: dict, run_dir: Path, run: int) -> None:
         Path(prefix + "_depth.png").write_bytes(base64.b64decode(data["depth_image"]))
 
     if data.get("point_cloud_ply"):
-        Path(prefix + "_point_cloud.ply").write_bytes(
-            base64.b64decode(data["point_cloud_ply"])
-        )
+        Path(prefix + "_point_cloud.ply").write_bytes(base64.b64decode(data["point_cloud_ply"]))
 
 
 def _run_group(
@@ -86,12 +85,15 @@ def _run_group(
 
         # ── per-run assertions ────────────────────────────────────────────────
         assert isinstance(data["depth_map"], list) and len(data["depth_map"]) > 0
-        assert data["max_depth"] > data["min_depth"], \
+        assert data["max_depth"] > data["min_depth"], (
             "Depth variation expected for a real indoor scene"
-        assert data["depth_image"] is not None, \
+        )
+        assert data["depth_image"] is not None, (
             "depth_image was requested but missing from response"
-        assert data["point_cloud_ply"] is not None, \
+        )
+        assert data["point_cloud_ply"] is not None, (
             "point_cloud_ply was requested but missing from response"
+        )
 
         # Binary fields should decode to valid PLY / PNG
         png_bytes = base64.b64decode(data["depth_image"])
@@ -100,12 +102,12 @@ def _run_group(
         ply_bytes = base64.b64decode(data["point_cloud_ply"])
         assert ply_bytes.startswith(b"ply\n"), "point_cloud_ply is not a valid PLY"
 
-    assert len(DepthEstimationHandler._depth_anything_models) > 0, \
+    assert len(DepthEstimationHandler._depth_anything_models) > 0, (
         "Model should be cached in memory after first REST inference"
+    )
 
     assert timings[0] < COLD_LIMIT, (
-        f"[REST / {scenario}] "
-        f"Cold load took {timings[0]:.3f}s — expected < {COLD_LIMIT}s"
+        f"[REST / {scenario}] Cold load took {timings[0]:.3f}s — expected < {COLD_LIMIT}s"
     )
     for i, t in enumerate(timings[1:], start=2):
         assert t < WARM_LIMIT, (
@@ -120,6 +122,7 @@ def _run_group(
 # Tests
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 def test_rest_default_model(indoor_image_bytes, tmp_path, timing_collector):
     """5 POST requests with the default model backend."""
     _run_group(
@@ -131,9 +134,7 @@ def test_rest_default_model(indoor_image_bytes, tmp_path, timing_collector):
     )
 
 
-def test_rest_local_model(
-    indoor_image_bytes, local_model_path, tmp_path, timing_collector
-):
+def test_rest_local_model(indoor_image_bytes, local_model_path, tmp_path, timing_collector):
     """5 POST requests with an explicit local .pth path."""
     _run_group(
         model_backend=local_model_path,
@@ -144,11 +145,10 @@ def test_rest_local_model(
     )
 
 
-def test_rest_advanced_config_custom_intrinsics_accepted(
-    indoor_image_bytes, local_model_path
-):
+def test_rest_advanced_config_custom_intrinsics_accepted(indoor_image_bytes, local_model_path):
     """Custom fx/fy/cx/cy form fields are accepted and produce a valid response."""
     from vizion3d.lifting.handlers import DepthEstimationHandler
+
     DepthEstimationHandler._depth_anything_models.clear()
 
     response = client.post(
@@ -170,11 +170,10 @@ def test_rest_advanced_config_custom_intrinsics_accepted(
     assert base64.b64decode(data["point_cloud_ply"]).startswith(b"ply\n")
 
 
-def test_rest_advanced_config_custom_depth_trunc_accepted(
-    indoor_image_bytes, local_model_path
-):
+def test_rest_advanced_config_custom_depth_trunc_accepted(indoor_image_bytes, local_model_path):
     """Custom depth_trunc form field is accepted without errors."""
     from vizion3d.lifting.handlers import DepthEstimationHandler
+
     DepthEstimationHandler._depth_anything_models.clear()
 
     response = client.post(
