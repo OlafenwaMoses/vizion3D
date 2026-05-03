@@ -20,6 +20,14 @@ Input contract for the depth estimation task. All inference parameters are decla
 
 ---
 
+## DepthEstimationAdvanceConfig
+
+Camera intrinsics and depth range settings. Pass an instance of this model as `advanced_config` on `DepthEstimationCommand` to override the PrimeSense defaults used for point cloud unprojection.
+
+::: vizion3d.lifting.models.DepthEstimationAdvanceConfig
+
+---
+
 ## DepthEstimationResult
 
 Output contract returned by `DepthEstimation.run()`. All fields are always present; optional geometry fields are `None` when the corresponding `return_*` flag was not set.

@@ -138,3 +138,42 @@ def test_grpc_local_model(
         grpc_client_stub=grpc_client_stub,
         timing_collector=timing_collector,
     )
+
+
+def test_grpc_advanced_config_custom_intrinsics_accepted(
+    indoor_image_bytes, local_model_path, grpc_client_stub
+):
+    """Custom fx/fy/cx/cy in the proto config are accepted and produce a valid response."""
+    DepthEstimationHandler._depth_anything_models.clear()
+
+    request = lifting_pb2.DepthEstimationRequest(
+        image_bytes=indoor_image_bytes,
+        model_backend=local_model_path,
+        return_point_cloud=True,
+        advanced_config=lifting_pb2.DepthEstimationAdvanceConfig(
+            fx=615.0, fy=615.0, cx=320.0, cy=240.0,
+        ),
+    )
+    response = grpc_client_stub.RunDepthEstimation(request)
+
+    assert len(response.depth_map) > 0
+    assert response.max_depth >= response.min_depth
+    assert len(response.point_cloud_ply) > 0
+    assert response.point_cloud_ply.startswith(b"ply\n")
+
+
+def test_grpc_advanced_config_partial_override_accepted(
+    indoor_image_bytes, local_model_path, grpc_client_stub
+):
+    """A proto config with only depth_trunc set is accepted without errors."""
+    DepthEstimationHandler._depth_anything_models.clear()
+
+    request = lifting_pb2.DepthEstimationRequest(
+        image_bytes=indoor_image_bytes,
+        model_backend=local_model_path,
+        advanced_config=lifting_pb2.DepthEstimationAdvanceConfig(depth_trunc=5.0),
+    )
+    response = grpc_client_stub.RunDepthEstimation(request)
+
+    assert len(response.depth_map) > 0
+    assert response.max_depth >= response.min_depth

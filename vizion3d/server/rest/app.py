@@ -9,6 +9,7 @@ from PIL import Image
 
 from vizion3d.lifting import DepthEstimation, DepthEstimationCommand
 from vizion3d.lifting.defaults import DEFAULT_DEPTH_MODEL_URL
+from vizion3d.lifting.models import DepthEstimationAdvanceConfig
 from vizion3d.lifting.utils import create_mesh_ply_binary, create_ply_binary
 
 _MAX_BODY = 500 * 1024 * 1024   # 500 MB
@@ -56,14 +57,30 @@ async def depth_estimation(
     return_depth_image: bool = Form(False),
     return_point_cloud: bool = Form(False),
     return_mesh: bool = Form(False),
+    fx: float | None = Form(None),
+    fy: float | None = Form(None),
+    cx: float | None = Form(None),
+    cy: float | None = Form(None),
+    depth_scale: float | None = Form(None),
+    depth_trunc: float | None = Form(None),
 ):
     image_bytes = await image.read()
+    base_cfg = DepthEstimationAdvanceConfig()
+    advanced_config = DepthEstimationAdvanceConfig(
+        fx=fx if fx is not None else base_cfg.fx,
+        fy=fy if fy is not None else base_cfg.fy,
+        cx=cx if cx is not None else base_cfg.cx,
+        cy=cy if cy is not None else base_cfg.cy,
+        depth_scale=depth_scale if depth_scale is not None else base_cfg.depth_scale,
+        depth_trunc=depth_trunc if depth_trunc is not None else base_cfg.depth_trunc,
+    )
     cmd = DepthEstimationCommand(
         image_input=image_bytes,
         model_backend=model_backend,
         return_depth_image=return_depth_image,
         return_point_cloud=return_point_cloud,
         return_mesh=return_mesh,
+        advanced_config=advanced_config,
     )
 
     result = DepthEstimation().run(cmd)

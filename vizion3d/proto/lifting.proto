@@ -6,6 +6,15 @@ service LiftingService {
   rpc RunDepthEstimation (DepthEstimationRequest) returns (DepthEstimationResponse);
 }
 
+message DepthEstimationAdvanceConfig {
+  optional float fx = 1;
+  optional float fy = 2;
+  optional float cx = 3;
+  optional float cy = 4;
+  optional float depth_scale = 5;
+  optional float depth_trunc = 6;
+}
+
 message DepthEstimationRequest {
   bytes image_bytes = 1;
   string model_backend = 2;
@@ -13,6 +22,7 @@ message DepthEstimationRequest {
   bool return_point_cloud = 4;
   bool return_mesh = 5;
   optional string local_model_path = 6;
+  optional DepthEstimationAdvanceConfig advanced_config = 7;
 }
 
 message FloatRow {

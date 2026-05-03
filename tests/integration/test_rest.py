@@ -142,3 +142,48 @@ def test_rest_local_model(
         scenario="Local model",
         timing_collector=timing_collector,
     )
+
+
+def test_rest_advanced_config_custom_intrinsics_accepted(
+    indoor_image_bytes, local_model_path
+):
+    """Custom fx/fy/cx/cy form fields are accepted and produce a valid response."""
+    from vizion3d.lifting.handlers import DepthEstimationHandler
+    DepthEstimationHandler._depth_anything_models.clear()
+
+    response = client.post(
+        "/lifting/depth-estimation",
+        files={"image": ("scene.jpg", indoor_image_bytes, "image/jpeg")},
+        data={
+            "model_backend": local_model_path,
+            "return_point_cloud": "true",
+            "fx": "615.0",
+            "fy": "615.0",
+            "cx": "320.0",
+            "cy": "240.0",
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data["depth_map"], list) and len(data["depth_map"]) > 0
+    assert data["point_cloud_ply"] is not None
+    assert base64.b64decode(data["point_cloud_ply"]).startswith(b"ply\n")
+
+
+def test_rest_advanced_config_custom_depth_trunc_accepted(
+    indoor_image_bytes, local_model_path
+):
+    """Custom depth_trunc form field is accepted without errors."""
+    from vizion3d.lifting.handlers import DepthEstimationHandler
+    DepthEstimationHandler._depth_anything_models.clear()
+
+    response = client.post(
+        "/lifting/depth-estimation",
+        files={"image": ("scene.jpg", indoor_image_bytes, "image/jpeg")},
+        data={
+            "model_backend": local_model_path,
+            "depth_trunc": "5.0",
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["max_depth"] >= response.json()["min_depth"]

@@ -8,6 +8,7 @@ from PIL import Image
 
 from vizion3d.lifting import DepthEstimation, DepthEstimationCommand
 from vizion3d.lifting.defaults import DEFAULT_DEPTH_MODEL_URL
+from vizion3d.lifting.models import DepthEstimationAdvanceConfig
 from vizion3d.lifting.utils import create_mesh_ply_binary, create_ply_binary
 from vizion3d.proto import lifting_pb2, lifting_pb2_grpc
 
@@ -34,12 +35,32 @@ def _o3d_mesh_to_ply_bytes(mesh) -> bytes:
 
 class LiftingServiceServicer(lifting_pb2_grpc.LiftingServiceServicer):
     def RunDepthEstimation(self, request, context):
+        base_cfg = DepthEstimationAdvanceConfig()
+        if request.HasField("advanced_config"):
+            proto_cfg = request.advanced_config
+            base_cfg = DepthEstimationAdvanceConfig(
+                fx=proto_cfg.fx if proto_cfg.HasField("fx") else base_cfg.fx,
+                fy=proto_cfg.fy if proto_cfg.HasField("fy") else base_cfg.fy,
+                cx=proto_cfg.cx if proto_cfg.HasField("cx") else base_cfg.cx,
+                cy=proto_cfg.cy if proto_cfg.HasField("cy") else base_cfg.cy,
+                depth_scale=(
+                    proto_cfg.depth_scale
+                    if proto_cfg.HasField("depth_scale")
+                    else base_cfg.depth_scale
+                ),
+                depth_trunc=(
+                    proto_cfg.depth_trunc
+                    if proto_cfg.HasField("depth_trunc")
+                    else base_cfg.depth_trunc
+                ),
+            )
         cmd = DepthEstimationCommand(
             image_input=request.image_bytes,
             model_backend=request.model_backend or DEFAULT_DEPTH_MODEL_URL,
             return_depth_image=request.return_depth_image,
             return_point_cloud=request.return_point_cloud,
             return_mesh=request.return_mesh,
+            advanced_config=base_cfg,
         )
         result = DepthEstimation().run(cmd)
 

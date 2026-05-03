@@ -22,7 +22,11 @@ from PIL import Image as PILImage
 
 pytest.importorskip("open3d", reason="open3d required — run: uv python pin 3.12 && uv sync")
 
-from vizion3d.lifting import DepthEstimation, DepthEstimationCommand  # noqa: E402
+from vizion3d.lifting import (  # noqa: E402
+    DepthEstimation,
+    DepthEstimationAdvanceConfig,
+    DepthEstimationCommand,
+)
 from vizion3d.lifting.defaults import DEFAULT_DEPTH_MODEL_URL  # noqa: E402
 from vizion3d.lifting.handlers import DepthEstimationHandler  # noqa: E402
 from vizion3d.lifting.utils import create_ply_binary  # noqa: E402
@@ -139,4 +143,54 @@ def test_direct_local_model(
         entry_point="Direct",
         scenario="Local model",
         timing_collector=timing_collector,
+    )
+
+
+def test_direct_advanced_config_custom_intrinsics(indoor_image_bytes, local_model_path):
+    """Custom fx/fy/cx/cy produce a valid point cloud without errors."""
+    DepthEstimationHandler._depth_anything_models.clear()
+    result = DepthEstimation().run(
+        DepthEstimationCommand(
+            image_input=indoor_image_bytes,
+            model_backend=local_model_path,
+            return_point_cloud=True,
+            advanced_config=DepthEstimationAdvanceConfig(
+                fx=615.0, fy=615.0, cx=320.0, cy=240.0
+            ),
+        )
+    )
+    assert isinstance(result.depth_map, list) and len(result.depth_map) > 0
+    assert result.point_cloud is not None
+    assert result.point_cloud.has_points()
+
+
+def test_direct_advanced_config_tight_depth_trunc_yields_fewer_points(
+    indoor_image_bytes, local_model_path
+):
+    """A very tight depth_trunc maps depth values to near-zero → fewer/no points."""
+    DepthEstimationHandler._depth_anything_models.clear()
+
+    default_result = DepthEstimation().run(
+        DepthEstimationCommand(
+            image_input=indoor_image_bytes,
+            model_backend=local_model_path,
+            return_point_cloud=True,
+        )
+    )
+
+    tight_result = DepthEstimation().run(
+        DepthEstimationCommand(
+            image_input=indoor_image_bytes,
+            model_backend=local_model_path,
+            return_point_cloud=True,
+            advanced_config=DepthEstimationAdvanceConfig(depth_trunc=0.0001),
+        )
+    )
+
+    import numpy as np
+    default_pts = len(np.asarray(default_result.point_cloud.points))
+    tight_pts = len(np.asarray(tight_result.point_cloud.points))
+    assert tight_pts < default_pts, (
+        f"Expected tight depth_trunc to yield fewer points "
+        f"({tight_pts} vs default {default_pts})"
     )
