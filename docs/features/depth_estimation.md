@@ -9,6 +9,15 @@ Depth estimation predicts the per-pixel distance from the camera for every pixel
 
 ## Model backends
 
+Default checkpoint download:
+[depth_anything_v2_vitb.pth](https://github.com/OlafenwaMoses/vizion3D/releases/download/essentials-v1/depth_anything_v2_vitb.pth)
+
+```bash
+curl -L \
+  https://github.com/OlafenwaMoses/vizion3D/releases/download/essentials-v1/depth_anything_v2_vitb.pth \
+  -o depth_anything_v2_vitb.pth
+```
+
 | Value | What happens |
 |---|---|
 | *(default)* | Downloads the vizion3D release checkpoint (`depth_anything_v2_vitb.pth`) to `~/.cache/vizion3d/models/` on first use, then loads it directly |
@@ -220,7 +229,10 @@ print(f"Backend: {result.backend_used}")
 # Remote checkpoint URL (downloaded and cached on first use)
 cmd = DepthEstimationCommand(
     image_input="scene.png",
-    model_backend="https://example.com/weights/depth_anything_v2_vits.pth",
+    model_backend=(
+        "https://github.com/OlafenwaMoses/vizion3D/releases/download/"
+        "essentials-v1/depth_anything_v2_vitb.pth"
+    ),
 )
 result = DepthEstimation().run(cmd)
 print(f"Backend: {result.backend_used}")

@@ -15,6 +15,15 @@ vizion3d uses [S2M2](https://github.com/Dongyeop-Yoo/S2M2) (Stereo Matching Mode
 
 ## Model backends
 
+Default checkpoint download:
+[stereo-depth-s2m2-L.pth](https://github.com/OlafenwaMoses/vizion3D/releases/download/essentials-v1/stereo-depth-s2m2-L.pth)
+
+```bash
+curl -L \
+  https://github.com/OlafenwaMoses/vizion3D/releases/download/essentials-v1/stereo-depth-s2m2-L.pth \
+  -o stereo-depth-s2m2-L.pth
+```
+
 | Value | What happens |
 |---|---|
 | *(default)* | Downloads the vizion3D release checkpoint (`stereo-depth-s2m2-L.pth`, the L variant) to `~/.cache/vizion3d/models/` on first use, then loads it |
