@@ -1,9 +1,9 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from vizion3d.core.cqrs import Command
 
 from .defaults import DEFAULT_DEPTH_MODEL_URL
-from .models import DepthEstimationResult
+from .models import DepthEstimationAdvanceConfig, DepthEstimationResult
 
 
 @dataclass
@@ -30,11 +30,15 @@ class DepthEstimationCommand(Command[DepthEstimationResult]):
             to the full 0–65535 range. Requires Open3D (Python 3.12).
         return_point_cloud: When `True`, the result includes an
             `open3d.geometry.PointCloud` unprojected from the RGB-D image using
-            PrimeSense default camera intrinsics. Point coordinates are in metres.
+            the camera intrinsics in `advanced_config`. Point coordinates are in metres.
             Requires Open3D (Python 3.12).
         return_mesh: When `True`, the result includes an
             `open3d.geometry.TriangleMesh` reconstructed from the point cloud via
             ball-pivoting. Includes vertex colours. Requires Open3D (Python 3.12).
+        advanced_config: Camera intrinsics and depth range settings. Override any
+            field to customise — e.g.
+            ``advanced_config=DepthEstimationAdvanceConfig(fx=615.0, fy=615.0)``.
+            Unspecified fields keep their defaults (PrimeSense values).
     """
 
     image_input: str | bytes
@@ -42,3 +46,6 @@ class DepthEstimationCommand(Command[DepthEstimationResult]):
     return_depth_image: bool = False
     return_point_cloud: bool = False
     return_mesh: bool = False
+    advanced_config: DepthEstimationAdvanceConfig = field(
+        default_factory=DepthEstimationAdvanceConfig
+    )

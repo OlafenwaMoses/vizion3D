@@ -6,6 +6,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
+
+permissions:
+  contents: read
         description: "Release version (e.g. 1.2.0)"
         required: true
         type: string

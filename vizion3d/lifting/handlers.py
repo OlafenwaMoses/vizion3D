@@ -1,3 +1,4 @@
+import contextlib
 import io
 import threading
 
@@ -11,8 +12,10 @@ from .defaults import resolve_model_backend
 from .depth_anything import convert_depth_anything_v2_state_dict, depth_anything_v2_config
 from .models import DepthEstimationResult
 
-RGBD_DEPTH_SCALE = 1000.0   # default: uint16 millimetres (RealSense / Kinect / PrimeSense)
-RGBD_DEPTH_TRUNC = 10.0    # default: discard points beyond 10 m
+# Legacy module-level constants kept for reference — actual values come from
+# DepthEstimationAdvanceConfig on each command.
+_DEFAULT_DEPTH_SCALE = 1000.0
+_DEFAULT_DEPTH_TRUNC = 10.0
 OPEN3D_CAMERA_TO_IMAGE_VIEW_TRANSFORM = np.array(
     [
         [1.0, 0.0, 0.0, 0.0],
@@ -40,7 +43,7 @@ class DepthEstimationHandler(CommandHandler[DepthEstimationCommand, DepthEstimat
 
         min_depth = float(np.min(depth_array))
         max_depth = float(np.max(depth_array))
-        depth_map = depth_array.tolist()
+        depth_map = depth_array.astype(np.float32).tolist()
 
         depth_image = None
         if command.return_depth_image:
@@ -48,8 +51,7 @@ class DepthEstimationHandler(CommandHandler[DepthEstimationCommand, DepthEstimat
                 import open3d as o3d
             except ImportError:
                 raise ImportError(
-                    "open3d is required for depth image output. "
-                    "Pin to Python 3.12 and run: uv sync"
+                    "open3d is required for depth image output. Pin to Python 3.12 and run: uv sync"
                 )
             range_depth = max_depth - min_depth
             normalized = (
@@ -71,21 +73,22 @@ class DepthEstimationHandler(CommandHandler[DepthEstimationCommand, DepthEstimat
                     "Pin to Python 3.12 and run: uv sync"
                 )
 
+            cfg = command.advanced_config
             color_o3d = o3d.geometry.Image(np.asarray(image).copy())
             depth_o3d = o3d.geometry.Image(
-                self._depth_array_to_rgbd_depth(depth_array)
+                self._depth_array_to_rgbd_depth(depth_array, cfg.depth_scale, cfg.depth_trunc)
             )
             rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(
                 color_o3d,
                 depth_o3d,
-                depth_scale=RGBD_DEPTH_SCALE,
-                depth_trunc=RGBD_DEPTH_TRUNC,
+                depth_scale=cfg.depth_scale,
+                depth_trunc=cfg.depth_trunc,
                 convert_rgb_to_intensity=False,
             )
             generated_point_cloud = o3d.geometry.PointCloud.create_from_rgbd_image(
                 rgbd_image,
                 o3d.camera.PinholeCameraIntrinsic(
-                    o3d.camera.PinholeCameraIntrinsicParameters.PrimeSenseDefault
+                    image.width, image.height, cfg.fx, cfg.fy, cfg.cx, cfg.cy
                 ),
             )
             self._orient_point_cloud_like_image(generated_point_cloud)
@@ -113,7 +116,9 @@ class DepthEstimationHandler(CommandHandler[DepthEstimationCommand, DepthEstimat
         return point_cloud
 
     @staticmethod
-    def _depth_array_to_rgbd_depth(depth_array: np.ndarray) -> np.ndarray:
+    def _depth_array_to_rgbd_depth(
+        depth_array: np.ndarray, depth_scale: float, depth_trunc: float
+    ) -> np.ndarray:
         min_depth = float(np.nanmin(depth_array))
         max_depth = float(np.nanmax(depth_array))
         depth_range = max_depth - min_depth
@@ -121,7 +126,7 @@ class DepthEstimationHandler(CommandHandler[DepthEstimationCommand, DepthEstimat
             return np.zeros_like(depth_array, dtype=np.uint16)
 
         normalized = (depth_array - min_depth) / depth_range
-        scaled_depth = normalized * RGBD_DEPTH_TRUNC * RGBD_DEPTH_SCALE
+        scaled_depth = normalized * depth_trunc * depth_scale
         return np.clip(scaled_depth, 0, np.iinfo(np.uint16).max).astype(np.uint16)
 
     @staticmethod
@@ -148,14 +153,22 @@ class DepthEstimationHandler(CommandHandler[DepthEstimationCommand, DepthEstimat
             o3d.utility.DoubleVector([radius, radius * 2.0]),
         )
 
+    @classmethod
+    def preload(cls, model_path: str) -> None:
+        """Resolve *model_path* (downloading if a URL) and load it into the class-level cache.
+
+        Call this at server startup to ensure the model is in memory before the first request.
+        """
+        from .defaults import resolve_model_backend
+
+        resolved = resolve_model_backend(model_path)
+        cls()._load_depth_anything_checkpoint(resolved)
+
     @staticmethod
     def _torch_device(torch_module) -> str:
         if torch_module.cuda.is_available():
             return "cuda"
-        if (
-            hasattr(torch_module.backends, "mps")
-            and torch_module.backends.mps.is_available()
-        ):
+        if hasattr(torch_module.backends, "mps") and torch_module.backends.mps.is_available():
             return "mps"
         return "cpu"
 
@@ -172,8 +185,7 @@ class DepthEstimationHandler(CommandHandler[DepthEstimationCommand, DepthEstimat
                 from transformers import DepthAnythingForDepthEstimation, DPTImageProcessor
             except ImportError as exc:
                 raise ImportError(
-                    "Depth Anything V2 checkpoints require torch and transformers. "
-                    "Run: uv sync"
+                    "Depth Anything V2 checkpoints require torch and transformers. Run: uv sync"
                 ) from exc
 
             model = DepthAnythingForDepthEstimation(depth_anything_v2_config(model_path))
@@ -200,16 +212,23 @@ class DepthEstimationHandler(CommandHandler[DepthEstimationCommand, DepthEstimat
                 image_std=[0.229, 0.224, 0.225],
             )
 
-            self._depth_anything_models[model_path] = (model, processor, torch)
+            self._depth_anything_models[model_path] = (model, processor, torch, device)
             return self._depth_anything_models[model_path]
 
     def _run_depth_anything_checkpoint(self, model_path: str, image: Image.Image) -> np.ndarray:
-        model, processor, torch = self._load_depth_anything_checkpoint(model_path)
-        device = next(model.parameters()).device
+        model, processor, torch, device = self._load_depth_anything_checkpoint(model_path)
         inputs = processor(images=image, return_tensors="pt")
-        inputs = {name: value.to(device) for name, value in inputs.items()}
+        inputs = {name: value.to(device, non_blocking=True) for name, value in inputs.items()}
 
-        with torch.inference_mode():
+        device_type = device if isinstance(device, str) else device.type
+        if device_type == "cuda":
+            autocast_ctx = torch.amp.autocast(device_type="cuda", dtype=torch.float16, enabled=True)
+        elif device_type == "mps":
+            autocast_ctx = torch.amp.autocast(device_type="mps", dtype=torch.float16, enabled=True)
+        else:
+            autocast_ctx = contextlib.nullcontext()
+
+        with torch.inference_mode(), autocast_ctx:
             outputs = model(**inputs)
 
         post_processed = processor.post_process_depth_estimation(
@@ -217,5 +236,9 @@ class DepthEstimationHandler(CommandHandler[DepthEstimationCommand, DepthEstimat
             target_sizes=[(image.height, image.width)],
         )
         depth = post_processed[0]["predicted_depth"]
+        result = depth.detach().cpu().numpy().astype(np.float32)
 
-        return depth.detach().cpu().numpy().astype(float)
+        if device_type == "mps":
+            torch.mps.empty_cache()
+
+        return result

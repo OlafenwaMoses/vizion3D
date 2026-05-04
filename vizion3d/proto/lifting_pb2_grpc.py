@@ -39,12 +39,23 @@ class LiftingServiceStub(object):
                 request_serializer=vizion3d_dot_proto_dot_lifting__pb2.DepthEstimationRequest.SerializeToString,
                 response_deserializer=vizion3d_dot_proto_dot_lifting__pb2.DepthEstimationResponse.FromString,
                 _registered_method=True)
+        self.RunStereoDepth = channel.unary_unary(
+                '/vizion3d.lifting.LiftingService/RunStereoDepth',
+                request_serializer=vizion3d_dot_proto_dot_lifting__pb2.StereoDepthRequest.SerializeToString,
+                response_deserializer=vizion3d_dot_proto_dot_lifting__pb2.StereoDepthResponse.FromString,
+                _registered_method=True)
 
 
 class LiftingServiceServicer(object):
     """Missing associated documentation comment in .proto file."""
 
     def RunDepthEstimation(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def RunStereoDepth(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -57,6 +68,11 @@ def add_LiftingServiceServicer_to_server(servicer, server):
                     servicer.RunDepthEstimation,
                     request_deserializer=vizion3d_dot_proto_dot_lifting__pb2.DepthEstimationRequest.FromString,
                     response_serializer=vizion3d_dot_proto_dot_lifting__pb2.DepthEstimationResponse.SerializeToString,
+            ),
+            'RunStereoDepth': grpc.unary_unary_rpc_method_handler(
+                    servicer.RunStereoDepth,
+                    request_deserializer=vizion3d_dot_proto_dot_lifting__pb2.StereoDepthRequest.FromString,
+                    response_serializer=vizion3d_dot_proto_dot_lifting__pb2.StereoDepthResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -86,6 +102,33 @@ class LiftingService(object):
             '/vizion3d.lifting.LiftingService/RunDepthEstimation',
             vizion3d_dot_proto_dot_lifting__pb2.DepthEstimationRequest.SerializeToString,
             vizion3d_dot_proto_dot_lifting__pb2.DepthEstimationResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def RunStereoDepth(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/vizion3d.lifting.LiftingService/RunStereoDepth',
+            vizion3d_dot_proto_dot_lifting__pb2.StereoDepthRequest.SerializeToString,
+            vizion3d_dot_proto_dot_lifting__pb2.StereoDepthResponse.FromString,
             options,
             channel_credentials,
             insecure,

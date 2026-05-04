@@ -2,7 +2,7 @@ from vizion3d.core.container import command_bus, register_command_handler
 
 from .commands import DepthEstimationCommand
 from .handlers import DepthEstimationHandler
-from .models import DepthEstimationResult
+from .models import DepthEstimationAdvanceConfig, DepthEstimationResult
 
 # Register handlers on import or application startup
 register_command_handler(DepthEstimationCommand, DepthEstimationHandler)
@@ -17,9 +17,21 @@ class DepthEstimation:
 
     Example:
         ```python
-        cmd = DepthEstimationCommand(image_input=b"...", return_mesh=True)
-        task = DepthEstimation()
-        result = task.run(cmd)
+        from vizion3d.lifting import (
+            DepthEstimation,
+            DepthEstimationAdvanceConfig,
+            DepthEstimationCommand,
+        )
+
+        cmd = DepthEstimationCommand(
+            image_input=b"...",
+            return_point_cloud=True,
+            return_mesh=True,
+            advanced_config=DepthEstimationAdvanceConfig(
+                fx=615.0, fy=615.0, cx=320.0, cy=240.0, depth_trunc=5.0
+            ),
+        )
+        result = DepthEstimation().run(cmd)
         ```
     """
 
@@ -38,4 +50,9 @@ class DepthEstimation:
         return command_bus.dispatch(command)
 
 
-__all__ = ["DepthEstimation", "DepthEstimationCommand", "DepthEstimationResult"]
+__all__ = [
+    "DepthEstimation",
+    "DepthEstimationAdvanceConfig",
+    "DepthEstimationCommand",
+    "DepthEstimationResult",
+]

@@ -38,14 +38,8 @@ def test_loaded_checkpoint_cache_is_shared_across_handler_instances():
     try:
         DepthEstimationHandler._depth_anything_models = {cache_key: cached_model}
 
-        assert (
-            DepthEstimationHandler()._load_depth_anything_checkpoint(cache_key)
-            is cached_model
-        )
-        assert (
-            DepthEstimationHandler()._load_depth_anything_checkpoint(cache_key)
-            is cached_model
-        )
+        assert DepthEstimationHandler()._load_depth_anything_checkpoint(cache_key) is cached_model
+        assert DepthEstimationHandler()._load_depth_anything_checkpoint(cache_key) is cached_model
     finally:
         DepthEstimationHandler._depth_anything_models = original_cache
 

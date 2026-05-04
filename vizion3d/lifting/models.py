@@ -4,6 +4,37 @@ from open3d.geometry import TriangleMesh as O3dTriangleMesh  # type: ignore[impo
 from pydantic import BaseModel, ConfigDict
 
 
+class DepthEstimationAdvanceConfig(BaseModel):
+    """
+    Camera intrinsics and depth range settings for depth estimation.
+
+    All fields are optional overrides — unspecified fields retain their defaults,
+    which match the Open3D PrimeSense preset (640×480 RGB-D sensor).
+
+    Attributes:
+        fx: Horizontal focal length in pixels. Controls the horizontal field of
+            view: a larger value means a narrower FOV and more perspective compression.
+        fy: Vertical focal length in pixels. Usually equal to ``fx`` for square
+            pixels; differs on sensors with non-square pixels.
+        cx: Principal point x — the pixel column of the optical axis, typically
+            near the horizontal image centre.
+        cy: Principal point y — the pixel row of the optical axis, typically near
+            the vertical image centre.
+        depth_scale: Divisor applied to raw uint16 depth values to convert them to
+            metres. ``1000`` means the raw values are in millimetres (the standard
+            for RealSense, Kinect, and PrimeSense sensors).
+        depth_trunc: Maximum depth in metres. Points beyond this distance are
+            discarded from the point cloud and mesh.
+    """
+
+    fx: float = 525.0
+    fy: float = 525.0
+    cx: float = 319.5
+    cy: float = 239.5
+    depth_scale: float = 1000.0
+    depth_trunc: float = 10.0
+
+
 class DepthEstimationResult(BaseModel):
     """
     Result payload returned after a depth estimation inference task.

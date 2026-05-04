@@ -3,14 +3,17 @@ Integration-test configuration.
 
 Provides
 --------
-indoor_image_bytes   — real 640×480 indoor-scene JPEG for inference
-local_model_path     — explicit .pth path in a session-scoped tmp dir
-                       (symlinked from the default cache if available,
-                        otherwise freshly downloaded; cleaned up by pytest)
-grpc_client_stub     — live LiftingService stub backed by an in-process
-                       gRPC server running in a background thread-pool
-timing_collector     — session-wide store that every test appends to
-pytest_terminal_summary — pretty inference-timing report printed at the end
+indoor_image_bytes       — real 640×480 indoor-scene JPEG for inference
+stereo_image_pair        — real calibrated Middlebury Teddy stereo pair
+stereo_advanced_config   — Teddy calibration mapped to StereoDepthAdvancedConfig
+local_model_path         — explicit .pth path for the depth-estimation model
+                           (symlinked from cache if available, else downloaded)
+local_stereo_model_path  — explicit .pth path for the stereo-depth model
+                           (symlinked from cache if available, else downloaded)
+grpc_client_stub         — live LiftingService stub backed by an in-process
+                           gRPC server running in a background thread-pool
+timing_collector         — session-wide store that every test appends to
+pytest_terminal_summary  — pretty inference-timing report printed at the end
 """
 
 from __future__ import annotations
@@ -36,6 +39,7 @@ ASSETS_DIR = Path(__file__).parent.parent / "assets"
 # Timing collector
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 @dataclass
 class TimingRecord:
     entry_point: str
@@ -57,9 +61,7 @@ class InferenceTimingCollector:
         duration: float,
         output_dir: str = "",
     ) -> None:
-        self.records.append(
-            TimingRecord(entry_point, scenario, run, duration, output_dir)
-        )
+        self.records.append(TimingRecord(entry_point, scenario, run, duration, output_dir))
 
 
 # Module-level singleton — pytest_terminal_summary reads from it after the session
@@ -72,8 +74,9 @@ def timing_collector() -> InferenceTimingCollector:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Image fixture
+# Image fixtures
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 @pytest.fixture(scope="session")
 def indoor_image_bytes() -> bytes:
@@ -86,9 +89,65 @@ def indoor_image_bytes() -> bytes:
     return path.read_bytes()
 
 
+def _parse_middlebury_calibration(path: Path) -> dict[str, float]:
+    values: dict[str, float] = {}
+    for line in path.read_text().splitlines():
+        if not line or "=" not in line:
+            continue
+        key, raw_value = line.split("=", 1)
+        if key == "cam0":
+            rows = raw_value.strip()[1:-1].split(";")
+            matrix = [[float(v) for v in row.split()] for row in rows]
+            values["focal_length"] = matrix[0][0]
+            values["cx"] = matrix[0][2]
+            values["cy"] = matrix[1][2]
+        elif key in {"doffs", "baseline", "width", "height", "ndisp"}:
+            values[key] = float(raw_value)
+    return values
+
+
+@pytest.fixture(scope="session")
+def stereo_image_pair() -> tuple[bytes, bytes]:
+    """Return a real calibrated ``(left_bytes, right_bytes)`` stereo pair.
+
+    The fixture uses Middlebury's quarter-resolution Teddy sample. Each image is
+    roughly 300 KB, and the paired ``calib.txt`` provides the camera intrinsics,
+    disparity offset, and baseline used by ``stereo_advanced_config``.
+    """
+    left = ASSETS_DIR / "stereo" / "teddy" / "left.png"
+    right = ASSETS_DIR / "stereo" / "teddy" / "right.png"
+    assert left.exists(), f"Stereo left image not found: {left}"
+    assert right.exists(), f"Stereo right image not found: {right}"
+    return left.read_bytes(), right.read_bytes()
+
+
+@pytest.fixture(scope="session")
+def stereo_calibration_values() -> dict[str, float]:
+    calib = ASSETS_DIR / "stereo" / "teddy" / "calib.txt"
+    assert calib.exists(), f"Stereo calibration not found: {calib}"
+    return _parse_middlebury_calibration(calib)
+
+
+@pytest.fixture(scope="session")
+def stereo_advanced_config(stereo_calibration_values):
+    from vizion3d.stereo import StereoDepthAdvancedConfig
+
+    return StereoDepthAdvancedConfig(
+        focal_length=stereo_calibration_values["focal_length"],
+        cx=stereo_calibration_values["cx"],
+        cy=stereo_calibration_values["cy"],
+        baseline=stereo_calibration_values["baseline"],
+        doffs=stereo_calibration_values["doffs"],
+        z_far=10.0,
+        conf_threshold=0.0,
+        occ_threshold=0.0,
+    )
+
+
 # ──────────────────────────────────────────────────────────────────────────────
-# Local-model-path fixture
+# Local-model-path fixtures
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 @pytest.fixture(scope="session")
 def local_model_path(tmp_path_factory) -> str:
@@ -117,14 +176,40 @@ def local_model_path(tmp_path_factory) -> str:
     return str(dest)
 
 
+@pytest.fixture(scope="session")
+def local_stereo_model_path(tmp_path_factory) -> str:
+    """
+    Provide a local .pth path for the stereo-depth model, cleaned up after
+    the session.  If the model is already in the default vizion3d cache we
+    symlink it (free); otherwise we download it fresh.
+    """
+    from vizion3d.lifting.defaults import default_model_cache_dir, download_model
+    from vizion3d.stereo.defaults import (
+        DEFAULT_STEREO_MODEL_FILENAME,
+        DEFAULT_STEREO_MODEL_URL,
+    )
+
+    default_cache = default_model_cache_dir() / DEFAULT_STEREO_MODEL_FILENAME
+    tmp_dir = tmp_path_factory.mktemp("local_stereo_model")
+    dest = tmp_dir / DEFAULT_STEREO_MODEL_FILENAME
+
+    if default_cache.exists():
+        dest.symlink_to(default_cache.resolve())
+    else:
+        download_model(DEFAULT_STEREO_MODEL_URL, cache_dir=tmp_dir)
+
+    assert dest.exists() or dest.is_symlink(), f"Stereo model not found at {dest}"
+    return str(dest)
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # gRPC server + client stub fixture
 # ──────────────────────────────────────────────────────────────────────────────
 
-_MAX_MSG = 500 * 1024 * 1024   # match server cap
+_MAX_MSG = 500 * 1024 * 1024  # match server cap
 
 _GRPC_OPTIONS = [
-    ("grpc.max_send_message_length",    _MAX_MSG),
+    ("grpc.max_send_message_length", _MAX_MSG),
     ("grpc.max_receive_message_length", _MAX_MSG),
 ]
 
@@ -142,10 +227,8 @@ def grpc_client_stub():
         futures.ThreadPoolExecutor(max_workers=4),
         options=_GRPC_OPTIONS,
     )
-    lifting_pb2_grpc.add_LiftingServiceServicer_to_server(
-        LiftingServiceServicer(), server
-    )
-    port = server.add_insecure_port("[::]:0")   # 0 → OS picks a free port
+    lifting_pb2_grpc.add_LiftingServiceServicer_to_server(LiftingServiceServicer(), server)
+    port = server.add_insecure_port("[::]:0")  # 0 → OS picks a free port
     server.start()
 
     channel = grpc.insecure_channel(f"localhost:{port}", options=_GRPC_OPTIONS)
@@ -161,17 +244,18 @@ def grpc_client_stub():
 # Terminal report  (hook)
 # ──────────────────────────────────────────────────────────────────────────────
 
-def pytest_terminal_summary(terminalreporter, exitstatus, config):   # noqa: ARG001
+
+def pytest_terminal_summary(terminalreporter, exitstatus, config):  # noqa: ARG001
     records = _COLLECTOR.records
     if not records:
         return
 
-    W  = 82
-    EP = 10   # entry-point col width
-    SC = 16   # scenario col width
-    RN =  4   # run col width
-    DU = 10   # duration col width
-    ST = 20   # status col width
+    W = 82
+    EP = 10  # entry-point col width
+    SC = 16  # scenario col width
+    RN = 4  # run col width
+    DU = 10  # duration col width
+    ST = 20  # status col width
 
     def _write(line: str = "") -> None:
         terminalreporter.write_line(line)
@@ -180,14 +264,10 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):   # noqa: ARG
         _write("━" * W)
 
     def _thin() -> None:
-        _write(
-            f"  {'─'*EP}─┼─{'─'*SC}─┼─{'─'*RN}─┼─{'─'*(DU)}─┼─{'─'*ST}"
-        )
+        _write(f"  {'─' * EP}─┼─{'─' * SC}─┼─{'─' * RN}─┼─{'─' * (DU)}─┼─{'─' * ST}")
 
     def _row(ep="", sc="", run="", dur="", status="") -> None:
-        _write(
-            f"  {ep:<{EP}} │ {sc:<{SC}} │ {run:^{RN}} │ {dur:>{DU}} │ {status}"
-        )
+        _write(f"  {ep:<{EP}} │ {sc:<{SC}} │ {run:^{RN}} │ {dur:>{DU}} │ {status}")
 
     _write()
     _thick()
@@ -197,17 +277,17 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):   # noqa: ARG
     _row("Entry Point", "Scenario", "Run", "Duration", "Status")
     _thin()
 
-    def sort_key(r): return (r.entry_point, r.scenario, r.run)
-    def group_key(r): return (r.entry_point, r.scenario)
+    def sort_key(r):
+        return (r.entry_point, r.scenario, r.run)
+
+    def group_key(r):
+        return (r.entry_point, r.scenario)
 
     first_loads: list[float] = []
-    warm_times:  list[float] = []
+    warm_times: list[float] = []
 
     sorted_records = sorted(records, key=sort_key)
-    groups = [
-        (k, list(v))
-        for k, v in groupby(sorted_records, key=group_key)
-    ]
+    groups = [(k, list(v)) for k, v in groupby(sorted_records, key=group_key)]
 
     for g_idx, ((ep, sc), recs) in enumerate(groups):
         if g_idx > 0:
@@ -217,15 +297,15 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):   # noqa: ARG
         first_dur = recs[0].duration
 
         for i, rec in enumerate(recs):
-            ep_label  = ep if i == 0 else ""
-            sc_label  = sc if i == 0 else ""
-            dur_str   = f"{rec.duration:7.3f}s"
+            ep_label = ep if i == 0 else ""
+            sc_label = sc if i == 0 else ""
+            dur_str = f"{rec.duration:7.3f}s"
 
             if rec.run == 1:
                 status = "◉ COLD LOAD"
                 first_loads.append(rec.duration)
             else:
-                pct    = (1.0 - rec.duration / first_dur) * 100.0
+                pct = (1.0 - rec.duration / first_dur) * 100.0
                 status = f"⚡ {pct:4.1f}% faster"
                 warm_times.append(rec.duration)
 
@@ -238,8 +318,8 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):   # noqa: ARG
     if first_loads and warm_times:
         avg_load = sum(first_loads) / len(first_loads)
         avg_warm = sum(warm_times) / len(warm_times)
-        speedup  = avg_load / avg_warm if avg_warm > 0 else float("inf")
-        total    = len(records)
+        speedup = avg_load / avg_warm if avg_warm > 0 else float("inf")
+        total = len(records)
 
         pad = 42
         _write(f"  {'SUMMARY'}")
