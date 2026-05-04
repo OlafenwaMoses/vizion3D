@@ -24,6 +24,7 @@ plugins:
 
 nav:
   - Home: index.md
+  - Hardware Acceleration: hardware_acceleration.md
   - Features:
       - Depth Estimation: features/depth_estimation.md
       - Depth Estimation Advanced Config: features/depth_estimation_advanced_config.md
