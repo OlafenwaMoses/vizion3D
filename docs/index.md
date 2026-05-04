@@ -111,4 +111,5 @@ Each task lives in its own module under `vizion3d/<category>/` and exposes exact
 | Task | Status | Docs |
 |---|---|---|
 | Monocular depth estimation | Stable | [Depth Estimation](features/depth_estimation.md) |
+| Stereo depth estimation | Stable | [Stereo Depth](features/stereo_depth.md) |
 
