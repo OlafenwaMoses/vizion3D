@@ -32,8 +32,8 @@ from vizion3d.stereo.defaults import DEFAULT_STEREO_MODEL_URL  # noqa: E402
 from vizion3d.stereo.handlers import StereoDepthHandler  # noqa: E402
 
 N_RUNS = 5
-COLD_LIMIT = float(os.environ.get("VIZION3D_TEST_COLD_LIMIT", "60.0"))
-WARM_LIMIT = float(os.environ.get("VIZION3D_TEST_WARM_LIMIT", "5.0"))
+STEREO_COLD_LIMIT = float(os.environ.get("VIZION3D_TEST_STEREO_COLD_LIMIT", "60.0"))
+STEREO_WARM_LIMIT = float(os.environ.get("VIZION3D_TEST_STEREO_WARM_LIMIT", "5.0"))
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -102,13 +102,15 @@ def _run_group(
         "Model should be cached in StereoDepthHandler._stereo_models after first inference"
     )
 
-    assert timings[0] < COLD_LIMIT, (
-        f"[{entry_point} / {scenario}] Cold load took {timings[0]:.3f}s — expected < {COLD_LIMIT}s"
+    assert timings[0] < STEREO_COLD_LIMIT, (
+        f"[{entry_point} / {scenario}] Cold load took {timings[0]:.3f}s "
+        f"— expected < {STEREO_COLD_LIMIT}s"
     )
     for i, t in enumerate(timings[1:], start=2):
-        assert t < WARM_LIMIT, (
+        assert t < STEREO_WARM_LIMIT, (
             f"[{entry_point} / {scenario}] "
-            f"Run {i} took {t:.3f}s — expected < {WARM_LIMIT}s (model should be cached)"
+            f"Run {i} took {t:.3f}s — expected < {STEREO_WARM_LIMIT}s "
+            "(model should be cached)"
         )
 
     return timings

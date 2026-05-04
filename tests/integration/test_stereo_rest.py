@@ -23,8 +23,8 @@ from vizion3d.stereo.defaults import DEFAULT_STEREO_MODEL_URL  # noqa: E402
 from vizion3d.stereo.handlers import StereoDepthHandler  # noqa: E402
 
 N_RUNS = 5
-COLD_LIMIT = float(os.environ.get("VIZION3D_TEST_STEREO_COLD_LIMIT", "60.0"))
-WARM_LIMIT = float(os.environ.get("VIZION3D_TEST_STEREO_WARM_LIMIT", "5.0"))
+STEREO_COLD_LIMIT = float(os.environ.get("VIZION3D_TEST_STEREO_COLD_LIMIT", "60.0"))
+STEREO_WARM_LIMIT = float(os.environ.get("VIZION3D_TEST_STEREO_WARM_LIMIT", "5.0"))
 
 client = TestClient(app, raise_server_exceptions=True)
 
@@ -96,9 +96,9 @@ def _run_group(
         assert base64.b64decode(data["point_cloud_ply"]).startswith(b"ply\n")
 
     assert len(StereoDepthHandler._stereo_models) > 0
-    assert timings[0] < COLD_LIMIT
+    assert timings[0] < STEREO_COLD_LIMIT
     for elapsed in timings[1:]:
-        assert elapsed < WARM_LIMIT
+        assert elapsed < STEREO_WARM_LIMIT
 
     return timings
 

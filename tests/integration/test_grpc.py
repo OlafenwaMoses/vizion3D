@@ -25,8 +25,8 @@ from vizion3d.lifting.handlers import DepthEstimationHandler  # noqa: E402
 from vizion3d.proto import lifting_pb2  # noqa: E402
 
 N_RUNS = 5
-COLD_LIMIT = float(os.environ.get("VIZION3D_TEST_COLD_LIMIT", "10.0"))
-WARM_LIMIT = float(os.environ.get("VIZION3D_TEST_WARM_LIMIT", "1.0"))
+DEPTH_COLD_LIMIT = float(os.environ.get("VIZION3D_TEST_DEPTH_COLD_LIMIT", "10.0"))
+DEPTH_WARM_LIMIT = float(os.environ.get("VIZION3D_TEST_DEPTH_WARM_LIMIT", "1.0"))
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -96,13 +96,14 @@ def _run_group(
         "Model should be cached in memory after first gRPC inference"
     )
 
-    assert timings[0] < COLD_LIMIT, (
-        f"[gRPC / {scenario}] Cold load took {timings[0]:.3f}s — expected < {COLD_LIMIT}s"
+    assert timings[0] < DEPTH_COLD_LIMIT, (
+        f"[gRPC / {scenario}] Cold load took {timings[0]:.3f}s — expected < {DEPTH_COLD_LIMIT}s"
     )
     for i, t in enumerate(timings[1:], start=2):
-        assert t < WARM_LIMIT, (
+        assert t < DEPTH_WARM_LIMIT, (
             f"[gRPC / {scenario}] "
-            f"Run {i} took {t:.3f}s — expected < {WARM_LIMIT}s (model should be cached)"
+            f"Run {i} took {t:.3f}s — expected < {DEPTH_WARM_LIMIT}s "
+            "(model should be cached)"
         )
 
     return timings
