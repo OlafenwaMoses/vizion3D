@@ -24,10 +24,13 @@ plugins:
 
 nav:
   - Home: index.md
+  - Hardware Acceleration: hardware_acceleration.md
   - Features:
-      - Depth Estimation: features/depth_estimation.md
-      - Depth Estimation Advanced Config: features/depth_estimation_advanced_config.md
-      - Stereo Depth: features/stereo_depth.md
+      - Depth Estimation:
+          - Overview: features/depth_estimation.md
+          - Advanced Config: features/depth_estimation_advanced_config.md
+      - Stereo Depth:
+          - Overview: features/stereo_depth.md
       - Depth Estimation vs Stereo Depth: features/depth_estimation_vs_stereo_depth.md
   - API Reference:
       - Lifting (2D → 3D): api/lifting.md
