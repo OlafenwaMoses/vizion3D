@@ -96,9 +96,8 @@ addopts   = "-v"
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-extend-exclude = ["*_pb2*.py"]
+extend-exclude = ["*_pb2*.py", "stereo_sample.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
 ignore = []
-

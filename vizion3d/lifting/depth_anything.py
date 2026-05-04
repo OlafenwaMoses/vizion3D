@@ -94,11 +94,14 @@ def convert_depth_anything_v2_state_dict(state_dict: dict) -> dict:
         "pretrained.patch_embed.proj.bias",
     )
 
-    layer_count = max(
-        int(key.split(".")[2])
-        for key in state_dict
-        if key.startswith("pretrained.blocks.") and key.endswith(".norm1.weight")
-    ) + 1
+    layer_count = (
+        max(
+            int(key.split(".")[2])
+            for key in state_dict
+            if key.startswith("pretrained.blocks.") and key.endswith(".norm1.weight")
+        )
+        + 1
+    )
 
     for idx in range(layer_count):
         original = f"pretrained.blocks.{idx}"
@@ -107,12 +110,10 @@ def convert_depth_anything_v2_state_dict(state_dict: dict) -> dict:
         add(f"{target}.norm1.weight", f"{original}.norm1.weight")
         add(f"{target}.norm1.bias", f"{original}.norm1.bias")
 
-        query_weight, key_weight, value_weight = state_dict[
-            f"{original}.attn.qkv.weight"
-        ].chunk(3, dim=0)
-        query_bias, key_bias, value_bias = state_dict[f"{original}.attn.qkv.bias"].chunk(
+        query_weight, key_weight, value_weight = state_dict[f"{original}.attn.qkv.weight"].chunk(
             3, dim=0
         )
+        query_bias, key_bias, value_bias = state_dict[f"{original}.attn.qkv.bias"].chunk(3, dim=0)
 
         converted[f"{target}.attention.attention.query.weight"] = query_weight
         converted[f"{target}.attention.attention.key.weight"] = key_weight

@@ -32,6 +32,7 @@ def test_depth_estimation_returns_depth_image(dummy_image_bytes):
 
     assert isinstance(res.depth_image, o3d.geometry.Image)
     import numpy as np
+
     arr = np.asarray(res.depth_image)
     assert arr.dtype == np.uint16
     assert arr.shape == (100, 100)

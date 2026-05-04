@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 # Cancel in-progress runs for the same branch on new pushes.
 # Never cancel runs on main (every merge must be fully tested).
 concurrency:
@@ -78,11 +81,25 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.VIZION3D_MODEL_CACHE }}
-          # Key is tied to the model filename — bump if the model changes
-          key: depth-anything-v2-vitb-pth
+          # Key is tied to the model filenames — bump if either model changes
+          key: depth-anything-v2-vitb-stereo-depth-s2m2-l-pth
+
+      - name: Show integration timing limits
+        env:
+          VIZION3D_TEST_DEPTH_COLD_LIMIT: ${{ vars.VIZION3D_TEST_DEPTH_COLD_LIMIT || vars.VIZION3D_TEST_COLD_LIMIT || '10' }}
+          VIZION3D_TEST_DEPTH_WARM_LIMIT: ${{ vars.VIZION3D_TEST_DEPTH_WARM_LIMIT || vars.VIZION3D_TEST_WARM_LIMIT || '1' }}
+          VIZION3D_TEST_STEREO_COLD_LIMIT: ${{ vars.VIZION3D_TEST_STEREO_COLD_LIMIT || '60' }}
+          VIZION3D_TEST_STEREO_WARM_LIMIT: ${{ vars.VIZION3D_TEST_STEREO_WARM_LIMIT || '5' }}
+        run: |
+          echo "VIZION3D_TEST_DEPTH_COLD_LIMIT=$VIZION3D_TEST_DEPTH_COLD_LIMIT"
+          echo "VIZION3D_TEST_DEPTH_WARM_LIMIT=$VIZION3D_TEST_DEPTH_WARM_LIMIT"
+          echo "VIZION3D_TEST_STEREO_COLD_LIMIT=$VIZION3D_TEST_STEREO_COLD_LIMIT"
+          echo "VIZION3D_TEST_STEREO_WARM_LIMIT=$VIZION3D_TEST_STEREO_WARM_LIMIT"
 
       - name: Run integration tests
         env:
-          VIZION3D_TEST_COLD_LIMIT: ${{ vars.VIZION3D_TEST_COLD_LIMIT }}
-          VIZION3D_TEST_WARM_LIMIT: ${{ vars.VIZION3D_TEST_WARM_LIMIT }}
+          VIZION3D_TEST_DEPTH_COLD_LIMIT: ${{ vars.VIZION3D_TEST_DEPTH_COLD_LIMIT || vars.VIZION3D_TEST_COLD_LIMIT || '10' }}
+          VIZION3D_TEST_DEPTH_WARM_LIMIT: ${{ vars.VIZION3D_TEST_DEPTH_WARM_LIMIT || vars.VIZION3D_TEST_WARM_LIMIT || '1' }}
+          VIZION3D_TEST_STEREO_COLD_LIMIT: ${{ vars.VIZION3D_TEST_STEREO_COLD_LIMIT || '60' }}
+          VIZION3D_TEST_STEREO_WARM_LIMIT: ${{ vars.VIZION3D_TEST_STEREO_WARM_LIMIT || '5' }}
         run: uv run pytest tests/integration/ -v

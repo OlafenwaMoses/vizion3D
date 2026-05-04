@@ -22,36 +22,39 @@ from PIL import Image as PILImage
 
 pytest.importorskip("open3d", reason="open3d required — run: uv python pin 3.12 && uv sync")
 
-from vizion3d.lifting import DepthEstimation, DepthEstimationCommand  # noqa: E402
+from vizion3d.lifting import (  # noqa: E402
+    DepthEstimation,
+    DepthEstimationAdvanceConfig,
+    DepthEstimationCommand,
+)
 from vizion3d.lifting.defaults import DEFAULT_DEPTH_MODEL_URL  # noqa: E402
 from vizion3d.lifting.handlers import DepthEstimationHandler  # noqa: E402
 from vizion3d.lifting.utils import create_ply_binary  # noqa: E402
 
 N_RUNS = 5
-COLD_LIMIT = float(os.environ.get("VIZION3D_TEST_COLD_LIMIT", "10.0"))
-WARM_LIMIT = float(os.environ.get("VIZION3D_TEST_WARM_LIMIT", "1.0"))
+DEPTH_COLD_LIMIT = float(os.environ.get("VIZION3D_TEST_DEPTH_COLD_LIMIT", "10.0"))
+DEPTH_WARM_LIMIT = float(os.environ.get("VIZION3D_TEST_DEPTH_WARM_LIMIT", "1.0"))
 
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Helpers
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 def _save_outputs(result, run_dir: Path, run: int) -> None:
     run_dir.mkdir(parents=True, exist_ok=True)
     prefix = run_dir / f"run_{run:02d}"
 
-    (prefix.with_suffix(".depth_map.json")).write_text(
-        json.dumps(result.depth_map)
-    )
+    (prefix.with_suffix(".depth_map.json")).write_text(json.dumps(result.depth_map))
 
     if result.depth_image is not None:
-        arr = np.asarray(result.depth_image)          # uint16 (H, W)
+        arr = np.asarray(result.depth_image)  # uint16 (H, W)
         PILImage.fromarray(arr).save(str(prefix) + "_depth.png")
 
     if result.point_cloud is not None and result.point_cloud.has_points():
-        pts  = np.asarray(result.point_cloud.points).astype(np.float32)
+        pts = np.asarray(result.point_cloud.points).astype(np.float32)
         cols = (np.asarray(result.point_cloud.colors) * 255).astype(np.uint8)
-        ply  = create_ply_binary(pts, cols)
+        ply = create_ply_binary(pts, cols)
         (str(prefix) + "_point_cloud.ply")
         Path(str(prefix) + "_point_cloud.ply").write_bytes(ply)
 
@@ -70,7 +73,7 @@ def _run_group(
     timings: list[float] = []
 
     for run in range(1, N_RUNS + 1):
-        t0     = time.perf_counter()
+        t0 = time.perf_counter()
         result = DepthEstimation().run(
             DepthEstimationCommand(
                 image_input=indoor_image_bytes,
@@ -88,25 +91,29 @@ def _run_group(
         # ── per-run assertions ────────────────────────────────────────────────
         assert isinstance(result.depth_map, list) and len(result.depth_map) > 0
         assert all(isinstance(row, list) for row in result.depth_map)
-        assert result.max_depth > result.min_depth, \
+        assert result.max_depth > result.min_depth, (
             "Depth variation expected for a real indoor scene"
+        )
         assert result.depth_image is not None, "depth_image was requested but missing"
-        assert result.point_cloud is not None and result.point_cloud.has_points(), \
+        assert result.point_cloud is not None and result.point_cloud.has_points(), (
             "point_cloud was requested but missing or empty"
+        )
 
     # ── caching assertion: model must be in memory after run 1 ───────────────
-    assert len(DepthEstimationHandler._depth_anything_models) > 0, \
+    assert len(DepthEstimationHandler._depth_anything_models) > 0, (
         "Model should be in DepthEstimationHandler._depth_anything_models after first inference"
+    )
 
     # ── timing assertions ─────────────────────────────────────────────────────
-    assert timings[0] < COLD_LIMIT, (
-        f"[{entry_point} / {scenario}] "
-        f"Cold load took {timings[0]:.3f}s — expected < {COLD_LIMIT}s"
+    assert timings[0] < DEPTH_COLD_LIMIT, (
+        f"[{entry_point} / {scenario}] Cold load took {timings[0]:.3f}s "
+        f"— expected < {DEPTH_COLD_LIMIT}s"
     )
     for i, t in enumerate(timings[1:], start=2):
-        assert t < WARM_LIMIT, (
+        assert t < DEPTH_WARM_LIMIT, (
             f"[{entry_point} / {scenario}] "
-            f"Run {i} took {t:.3f}s — expected < {WARM_LIMIT}s (model should be cached)"
+            f"Run {i} took {t:.3f}s — expected < {DEPTH_WARM_LIMIT}s "
+            "(model should be cached)"
         )
 
     return timings
@@ -115,6 +122,7 @@ def _run_group(
 # ──────────────────────────────────────────────────────────────────────────────
 # Tests
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 def test_direct_default_model(indoor_image_bytes, tmp_path, timing_collector):
     """5 inferences with the default model backend (downloads to vizion3d cache)."""
@@ -128,9 +136,7 @@ def test_direct_default_model(indoor_image_bytes, tmp_path, timing_collector):
     )
 
 
-def test_direct_local_model(
-    indoor_image_bytes, local_model_path, tmp_path, timing_collector
-):
+def test_direct_local_model(indoor_image_bytes, local_model_path, tmp_path, timing_collector):
     """5 inferences with an explicit local .pth path in a tmp directory."""
     _run_group(
         model_backend=local_model_path,
@@ -139,4 +145,52 @@ def test_direct_local_model(
         entry_point="Direct",
         scenario="Local model",
         timing_collector=timing_collector,
+    )
+
+
+def test_direct_advanced_config_custom_intrinsics(indoor_image_bytes, local_model_path):
+    """Custom fx/fy/cx/cy produce a valid point cloud without errors."""
+    DepthEstimationHandler._depth_anything_models.clear()
+    result = DepthEstimation().run(
+        DepthEstimationCommand(
+            image_input=indoor_image_bytes,
+            model_backend=local_model_path,
+            return_point_cloud=True,
+            advanced_config=DepthEstimationAdvanceConfig(fx=615.0, fy=615.0, cx=320.0, cy=240.0),
+        )
+    )
+    assert isinstance(result.depth_map, list) and len(result.depth_map) > 0
+    assert result.point_cloud is not None
+    assert result.point_cloud.has_points()
+
+
+def test_direct_advanced_config_tight_depth_trunc_yields_fewer_points(
+    indoor_image_bytes, local_model_path
+):
+    """A very tight depth_trunc maps depth values to near-zero → fewer/no points."""
+    DepthEstimationHandler._depth_anything_models.clear()
+
+    default_result = DepthEstimation().run(
+        DepthEstimationCommand(
+            image_input=indoor_image_bytes,
+            model_backend=local_model_path,
+            return_point_cloud=True,
+        )
+    )
+
+    tight_result = DepthEstimation().run(
+        DepthEstimationCommand(
+            image_input=indoor_image_bytes,
+            model_backend=local_model_path,
+            return_point_cloud=True,
+            advanced_config=DepthEstimationAdvanceConfig(depth_trunc=0.0001),
+        )
+    )
+
+    import numpy as np
+
+    default_pts = len(np.asarray(default_result.point_cloud.points))
+    tight_pts = len(np.asarray(tight_result.point_cloud.points))
+    assert tight_pts < default_pts, (
+        f"Expected tight depth_trunc to yield fewer points ({tight_pts} vs default {default_pts})"
     )

@@ -9,6 +9,15 @@ Depth estimation predicts the per-pixel distance from the camera for every pixel
 
 ## Model backends
 
+Default checkpoint download:
+[depth_anything_v2_vitb.pth](https://github.com/OlafenwaMoses/vizion3D/releases/download/essentials-v1/depth_anything_v2_vitb.pth)
+
+```bash
+curl -L \
+  https://github.com/OlafenwaMoses/vizion3D/releases/download/essentials-v1/depth_anything_v2_vitb.pth \
+  -o depth_anything_v2_vitb.pth
+```
+
 | Value | What happens |
 |---|---|
 | *(default)* | Downloads the vizion3D release checkpoint (`depth_anything_v2_vitb.pth`) to `~/.cache/vizion3d/models/` on first use, then loads it directly |
@@ -32,6 +41,7 @@ Set `VIZION3D_MODEL_CACHE` in your environment to change the default cache direc
 | `return_depth_image` | `bool` | No | `False` | If `True`, the result includes a 16-bit grayscale Open3D Image of the depth map. |
 | `return_point_cloud` | `bool` | No | `False` | If `True`, the result includes an Open3D PointCloud unprojected from the RGB-D image. |
 | `return_mesh` | `bool` | No | `False` | If `True`, the result includes an Open3D TriangleMesh reconstructed from the point cloud via ball-pivoting. |
+| `advanced_config` | `DepthEstimationAdvanceConfig` | No | PrimeSense defaults | Camera intrinsics and depth range settings. See [Advanced config](#10-advanced-config-camera-intrinsics-depth-range) below. |
 
 ---
 
@@ -46,7 +56,7 @@ Set `VIZION3D_MODEL_CACHE` in your environment to change the default cache direc
 | `max_depth` | `float` | Yes | Maximum value in `depth_map`. Guaranteed `max_depth >= min_depth`. |
 | `backend_used` | `str` | Yes | Resolved model identifier that processed the request (local file path). |
 | `depth_image` | `open3d.geometry.Image \| None` | When `return_depth_image=True` | 16-bit grayscale image, dtype `uint16`, shape `(H, W)`. The full 0–65535 range maps to `[min_depth, max_depth]`. |
-| `point_cloud` | `open3d.geometry.PointCloud \| None` | When `return_point_cloud=True` | Coloured 3D point cloud unprojected from the RGB-D image using PrimeSense default intrinsics. Coordinates are in metres. |
+| `point_cloud` | `open3d.geometry.PointCloud \| None` | When `return_point_cloud=True` | Coloured 3D point cloud unprojected from the RGB-D image using the intrinsics in `advanced_config`. Coordinates are in metres. |
 | `mesh` | `open3d.geometry.TriangleMesh \| None` | When `return_mesh=True` | Triangle mesh surface reconstructed from the point cloud via ball-pivoting. Includes vertex colours. |
 | `point_cloud_scale` | `float` | Yes | Scale factor: multiply any distance measured between two points in the point cloud by this value to get the equivalent distance in metres. Always `1.0` — Open3D produces point cloud coordinates directly in metres. |
 
@@ -219,7 +229,10 @@ print(f"Backend: {result.backend_used}")
 # Remote checkpoint URL (downloaded and cached on first use)
 cmd = DepthEstimationCommand(
     image_input="scene.png",
-    model_backend="https://example.com/weights/depth_anything_v2_vits.pth",
+    model_backend=(
+        "https://github.com/OlafenwaMoses/vizion3D/releases/download/"
+        "essentials-v1/depth_anything_v2_vitb.pth"
+    ),
 )
 result = DepthEstimation().run(cmd)
 print(f"Backend: {result.backend_used}")
@@ -229,7 +242,7 @@ print(f"Backend: {result.backend_used}")
 
 ## 8. REST API
 
-Start the server:
+Start the server with all REST features enabled:
 
 **pip / Poetry**
 ```bash
@@ -239,6 +252,31 @@ vizion3d-serve-rest
 **uv**
 ```bash
 uv run vizion3d-serve-rest
+```
+
+To preload a depth-estimation checkpoint into memory at startup, pass
+`--depth_model`. This also enables the depth-estimation endpoint. If this flag
+is omitted, the default vizion3D release model is downloaded on first inference
+and cached under `~/.cache/vizion3d/models/`.
+
+```bash
+uv run vizion3d-serve-rest --depth_model /models/depth_anything_v2_vitb.pth
+```
+
+The REST server can also expose only selected features. If none of
+`--depth_estimation`, `--stereo_depth`, `--depth_model`, or `--stereo_model` is
+provided, all features are enabled. If any of those flags is provided, only the
+selected features are enabled. A model path flag selects and preloads its
+feature:
+
+```bash
+# Only POST /lifting/depth-estimation
+uv run vizion3d-serve-rest --depth_estimation
+
+# Only depth estimation, with the model loaded before the first request
+uv run vizion3d-serve-rest \
+  --depth_estimation \
+  --depth_model /models/depth_anything_v2_vitb.pth
 ```
 
 Send a request with `multipart/form-data`:
@@ -294,9 +332,38 @@ print(f"Backend   : {response.backend_used}")
 
 ---
 
+## 10. Advanced config: camera intrinsics & depth range
+
+`DepthEstimationAdvanceConfig` lets you supply the actual camera intrinsics and depth range for your sensor, replacing the built-in PrimeSense defaults. This is required for accurate metric 3D geometry when your camera is not a 640×480 PrimeSense sensor.
+
+```python
+from vizion3d.lifting import (
+    DepthEstimation,
+    DepthEstimationAdvanceConfig,
+    DepthEstimationCommand,
+)
+
+result = DepthEstimation().run(
+    DepthEstimationCommand(
+        image_input="scene.png",
+        return_point_cloud=True,
+        advanced_config=DepthEstimationAdvanceConfig(
+            fx=909.15,
+            fy=908.48,
+            cx=640.0,
+            cy=360.0,
+            depth_trunc=6.0,
+        ),
+    )
+)
+```
+
+The same config is available in the REST and gRPC entry points. See [Advanced Config](depth_estimation_advanced_config.md) for the full field reference, formulas, entry-point examples, and camera presets.
+
+---
+
 ## Known limitations
 
 - **Relative depth only** — the default monocular backend produces relative (inverse) depth, not metric depth. Point cloud distances are internally consistent but not calibrated to real-world scale without a known reference distance.
-- **Fixed camera intrinsics** — point cloud unprojection uses `PrimeSenseDefault` (640×480) intrinsics regardless of input image resolution. For accurate metric geometry, supply real camera intrinsics.
 - **Ball-pivoting mesh quality** — the mesh reconstructor works best on dense, evenly sampled point clouds. Sparse or noisy clouds may produce gaps or missing faces.
 - **Python 3.12 required for Open3D** — `return_depth_image`, `return_point_cloud`, and `return_mesh` require Open3D, which currently only supports Python 3.12 in this project.

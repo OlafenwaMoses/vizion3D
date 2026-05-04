@@ -5,6 +5,9 @@ on:
     branches:
       - release
 
+permissions:
+  contents: read
+
 jobs:
   check-source:
     name: Source branch check
