@@ -242,7 +242,6 @@ class TestRestAdvancedConfig:
         result.backend_used = "/fake/model.pth"
         result.depth_image = None
         result.point_cloud = None
-        result.mesh = None
 
         with patch("vizion3d.server.rest.depth_estimation.DepthEstimation") as mock_cls:
             mock_cls.return_value.run.return_value = result
@@ -322,7 +321,6 @@ class TestGrpcAdvancedConfig:
         result.backend_used = "/fake/model.pth"
         result.depth_image = None
         result.point_cloud = None
-        result.mesh = None
 
         with patch("vizion3d.server.grpc.server.DepthEstimation") as mock_cls:
             mock_cls.return_value.run.return_value = result

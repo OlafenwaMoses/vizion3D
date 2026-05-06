@@ -32,9 +32,6 @@ class DepthEstimationCommand(Command[DepthEstimationResult]):
             `open3d.geometry.PointCloud` unprojected from the RGB-D image using
             the camera intrinsics in `advanced_config`. Point coordinates are in metres.
             Requires Open3D (Python 3.12).
-        return_mesh: When `True`, the result includes an
-            `open3d.geometry.TriangleMesh` reconstructed from the point cloud via
-            ball-pivoting. Includes vertex colours. Requires Open3D (Python 3.12).
         advanced_config: Camera intrinsics and depth range settings. Override any
             field to customise — e.g.
             ``advanced_config=DepthEstimationAdvanceConfig(fx=615.0, fy=615.0)``.
@@ -45,7 +42,6 @@ class DepthEstimationCommand(Command[DepthEstimationResult]):
     model_backend: str = DEFAULT_DEPTH_MODEL_URL
     return_depth_image: bool = False
     return_point_cloud: bool = False
-    return_mesh: bool = False
     advanced_config: DepthEstimationAdvanceConfig = field(
         default_factory=DepthEstimationAdvanceConfig
     )

@@ -232,7 +232,7 @@ def test_stereo_direct_advanced_config_scale_factor(
 def test_stereo_direct_all_outputs_returned(
     stereo_image_pair, stereo_advanced_config, local_stereo_model_path
 ):
-    """depth_image, point_cloud, and mesh are all returned when requested."""
+    """depth_image and point_cloud are returned when requested."""
     StereoDepthHandler._stereo_models.clear()
     left_bytes, right_bytes = stereo_image_pair
 
@@ -243,7 +243,6 @@ def test_stereo_direct_all_outputs_returned(
             model_backend=local_stereo_model_path,
             return_depth_image=True,
             return_point_cloud=True,
-            return_mesh=True,
             advanced_config=stereo_advanced_config,
         )
     )
@@ -254,5 +253,3 @@ def test_stereo_direct_all_outputs_returned(
     assert result.point_cloud is not None
     assert result.point_cloud.has_points()
     assert result.point_cloud_scale == 1.0
-
-    assert result.mesh is not None

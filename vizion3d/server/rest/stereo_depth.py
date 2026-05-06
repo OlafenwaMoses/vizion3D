@@ -15,7 +15,6 @@ from vizion3d.stereo.models import StereoDepthAdvancedConfig
 from .serialisation import (
     b64,
     o3d_depth_image_to_png_bytes,
-    o3d_mesh_to_ply_bytes,
     o3d_point_cloud_to_ply_bytes,
 )
 
@@ -46,7 +45,6 @@ async def stereo_depth(
     model_backend: str | None = Form(None),
     return_depth_image: bool = Form(False),
     return_point_cloud: bool = Form(False),
-    return_mesh: bool = Form(False),
     focal_length: float | None = Form(None),
     cx: float | None = Form(None),
     cy: float | None = Form(None),
@@ -65,7 +63,6 @@ async def stereo_depth(
         model_backend: S2M2 checkpoint URL or local path (defaults to the vizion3D release).
         return_depth_image: Include a base64-encoded 16-bit PNG depth image.
         return_point_cloud: Include a base64-encoded binary PLY point cloud.
-        return_mesh: Include a base64-encoded binary PLY surface mesh.
         focal_length: Focal length in pixels (default 1000.0 — override with your calibration).
         cx, cy: Principal point in pixels.
         baseline: Stereo baseline in millimetres (default 100.0).
@@ -77,8 +74,7 @@ async def stereo_depth(
 
     Returns:
         JSON with ``depth_map``, ``disparity_map``, ``min_depth``, ``max_depth``,
-        ``backend_used``, and optional ``depth_image``, ``point_cloud_ply``,
-        ``mesh_ply`` (base64).
+        ``backend_used``, and optional ``depth_image``, ``point_cloud_ply`` (base64).
     """
     left_bytes = await left_image.read()
     right_bytes = await right_image.read()
@@ -102,7 +98,6 @@ async def stereo_depth(
         model_backend=effective_backend,
         return_depth_image=return_depth_image,
         return_point_cloud=return_point_cloud,
-        return_mesh=return_mesh,
         advanced_config=advanced_config,
     )
     result = StereoDepth().run(cmd)
@@ -122,5 +117,4 @@ async def stereo_depth(
             if result.point_cloud is not None
             else None
         ),
-        "mesh_ply": b64(o3d_mesh_to_ply_bytes(result.mesh) if result.mesh is not None else None),
     }

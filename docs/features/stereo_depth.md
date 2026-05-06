@@ -56,7 +56,6 @@ The S2M2 architecture comes in four size variants.  The correct one is detected 
 | `model_backend` | `str` | No | vizion3D release checkpoint URL | S2M2 checkpoint. See [Model backends](#model-backends) above. |
 | `return_depth_image` | `bool` | No | `False` | If `True`, the result includes a 16-bit grayscale Open3D Image of the depth map. |
 | `return_point_cloud` | `bool` | No | `False` | If `True`, the result includes an Open3D PointCloud in metres. |
-| `return_mesh` | `bool` | No | `False` | If `True`, the result includes an Open3D TriangleMesh reconstructed via ball-pivoting. |
 | `advanced_config` | `StereoDepthAdvancedConfig` | No | 1280×720 @ 100 mm baseline defaults | Camera intrinsics and inference settings. See [Advanced config](#advanced-config) below. |
 
 ---
@@ -74,7 +73,6 @@ The S2M2 architecture comes in four size variants.  The correct one is detected 
 | `backend_used` | `str` | Yes | Resolved local file path of the checkpoint used. |
 | `depth_image` | `open3d.geometry.Image \| None` | When `return_depth_image=True` | 16-bit grayscale image, dtype `uint16`. The full 0–65535 range maps to `[min_depth, max_depth]` in metres. |
 | `point_cloud` | `open3d.geometry.PointCloud \| None` | When `return_point_cloud=True` | Coloured 3D point cloud, coordinates in **metres**. |
-| `mesh` | `open3d.geometry.TriangleMesh \| None` | When `return_mesh=True` | Surface mesh from ball-pivoting. Includes vertex colours. |
 | `point_cloud_scale` | `float` | Yes | Always `1.0` — stereo depth produces real metric coordinates. |
 
 ---
@@ -187,28 +185,7 @@ o3d.io.write_point_cloud("scene.ply", pcd)
 
 ---
 
-## 6. Surface mesh
-
-```python
-import open3d as o3d
-from vizion3d.stereo import StereoDepth, StereoDepthCommand
-
-cmd = StereoDepthCommand(
-    left_image="left.png",
-    right_image="right.png",
-    return_mesh=True,
-)
-result = StereoDepth().run(cmd)
-
-mesh = result.mesh
-print(f"Vertices  : {len(mesh.vertices)}")
-print(f"Triangles : {len(mesh.triangles)}")
-o3d.io.write_triangle_mesh("scene_mesh.ply", mesh)
-```
-
----
-
-## 7. All outputs at once
+## 6. All outputs at once
 
 ```python
 import numpy as np
@@ -220,19 +197,17 @@ cmd = StereoDepthCommand(
     right_image="right.png",
     return_depth_image=True,
     return_point_cloud=True,
-    return_mesh=True,
 )
 result = StereoDepth().run(cmd)
 
 print(f"Depth range : {result.min_depth:.2f} → {result.max_depth:.2f} m")
 depth_arr = np.asarray(result.depth_image)    # uint16 (H, W)
 o3d.io.write_point_cloud("scene.ply", result.point_cloud)
-o3d.io.write_triangle_mesh("scene_mesh.ply", result.mesh)
 ```
 
 ---
 
-## 8. Speed vs quality: scale factor
+## 7. Speed vs quality: scale factor
 
 Use `scale_factor < 1.0` to downsample input before inference for faster results:
 
@@ -251,7 +226,7 @@ result = StereoDepth().run(cmd)
 
 ---
 
-## 9. REST API
+## 8. REST API
 
 Start the server with all REST features enabled:
 
@@ -305,11 +280,11 @@ curl -X POST "http://localhost:8000/lifting/stereo-depth" \
   -F "return_point_cloud=true"
 ```
 
-The response is a JSON-serialised `StereoDepthResult`.  Binary fields (`depth_image`, `point_cloud_ply`, `mesh_ply`) are base64-encoded.
+The response is a JSON-serialised `StereoDepthResult`.  Binary fields (`depth_image`, `point_cloud_ply`) are base64-encoded.
 
 ---
 
-## 10. gRPC API
+## 9. gRPC API
 
 Start the server:
 
@@ -422,5 +397,4 @@ cfg = StereoDepthAdvancedConfig(
 
 - **Rectified pairs required** — images must be stereo-rectified so corresponding points lie on the same horizontal scanline.  Un-rectified pairs will produce incorrect results.
 - **Metric scale depends on calibration** — an incorrect `baseline` or `focal_length` scales all depth values uniformly.  Always use calibrated values for real applications.
-- **Ball-pivoting mesh quality** — works best on dense, evenly sampled point clouds.  Sparse or noisy clouds from occluded regions may produce gaps or missing faces.
-- **Python 3.12 required for Open3D** — `return_depth_image`, `return_point_cloud`, and `return_mesh` require Open3D, which currently only supports Python 3.12 in this project.
+- **Python 3.12 required for Open3D** — `return_depth_image` and `return_point_cloud` require Open3D, which currently only supports Python 3.12 in this project.

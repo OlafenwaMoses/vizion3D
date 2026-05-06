@@ -15,7 +15,6 @@ from vizion3d.lifting.models import DepthEstimationAdvanceConfig
 from .serialisation import (
     b64,
     o3d_depth_image_to_png_bytes,
-    o3d_mesh_to_ply_bytes,
     o3d_point_cloud_to_ply_bytes,
 )
 
@@ -45,7 +44,6 @@ async def depth_estimation(
     model_backend: str | None = Form(None),
     return_depth_image: bool = Form(False),
     return_point_cloud: bool = Form(False),
-    return_mesh: bool = Form(False),
     fx: float | None = Form(None),
     fy: float | None = Form(None),
     cx: float | None = Form(None),
@@ -60,14 +58,13 @@ async def depth_estimation(
         model_backend: Checkpoint URL or local path (defaults to the vizion3D release).
         return_depth_image: Include a base64-encoded 16-bit PNG depth image.
         return_point_cloud: Include a base64-encoded binary PLY point cloud.
-        return_mesh: Include a base64-encoded binary PLY surface mesh.
         fx, fy, cx, cy: Camera intrinsics (uses PrimeSense defaults if omitted).
         depth_scale: Raw uint16 → metres divisor (default 1000).
         depth_trunc: Maximum depth in metres (default 10).
 
     Returns:
         JSON with ``depth_map``, ``min_depth``, ``max_depth``, ``backend_used``,
-        and optional ``depth_image``, ``point_cloud_ply``, ``mesh_ply`` (base64).
+        and optional ``depth_image``, ``point_cloud_ply`` (base64).
     """
     image_bytes = await image.read()
     effective_backend = model_backend or _model_override or DEFAULT_DEPTH_MODEL_URL
@@ -85,7 +82,6 @@ async def depth_estimation(
         model_backend=effective_backend,
         return_depth_image=return_depth_image,
         return_point_cloud=return_point_cloud,
-        return_mesh=return_mesh,
         advanced_config=advanced_config,
     )
     result = DepthEstimation().run(cmd)
@@ -104,5 +100,4 @@ async def depth_estimation(
             if result.point_cloud is not None
             else None
         ),
-        "mesh_ply": b64(o3d_mesh_to_ply_bytes(result.mesh) if result.mesh is not None else None),
     }

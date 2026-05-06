@@ -11,7 +11,7 @@ import io
 import numpy as np
 from PIL import Image
 
-from vizion3d.lifting.utils import create_mesh_ply_binary, create_ply_binary
+from vizion3d.lifting.utils import create_ply_binary
 
 
 def o3d_depth_image_to_png_bytes(o3d_image) -> bytes:
@@ -27,14 +27,6 @@ def o3d_point_cloud_to_ply_bytes(pcd) -> bytes:
     points = np.asarray(pcd.points).astype(np.float32)
     colors = (np.asarray(pcd.colors) * 255).astype(np.uint8)
     return create_ply_binary(points, colors)
-
-
-def o3d_mesh_to_ply_bytes(mesh) -> bytes:
-    """Serialise an Open3D TriangleMesh to binary PLY bytes."""
-    points = np.asarray(mesh.vertices).astype(np.float32)
-    colors = (np.asarray(mesh.vertex_colors) * 255).astype(np.uint8)
-    faces = np.asarray(mesh.triangles).astype(np.int32)
-    return create_mesh_ply_binary(points, colors, faces)
 
 
 def b64(data: bytes | None) -> str | None:

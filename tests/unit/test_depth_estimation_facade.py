@@ -21,7 +21,6 @@ def test_depth_estimation_basic(dummy_image_bytes):
     assert res.backend_used.endswith(DEFAULT_DEPTH_MODEL_FILENAME)
     assert res.depth_image is None
     assert res.point_cloud is None
-    assert res.mesh is None
     assert res.point_cloud_scale == 1.0
 
 
@@ -90,20 +89,6 @@ def test_point_cloud_orientation_keeps_image_top_up():
 
     assert points[0, 1] > points[1, 1]
     assert np.all(points[:, 2] > 0)
-
-
-def test_depth_estimation_returns_mesh(dummy_image_bytes):
-    res = DepthEstimation().run(
-        DepthEstimationCommand(image_input=dummy_image_bytes, return_mesh=True)
-    )
-
-    assert isinstance(res.mesh, o3d.geometry.TriangleMesh)
-    assert res.mesh.has_vertices()
-    assert res.mesh.has_triangles()
-    assert res.mesh.has_vertex_colors()
-    import numpy as np
-
-    assert len(np.asarray(res.mesh.triangles)) > 0
 
 
 def test_depth_estimation_accepts_file_path(tmp_path):

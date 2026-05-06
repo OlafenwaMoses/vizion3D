@@ -43,7 +43,6 @@ def _fake_result(depth_map=None):
     result.backend_used = "/fake/model.pth"
     result.depth_image = None
     result.point_cloud = None
-    result.mesh = None
     return result
 
 
@@ -116,7 +115,6 @@ def test_depth_estimation_optional_outputs_null_by_default(image_file):
     data = response.json()
     assert data["depth_image"] is None
     assert data["point_cloud_ply"] is None
-    assert data["mesh_ply"] is None
 
 
 def test_depth_estimation_backend_used_is_returned(image_file):

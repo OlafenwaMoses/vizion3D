@@ -175,7 +175,6 @@ class TestHandlerOptionalOutputs:
             )
         assert result.depth_image is None
         assert result.point_cloud is None
-        assert result.mesh is None
 
     def test_return_depth_image_requires_open3d(self, dummy_image_bytes, fake_disp):
         pytest.importorskip("open3d", reason="open3d required")
@@ -235,23 +234,6 @@ class TestHandlerOptionalOutputs:
 
         assert result.point_cloud is not None
         assert len(np.asarray(result.point_cloud.points)) < fake_disp.size
-
-    def test_return_mesh_requires_open3d(self, dummy_image_bytes, fake_disp):
-        open3d = pytest.importorskip("open3d", reason="open3d required")
-        with patch.object(StereoDepthHandler, "_run_s2m2", return_value=fake_disp):
-            result = StereoDepthHandler().handle(
-                StereoDepthCommand(
-                    left_image=dummy_image_bytes,
-                    right_image=dummy_image_bytes,
-                    model_backend="/fake/model.pth",
-                    return_mesh=True,
-                    advanced_config=StereoDepthAdvancedConfig(
-                        focal_length=1000.0, baseline=100.0, z_far=10.0
-                    ),
-                )
-            )
-        assert result.mesh is not None
-        assert isinstance(result.mesh, open3d.geometry.TriangleMesh)
 
 
 # ── S2M2 variant detection ────────────────────────────────────────────────────
