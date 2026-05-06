@@ -2,7 +2,7 @@
 Stereo Depth task — direct Python entry point.
 
 Import :class:`StereoDepth` and run it with a :class:`StereoDepthCommand` to
-obtain metric depth maps, disparity maps, point clouds, and meshes from
+obtain metric depth maps, disparity maps, and point clouds from
 rectified left/right stereo image pairs.
 
 Example::
@@ -17,7 +17,6 @@ Example::
         left_image="left.png",
         right_image="right.png",
         return_point_cloud=True,
-        return_mesh=True,
         advanced_config=StereoDepthAdvancedConfig(
             focal_length=1733.74,
             cx=792.27,
@@ -61,7 +60,7 @@ class StereoDepth:
 
         Returns:
             :class:`StereoDepthResult` with metric depth, disparity, and optional
-            depth image, point cloud, and mesh.
+            depth image and point cloud.
         """
         return command_bus.dispatch(command)
 

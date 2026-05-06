@@ -40,9 +40,6 @@ class StereoDepthCommand(Command[StereoDepthResult]):
         return_point_cloud: When ``True``, the result includes an
             ``open3d.geometry.PointCloud`` unprojected using the stereo camera
             intrinsics in ``advanced_config``. Point coordinates are in metres.
-        return_mesh: When ``True``, the result includes an
-            ``open3d.geometry.TriangleMesh`` reconstructed from the point cloud
-            via ball-pivoting. Includes vertex colours.
         advanced_config: Camera intrinsics and inference settings. Override any
             field to match your stereo rig — e.g.
             ``advanced_config=StereoDepthAdvancedConfig(focal_length=1733.74,
@@ -55,5 +52,4 @@ class StereoDepthCommand(Command[StereoDepthResult]):
     model_backend: str = DEFAULT_STEREO_MODEL_URL
     return_depth_image: bool = False
     return_point_cloud: bool = False
-    return_mesh: bool = False
     advanced_config: StereoDepthAdvancedConfig = field(default_factory=StereoDepthAdvancedConfig)

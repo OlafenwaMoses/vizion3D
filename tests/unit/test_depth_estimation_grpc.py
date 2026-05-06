@@ -37,7 +37,6 @@ def _fake_result(depth_map=None):
     result.backend_used = "/fake/model.pth"
     result.depth_image = None
     result.point_cloud = None
-    result.mesh = None
     return result
 
 
@@ -84,7 +83,6 @@ def test_grpc_optional_fields_empty_when_not_requested(servicer, mock_context, i
         response = servicer.RunDepthEstimation(request, mock_context)
     assert response.depth_image == b""
     assert response.point_cloud_ply == b""
-    assert response.mesh_ply == b""
 
 
 def test_grpc_uses_default_backend_when_model_backend_is_empty(servicer, mock_context, image_bytes):
@@ -112,7 +110,6 @@ def test_grpc_forwards_return_flags(servicer, mock_context, image_bytes):
         image_bytes=image_bytes,
         return_depth_image=True,
         return_point_cloud=True,
-        return_mesh=True,
     )
     with patch("vizion3d.server.grpc.server.DepthEstimation") as mock_cls:
         mock_cls.return_value.run.return_value = _fake_result()
@@ -120,4 +117,3 @@ def test_grpc_forwards_return_flags(servicer, mock_context, image_bytes):
     called_cmd = mock_cls.return_value.run.call_args[0][0]
     assert called_cmd.return_depth_image is True
     assert called_cmd.return_point_cloud is True
-    assert called_cmd.return_mesh is True
