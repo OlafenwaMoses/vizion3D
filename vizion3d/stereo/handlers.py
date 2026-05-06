@@ -2,7 +2,7 @@
 CQRS command handler for the Stereo Depth task.
 
 Orchestrates model loading, image pre-processing, stereo inference, depth
-computation, and optional point-cloud / mesh generation.
+computation, and optional point-cloud generation.
 """
 
 from __future__ import annotations
@@ -15,10 +15,7 @@ import numpy as np
 from PIL import Image
 
 from vizion3d.core.cqrs import CommandHandler
-from vizion3d.lifting.handlers import (
-    OPEN3D_CAMERA_TO_IMAGE_VIEW_TRANSFORM,
-    DepthEstimationHandler,
-)
+from vizion3d.lifting.handlers import OPEN3D_CAMERA_TO_IMAGE_VIEW_TRANSFORM
 
 from .arch import build_s2m2
 from .arch.utils import image_crop, image_pad
@@ -45,7 +42,7 @@ class StereoDepthHandler(CommandHandler[StereoDepthCommand, StereoDepthResult]):
     4. Run stereo inference with mixed-precision autocast where available.
     5. Crop output back to original resolution; optionally upsample if scaled.
     6. Convert disparity → metric depth using the pinhole stereo formula.
-    7. Unproject depth + colour into an Open3D PointCloud and optionally mesh.
+    7. Optionally unproject depth + colour into an Open3D PointCloud.
     """
 
     _stereo_models: dict = {}
@@ -59,7 +56,7 @@ class StereoDepthHandler(CommandHandler[StereoDepthCommand, StereoDepthResult]):
 
         Returns:
             :class:`StereoDepthResult` with depth map, disparity map, and
-            optional depth image, point cloud, and mesh.
+            optional depth image and point cloud.
         """
         model_id = resolve_stereo_model_backend(command.model_backend)
 
@@ -109,16 +106,14 @@ class StereoDepthHandler(CommandHandler[StereoDepthCommand, StereoDepthResult]):
             depth_image = o3d.geometry.Image(depth_16bit)
 
         point_cloud = None
-        mesh = None
-        if command.return_point_cloud or command.return_mesh:
+        if command.return_point_cloud:
             try:
                 import open3d as o3d
             except ImportError:
                 raise ImportError(
-                    "open3d is required for point cloud / mesh output. "
-                    "Pin to Python 3.12 and run: uv sync"
+                    "open3d is required for point cloud output. Pin to Python 3.12 and run: uv sync"
                 )
-            point_cloud, mesh = self._unproject(
+            point_cloud = self._unproject(
                 left_pil,
                 depth_m,
                 disp_np,
@@ -126,8 +121,6 @@ class StereoDepthHandler(CommandHandler[StereoDepthCommand, StereoDepthResult]):
                 o3d,
                 occ_np=occ_np,
                 conf_np=conf_np,
-                want_cloud=command.return_point_cloud,
-                want_mesh=command.return_mesh,
             )
 
         return StereoDepthResult(
@@ -138,7 +131,6 @@ class StereoDepthHandler(CommandHandler[StereoDepthCommand, StereoDepthResult]):
             backend_used=model_id,
             depth_image=depth_image,
             point_cloud=point_cloud,
-            mesh=mesh,
             point_cloud_scale=1.0,
         )
 
@@ -287,7 +279,7 @@ class StereoDepthHandler(CommandHandler[StereoDepthCommand, StereoDepthResult]):
             pred_conf.squeeze().float().cpu().numpy(),
         )
 
-    # ── Point cloud / mesh ────────────────────────────────────────────────────
+    # ── Point cloud ───────────────────────────────────────────────────────────────
 
     def _unproject(
         self,
@@ -299,10 +291,8 @@ class StereoDepthHandler(CommandHandler[StereoDepthCommand, StereoDepthResult]):
         *,
         occ_np=None,
         conf_np=None,
-        want_cloud,
-        want_mesh,
     ):
-        """Unproject the left image into a coloured 3D point cloud and optional mesh.
+        """Unproject the left image into a coloured 3D point cloud.
 
         Args:
             left_pil: Left PIL image (RGB) — used for vertex colours.
@@ -312,11 +302,9 @@ class StereoDepthHandler(CommandHandler[StereoDepthCommand, StereoDepthResult]):
             o3d: Imported open3d module.
             occ_np: Optional per-pixel occlusion score, shape ``(H, W)``.
             conf_np: Optional per-pixel confidence score, shape ``(H, W)``.
-            want_cloud: Whether to return the point cloud.
-            want_mesh: Whether to return the mesh.
 
         Returns:
-            ``(point_cloud, mesh)`` — each is the Open3D object or ``None`` if not requested.
+            ``open3d.geometry.PointCloud`` with metric coordinates.
         """
         H, W = depth_m.shape
         left_np = np.asarray(left_pil)
@@ -341,11 +329,7 @@ class StereoDepthHandler(CommandHandler[StereoDepthCommand, StereoDepthResult]):
         # Flip Y so Y increases downward in the viewer, matching image-plane orientation.
         pcd.transform(_CAMERA_TO_IMAGE_VIEW)
 
-        mesh = None
-        if want_mesh:
-            mesh = DepthEstimationHandler._mesh_from_point_cloud(pcd, o3d)
-
-        return (pcd if want_cloud else None), mesh
+        return pcd
 
     # ── Pre-loading ───────────────────────────────────────────────────────────
 

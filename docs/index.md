@@ -46,7 +46,7 @@ For per-backend prerequisites, install commands, and platform notes, see the [Ha
 
 ## Quick start — depth estimation
 
-Get a depth map, point cloud, and mesh from a single image in under 10 lines.
+Get a depth map and point cloud from a single image in under 10 lines.
 
 ```python
 import open3d as o3d
@@ -56,7 +56,6 @@ result = DepthEstimation().run(
     DepthEstimationCommand(
         image_input="scene.png",
         return_point_cloud=True,
-        return_mesh=True,
     )
 )
 
@@ -65,7 +64,6 @@ print(f"Points      : {len(result.point_cloud.points)}")
 print(f"Scale       : {result.point_cloud_scale} metre per unit")
 
 o3d.io.write_point_cloud("scene.ply", result.point_cloud)
-o3d.io.write_triangle_mesh("scene_mesh.ply", result.mesh)
 ```
 
 ---

@@ -6,7 +6,6 @@ Defines the camera-configuration Pydantic model and the result payload.
 
 from open3d.geometry import Image as O3dImage  # type: ignore[import-untyped]
 from open3d.geometry import PointCloud as O3dPointCloud  # type: ignore[import-untyped]
-from open3d.geometry import TriangleMesh as O3dTriangleMesh  # type: ignore[import-untyped]
 from pydantic import BaseModel, ConfigDict
 
 
@@ -31,7 +30,7 @@ class StereoDepthAdvancedConfig(BaseModel):
             where the principal points are not aligned across the two views.
             Set to ``0.0`` for standard rectified pairs.
         z_far: Maximum depth in metres. Points beyond this distance are excluded
-            from the point cloud and mesh to reduce noise and file size.
+            from the point cloud to reduce noise and file size.
         conf_threshold: Minimum per-pixel confidence score (in ``[0, 1]``) for a
             point to be included in the point cloud.  Lower values include more
             uncertain points; higher values give sparser but more reliable clouds.
@@ -74,9 +73,6 @@ class StereoDepthResult(BaseModel):
         point_cloud: Coloured ``open3d.geometry.PointCloud`` unprojected from the
             RGB-D image using the camera intrinsics in ``advanced_config``.
             Coordinates are in metres.  Present when ``return_point_cloud=True``.
-        mesh: ``open3d.geometry.TriangleMesh`` reconstructed via ball-pivoting
-            from the point cloud.  Includes vertex colours.
-            Present when ``return_mesh=True``.
         point_cloud_scale: Scale factor: multiply any distance measured between
             two points in the returned point cloud by this value to get the
             equivalent distance in metres.  Always ``1.0`` for stereo depth —
@@ -90,7 +86,6 @@ class StereoDepthResult(BaseModel):
     backend_used: str
     depth_image: O3dImage | None = None
     point_cloud: O3dPointCloud | None = None
-    mesh: O3dTriangleMesh | None = None
     point_cloud_scale: float = 1.0
 
     model_config = ConfigDict(arbitrary_types_allowed=True)

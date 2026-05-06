@@ -182,7 +182,6 @@ class TestStereoRestAdvancedConfig:
         result.backend_used = "/fake/stereo.pth"
         result.depth_image = None
         result.point_cloud = None
-        result.mesh = None
 
         with patch("vizion3d.server.rest.stereo_depth.StereoDepth") as mock_cls:
             mock_cls.return_value.run.return_value = result
@@ -268,7 +267,6 @@ class TestStereoGrpcAdvancedConfig:
         result.backend_used = "/fake/stereo.pth"
         result.depth_image = None
         result.point_cloud = None
-        result.mesh = None
 
         with patch("vizion3d.server.grpc.server.StereoDepth") as mock_cls:
             mock_cls.return_value.run.return_value = result

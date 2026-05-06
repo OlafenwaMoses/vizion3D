@@ -63,14 +63,12 @@ class DepthEstimationHandler(CommandHandler[DepthEstimationCommand, DepthEstimat
             depth_image = o3d.geometry.Image(depth_16bit)
 
         point_cloud = None
-        mesh = None
-        if command.return_point_cloud or command.return_mesh:
+        if command.return_point_cloud:
             try:
                 import open3d as o3d
             except ImportError:
                 raise ImportError(
-                    "open3d is required for point cloud / mesh output. "
-                    "Pin to Python 3.12 and run: uv sync"
+                    "open3d is required for point cloud output. Pin to Python 3.12 and run: uv sync"
                 )
 
             cfg = command.advanced_config
@@ -92,12 +90,7 @@ class DepthEstimationHandler(CommandHandler[DepthEstimationCommand, DepthEstimat
                 ),
             )
             self._orient_point_cloud_like_image(generated_point_cloud)
-
-            if command.return_point_cloud:
-                point_cloud = generated_point_cloud
-
-            if command.return_mesh:
-                mesh = self._mesh_from_point_cloud(generated_point_cloud, o3d)
+            point_cloud = generated_point_cloud
 
         return DepthEstimationResult(
             depth_map=depth_map,
@@ -106,7 +99,6 @@ class DepthEstimationHandler(CommandHandler[DepthEstimationCommand, DepthEstimat
             backend_used=model_id,
             depth_image=depth_image,
             point_cloud=point_cloud,
-            mesh=mesh,
             point_cloud_scale=1.0,
         )
 
@@ -128,30 +120,6 @@ class DepthEstimationHandler(CommandHandler[DepthEstimationCommand, DepthEstimat
         normalized = (depth_array - min_depth) / depth_range
         scaled_depth = normalized * depth_trunc * depth_scale
         return np.clip(scaled_depth, 0, np.iinfo(np.uint16).max).astype(np.uint16)
-
-    @staticmethod
-    def _mesh_from_point_cloud(point_cloud, o3d):
-        if point_cloud.is_empty():
-            return o3d.geometry.TriangleMesh()
-
-        point_cloud = o3d.geometry.PointCloud(point_cloud)
-        if not point_cloud.has_normals():
-            point_cloud.estimate_normals(
-                search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.1, max_nn=30)
-            )
-
-        distances = point_cloud.compute_nearest_neighbor_distance()
-        if len(distances) == 0:
-            return o3d.geometry.TriangleMesh()
-
-        radius = float(np.mean(distances) * 3.0)
-        if radius <= 0:
-            return o3d.geometry.TriangleMesh()
-
-        return o3d.geometry.TriangleMesh.create_from_point_cloud_ball_pivoting(
-            point_cloud,
-            o3d.utility.DoubleVector([radius, radius * 2.0]),
-        )
 
     @classmethod
     def preload(cls, model_path: str) -> None:

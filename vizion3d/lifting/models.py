@@ -1,6 +1,5 @@
 from open3d.geometry import Image as O3dImage  # type: ignore[import-untyped]
 from open3d.geometry import PointCloud as O3dPointCloud  # type: ignore[import-untyped]
-from open3d.geometry import TriangleMesh as O3dTriangleMesh  # type: ignore[import-untyped]
 from pydantic import BaseModel, ConfigDict
 
 
@@ -24,7 +23,7 @@ class DepthEstimationAdvanceConfig(BaseModel):
             metres. ``1000`` means the raw values are in millimetres (the standard
             for RealSense, Kinect, and PrimeSense sensors).
         depth_trunc: Maximum depth in metres. Points beyond this distance are
-            discarded from the point cloud and mesh.
+            discarded from the point cloud.
     """
 
     fx: float = 525.0
@@ -54,8 +53,6 @@ class DepthEstimationResult(BaseModel):
             RGB-D image, present when `return_point_cloud=True`. Coordinates are
             in metres — multiply distances by `point_cloud_scale` (always `1.0`)
             to confirm the unit.
-        mesh: `open3d.geometry.TriangleMesh` reconstructed via ball-pivoting,
-            present when `return_mesh=True`. Includes vertex colours.
         point_cloud_scale: Scale factor for the point cloud coordinate space.
             Multiply any distance measured between two points in the returned
             point cloud by this value to get the equivalent distance in metres.
@@ -68,7 +65,6 @@ class DepthEstimationResult(BaseModel):
     backend_used: str
     depth_image: O3dImage | None = None
     point_cloud: O3dPointCloud | None = None
-    mesh: O3dTriangleMesh | None = None
     point_cloud_scale: float = 1.0
 
     model_config = ConfigDict(arbitrary_types_allowed=True)

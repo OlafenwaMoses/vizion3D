@@ -3,7 +3,7 @@
 **Category:** Lifting (2D → 3D)  
 **Experimental:** No
 
-Depth estimation predicts the per-pixel distance from the camera for every pixel in a 2D RGB image, producing a depth map and optionally unprojecting it into a 3D point cloud or surface mesh. vizion3d uses [Depth Anything V2](https://github.com/DepthAnything/Depth-Anything-V2) as its default backend.
+Depth estimation predicts the per-pixel distance from the camera for every pixel in a 2D RGB image, producing a depth map and optionally unprojecting it into a 3D point cloud. vizion3d uses [Depth Anything V2](https://github.com/DepthAnything/Depth-Anything-V2) as its default backend.
 
 ---
 
@@ -40,7 +40,6 @@ Set `VIZION3D_MODEL_CACHE` in your environment to change the default cache direc
 | `model_backend` | `str` | No | vizion3D release checkpoint URL | Model backend identifier. See [Model backends](#model-backends) above. |
 | `return_depth_image` | `bool` | No | `False` | If `True`, the result includes a 16-bit grayscale Open3D Image of the depth map. |
 | `return_point_cloud` | `bool` | No | `False` | If `True`, the result includes an Open3D PointCloud unprojected from the RGB-D image. |
-| `return_mesh` | `bool` | No | `False` | If `True`, the result includes an Open3D TriangleMesh reconstructed from the point cloud via ball-pivoting. |
 | `advanced_config` | `DepthEstimationAdvanceConfig` | No | PrimeSense defaults | Camera intrinsics and depth range settings. See [Advanced config](#10-advanced-config-camera-intrinsics-depth-range) below. |
 
 ---
@@ -57,7 +56,6 @@ Set `VIZION3D_MODEL_CACHE` in your environment to change the default cache direc
 | `backend_used` | `str` | Yes | Resolved model identifier that processed the request (local file path). |
 | `depth_image` | `open3d.geometry.Image \| None` | When `return_depth_image=True` | 16-bit grayscale image, dtype `uint16`, shape `(H, W)`. The full 0–65535 range maps to `[min_depth, max_depth]`. |
 | `point_cloud` | `open3d.geometry.PointCloud \| None` | When `return_point_cloud=True` | Coloured 3D point cloud unprojected from the RGB-D image using the intrinsics in `advanced_config`. Coordinates are in metres. |
-| `mesh` | `open3d.geometry.TriangleMesh \| None` | When `return_mesh=True` | Triangle mesh surface reconstructed from the point cloud via ball-pivoting. Includes vertex colours. |
 | `point_cloud_scale` | `float` | Yes | Scale factor: multiply any distance measured between two points in the point cloud by this value to get the equivalent distance in metres. Always `1.0` — Open3D produces point cloud coordinates directly in metres. |
 
 ---
@@ -154,33 +152,9 @@ o3d.io.write_point_cloud("scene.ply", pcd)
 
 ---
 
-## 5. Surface mesh
+## 5. All outputs at once
 
-Request a triangulated mesh reconstructed from the point cloud via ball-pivoting. Includes vertex colours.
-
-```python
-import open3d as o3d
-from vizion3d.lifting import DepthEstimation, DepthEstimationCommand
-
-cmd = DepthEstimationCommand(
-    image_input="scene.png",
-    return_mesh=True,
-)
-result = DepthEstimation().run(cmd)
-
-mesh = result.mesh                                # open3d.geometry.TriangleMesh
-print(f"Vertices  : {len(mesh.vertices)}")
-print(f"Triangles : {len(mesh.triangles)}")
-
-# Save as PLY
-o3d.io.write_triangle_mesh("scene_mesh.ply", mesh)
-```
-
----
-
-## 6. All outputs at once
-
-All three optional outputs can be requested in a single inference pass.
+Both optional outputs can be requested in a single inference pass.
 
 ```python
 import numpy as np
@@ -191,7 +165,6 @@ cmd = DepthEstimationCommand(
     image_input="scene.png",
     return_depth_image=True,
     return_point_cloud=True,
-    return_mesh=True,
 )
 result = DepthEstimation().run(cmd)
 
@@ -204,14 +177,11 @@ depth_arr = np.asarray(result.depth_image)        # uint16 (H, W)
 # Point cloud
 pcd = result.point_cloud
 o3d.io.write_point_cloud("scene.ply", pcd)
-
-# Mesh
-o3d.io.write_triangle_mesh("scene_mesh.ply", result.mesh)
 ```
 
 ---
 
-## 7. Custom model backend
+## 6. Custom model backend
 
 Use a local `.pth` checkpoint or a remote URL to a `.pth` file.
 
@@ -240,7 +210,7 @@ print(f"Backend: {result.backend_used}")
 
 ---
 
-## 8. REST API
+## 7. REST API
 
 Start the server with all REST features enabled:
 
@@ -284,15 +254,14 @@ Send a request with `multipart/form-data`:
 ```bash
 curl -X POST "http://localhost:8000/lifting/depth-estimation" \
   -F "image=@scene.png" \
-  -F "return_point_cloud=true" \
-  -F "return_mesh=true"
+  -F "return_point_cloud=true"
 ```
 
-The response is a JSON-serialised `DepthEstimationResult`. Binary fields (`depth_image`, `point_cloud`, `mesh`) are base64-encoded in the JSON response.
+The response is a JSON-serialised `DepthEstimationResult`. Binary fields (`depth_image`, `point_cloud_ply`) are base64-encoded in the JSON response.
 
 ---
 
-## 9. gRPC API
+## 8. gRPC API
 
 Start the server:
 
@@ -321,7 +290,6 @@ with open("scene.png", "rb") as f:
 request = lifting_pb2.DepthEstimationRequest(
     image_bytes=img_bytes,
     return_point_cloud=True,
-    return_mesh=True,
 )
 
 response = stub.RunDepthEstimation(request)
@@ -332,7 +300,7 @@ print(f"Backend   : {response.backend_used}")
 
 ---
 
-## 10. Advanced config: camera intrinsics & depth range
+## 9. Advanced config: camera intrinsics & depth range
 
 `DepthEstimationAdvanceConfig` lets you supply the actual camera intrinsics and depth range for your sensor, replacing the built-in PrimeSense defaults. This is required for accurate metric 3D geometry when your camera is not a 640×480 PrimeSense sensor.
 
@@ -362,8 +330,9 @@ The same config is available in the REST and gRPC entry points. See [Advanced Co
 
 ---
 
+---
+
 ## Known limitations
 
 - **Relative depth only** — the default monocular backend produces relative (inverse) depth, not metric depth. Point cloud distances are internally consistent but not calibrated to real-world scale without a known reference distance.
-- **Ball-pivoting mesh quality** — the mesh reconstructor works best on dense, evenly sampled point clouds. Sparse or noisy clouds may produce gaps or missing faces.
-- **Python 3.12 required for Open3D** — `return_depth_image`, `return_point_cloud`, and `return_mesh` require Open3D, which currently only supports Python 3.12 in this project.
+- **Python 3.12 required for Open3D** — `return_depth_image` and `return_point_cloud` require Open3D, which currently only supports Python 3.12 in this project.
