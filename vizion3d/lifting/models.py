@@ -1,3 +1,4 @@
+import numpy as np
 from open3d.geometry import Image as O3dImage  # type: ignore[import-untyped]
 from open3d.geometry import PointCloud as O3dPointCloud  # type: ignore[import-untyped]
 from pydantic import BaseModel, ConfigDict
@@ -47,8 +48,12 @@ class DepthEstimationResult(BaseModel):
         backend_used: Resolved model identifier that processed the request
             (local file path).
         depth_image: 16-bit grayscale `open3d.geometry.Image` (dtype `uint16`),
-            present when `return_depth_image=True` was set on the command.
-            The full 0–65535 range maps linearly to `[min_depth, max_depth]`.
+            present by default (suppress with `return_depth_image=False`).
+            Depth Anything V2 outputs inverse relative depth, so higher uint16 values
+            correspond to closer pixels — closer = brighter.
+        raw_depth: Raw float32 depth array, shape `(H, W)`, present by default
+            (suppress with `return_raw_depth=False`).  Values are relative —
+            not metric — for monocular depth estimation.
         point_cloud: Coloured `open3d.geometry.PointCloud` unprojected from the
             RGB-D image, present when `return_point_cloud=True`. Coordinates are
             in metres — multiply distances by `point_cloud_scale` (always `1.0`)
@@ -64,6 +69,7 @@ class DepthEstimationResult(BaseModel):
     max_depth: float
     backend_used: str
     depth_image: O3dImage | None = None
+    raw_depth: np.ndarray | None = None
     point_cloud: O3dPointCloud | None = None
     point_cloud_scale: float = 1.0
 

@@ -164,7 +164,8 @@ class TestDepthMetricConversion:
 
 
 class TestHandlerOptionalOutputs:
-    def test_no_optional_outputs_by_default(self, dummy_image_bytes, fake_disp):
+    def test_depth_image_and_raw_depth_returned_by_default(self, dummy_image_bytes, fake_disp):
+        pytest.importorskip("open3d", reason="open3d required")
         with patch.object(StereoDepthHandler, "_run_s2m2", return_value=fake_disp):
             result = StereoDepthHandler().handle(
                 StereoDepthCommand(
@@ -173,8 +174,23 @@ class TestHandlerOptionalOutputs:
                     model_backend="/fake/model.pth",
                 )
             )
+        assert result.depth_image is not None, "depth_image must be present by default"
+        assert result.raw_depth is not None, "raw_depth must be present by default"
+        assert result.point_cloud is None, "point_cloud must still be opt-in"
+
+    def test_depth_image_and_raw_depth_suppressed_when_disabled(self, dummy_image_bytes, fake_disp):
+        with patch.object(StereoDepthHandler, "_run_s2m2", return_value=fake_disp):
+            result = StereoDepthHandler().handle(
+                StereoDepthCommand(
+                    left_image=dummy_image_bytes,
+                    right_image=dummy_image_bytes,
+                    model_backend="/fake/model.pth",
+                    return_depth_image=False,
+                    return_raw_depth=False,
+                )
+            )
         assert result.depth_image is None
-        assert result.point_cloud is None
+        assert result.raw_depth is None
 
     def test_return_depth_image_requires_open3d(self, dummy_image_bytes, fake_disp):
         pytest.importorskip("open3d", reason="open3d required")
@@ -190,6 +206,74 @@ class TestHandlerOptionalOutputs:
         assert result.depth_image is not None
         arr = np.asarray(result.depth_image)
         assert arr.dtype == np.uint16
+
+    def test_depth_image_closer_is_brighter(self, dummy_image_bytes, fake_disp):
+        """Min depth (closest pixels) must map to the highest uint16 value."""
+        pytest.importorskip("open3d", reason="open3d required")
+        # Use a disparity field where the top-left quadrant has much higher
+        # disparity (closer) so we can verify the inversion.
+        near_far = fake_disp.copy()
+        near_far[:24, :32] = 200.0   # very close (high disparity)
+        near_far[24:, 32:] = 1.0     # very far   (low disparity)
+        with patch.object(StereoDepthHandler, "_run_s2m2", return_value=near_far):
+            result = StereoDepthHandler().handle(
+                StereoDepthCommand(
+                    left_image=dummy_image_bytes,
+                    right_image=dummy_image_bytes,
+                    model_backend="/fake/model.pth",
+                    return_depth_image=True,
+                )
+            )
+        arr = np.asarray(result.depth_image)
+        # Near pixels (top-left) should be bright; far pixels (bottom-right) should be dark.
+        near_mean = arr[:24, :32].mean()
+        far_mean = arr[24:, 32:].mean()
+        assert near_mean > far_mean, "closer pixels must be brighter in the depth image"
+
+    def test_return_raw_depth(self, dummy_image_bytes, fake_disp):
+        with patch.object(StereoDepthHandler, "_run_s2m2", return_value=fake_disp):
+            result = StereoDepthHandler().handle(
+                StereoDepthCommand(
+                    left_image=dummy_image_bytes,
+                    right_image=dummy_image_bytes,
+                    model_backend="/fake/model.pth",
+                    return_raw_depth=True,
+                )
+            )
+        assert result.raw_depth is not None
+        assert result.raw_depth.dtype == np.float32
+        assert result.raw_depth.shape == (48, 64)
+
+    def test_raw_depth_matches_depth_map(self, dummy_image_bytes, fake_disp):
+        """raw_depth and depth_map must contain the same values."""
+        with patch.object(StereoDepthHandler, "_run_s2m2", return_value=fake_disp):
+            result = StereoDepthHandler().handle(
+                StereoDepthCommand(
+                    left_image=dummy_image_bytes,
+                    right_image=dummy_image_bytes,
+                    model_backend="/fake/model.pth",
+                    return_raw_depth=True,
+                )
+            )
+        depth_map_arr = np.array(result.depth_map, dtype=np.float32)
+        np.testing.assert_array_equal(result.raw_depth, depth_map_arr)
+
+    def test_raw_depth_values_are_metric_metres(self, dummy_image_bytes):
+        """raw_depth values must equal baseline*focal/(disp*1000) for known disparity."""
+        cfg = StereoDepthAdvancedConfig(focal_length=1000.0, baseline=100.0, doffs=0.0)
+        uniform_disp = np.full((48, 64), 10.0, dtype=np.float32)
+        with patch.object(StereoDepthHandler, "_run_s2m2", return_value=uniform_disp):
+            result = StereoDepthHandler().handle(
+                StereoDepthCommand(
+                    left_image=dummy_image_bytes,
+                    right_image=dummy_image_bytes,
+                    model_backend="/fake/model.pth",
+                    return_raw_depth=True,
+                    advanced_config=cfg,
+                )
+            )
+        expected = (100.0 * 1000.0) / (10.0 * 1000.0)   # = 10.0 m
+        np.testing.assert_allclose(result.raw_depth, expected, rtol=1e-5)
 
     def test_return_point_cloud_requires_open3d(self, dummy_image_bytes, fake_disp):
         pytest.importorskip("open3d", reason="open3d required")

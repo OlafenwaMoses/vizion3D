@@ -35,8 +35,12 @@ class StereoDepthCommand(Command[StereoDepthResult]):
             - Any HTTPS URL is downloaded to the cache directory and loaded.
 
         return_depth_image: When ``True``, the result includes a 16-bit grayscale
-            ``open3d.geometry.Image`` (dtype ``uint16``) where the full 0–65535
-            range maps linearly to ``[min_depth, max_depth]`` in metres.
+            ``open3d.geometry.Image`` (dtype ``uint16``) where 65535 maps to
+            ``min_depth`` (closest, brightest) and 0 maps to ``max_depth``
+            (farthest, darkest) — closer = brighter.
+        return_raw_depth: When ``True``, the result includes the metric depth
+            map as a float32 numpy array of shape ``(H, W)``, in metres.  This
+            is the unmodified depth before any normalisation or uint16 encoding.
         return_point_cloud: When ``True``, the result includes an
             ``open3d.geometry.PointCloud`` unprojected using the stereo camera
             intrinsics in ``advanced_config``. Point coordinates are in metres.
@@ -50,6 +54,7 @@ class StereoDepthCommand(Command[StereoDepthResult]):
     left_image: str | bytes
     right_image: str | bytes
     model_backend: str = DEFAULT_STEREO_MODEL_URL
-    return_depth_image: bool = False
+    return_depth_image: bool = True
+    return_raw_depth: bool = True
     return_point_cloud: bool = False
     advanced_config: StereoDepthAdvancedConfig = field(default_factory=StereoDepthAdvancedConfig)

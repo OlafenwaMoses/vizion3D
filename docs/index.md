@@ -12,6 +12,87 @@ Every task is accessible through three consumption modes driven by one shared CQ
 
 ---
 
+<a id="sample-output"></a>
+
+<figure>
+  <img src="assets/images/Drawing_Room.jpg" alt="Drawing_Room.jpg" style="width:100%;border-radius:6px;">
+  <figcaption style="color:#aaa;font-size:0.8em;margin-top:0.3rem;">input image</figcaption>
+</figure>
+
+<figure>
+  <img src="assets/images/Drawing_Room_depth.png" alt="Drawing_Room_depth.png" style="width:100%;border-radius:6px;">
+  <figcaption style="color:#aaa;font-size:0.8em;margin-top:0.3rem;">depth map</figcaption>
+</figure>
+
+<figure>
+  <div id="ply-viewer" style="width:105%;margin-left:-3.5%;margin-right:-3.5%;height:480px;overflow:hidden;border-radius:6px;background:#d8d8d8;"></div>
+  <figcaption style="color:#aaa;font-size:0.8em;margin-top:0.3rem;">Generated Point cloud from depth estimation</figcaption>
+</figure>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { PLYLoader } from 'three/addons/loaders/PLYLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const container = document.getElementById('ply-viewer');
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(window.devicePixelRatio);
+
+// Set canvas to fill the container via CSS; Three.js buffer stays in sync via ResizeObserver.
+renderer.setSize(container.clientWidth || 800, container.clientHeight || 480, false);
+renderer.domElement.style.cssText = 'width:100%;height:100%;display:block;';
+container.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(60, (container.clientWidth || 800) / (container.clientHeight || 480), 0.001, 1000);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+
+new ResizeObserver(() => {
+  const w = renderer.domElement.clientWidth;
+  const h = renderer.domElement.clientHeight;
+  if (w > 0 && h > 0) {
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+}).observe(renderer.domElement);
+
+new PLYLoader().load('assets/pointclouds/Drawing_Room.ply', (geometry) => {
+  const material = new THREE.PointsMaterial({ size: 0.003, vertexColors: true });
+  const points = new THREE.Points(geometry, material);
+  scene.add(points);
+  geometry.computeBoundingBox();
+  const center = new THREE.Vector3();
+  geometry.boundingBox.getCenter(center);
+  points.position.sub(center);
+  const size = geometry.boundingBox.getSize(new THREE.Vector3()).length();
+  camera.position.set(0, size * 0.3, size * 0.6);
+  camera.far = size * 10;
+  camera.updateProjectionMatrix();
+  controls.target.set(0, 0, 0);
+  controls.maxDistance = size * 5;
+  controls.update();
+});
+
+(function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+})();
+</script>
+
+---
+
 ## Installation
 
 Requires **Python 3.12** (Open3D constraint).
@@ -54,7 +135,7 @@ from vizion3d.lifting import DepthEstimation, DepthEstimationCommand
 
 result = DepthEstimation().run(
     DepthEstimationCommand(
-        image_input="scene.png",
+        image_input="Drawing_Room.jpg",
         return_point_cloud=True,
     )
 )
@@ -63,8 +144,10 @@ print(f"Depth range : {result.min_depth:.4f} → {result.max_depth:.4f}")
 print(f"Points      : {len(result.point_cloud.points)}")
 print(f"Scale       : {result.point_cloud_scale} metre per unit")
 
-o3d.io.write_point_cloud("scene.ply", result.point_cloud)
+o3d.io.write_point_cloud("Drawing_Room.ply", result.point_cloud)
 ```
+
+<span style="color:#aaa;font-size:0.85em;">Output: [Drawing_Room.jpg and Drawing_Room.ply](#sample-output)</span>
 
 ---
 

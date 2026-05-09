@@ -16,16 +16,6 @@ from .models import DepthEstimationResult
 # DepthEstimationAdvanceConfig on each command.
 _DEFAULT_DEPTH_SCALE = 1000.0
 _DEFAULT_DEPTH_TRUNC = 10.0
-OPEN3D_CAMERA_TO_IMAGE_VIEW_TRANSFORM = np.array(
-    [
-        [1.0, 0.0, 0.0, 0.0],
-        [0.0, -1.0, 0.0, 0.0],
-        [0.0, 0.0, 1.0, 0.0],
-        [0.0, 0.0, 0.0, 1.0],
-    ],
-    dtype=np.float64,
-)
-
 
 class DepthEstimationHandler(CommandHandler[DepthEstimationCommand, DepthEstimationResult]):
     _depth_anything_models = {}
@@ -44,6 +34,8 @@ class DepthEstimationHandler(CommandHandler[DepthEstimationCommand, DepthEstimat
         min_depth = float(np.min(depth_array))
         max_depth = float(np.max(depth_array))
         depth_map = depth_array.astype(np.float32).tolist()
+
+        raw_depth = depth_array.copy() if command.return_raw_depth else None
 
         depth_image = None
         if command.return_depth_image:
@@ -89,7 +81,6 @@ class DepthEstimationHandler(CommandHandler[DepthEstimationCommand, DepthEstimat
                     image.width, image.height, cfg.fx, cfg.fy, cfg.cx, cfg.cy
                 ),
             )
-            self._orient_point_cloud_like_image(generated_point_cloud)
             point_cloud = generated_point_cloud
 
         return DepthEstimationResult(
@@ -98,14 +89,10 @@ class DepthEstimationHandler(CommandHandler[DepthEstimationCommand, DepthEstimat
             max_depth=max_depth,
             backend_used=model_id,
             depth_image=depth_image,
+            raw_depth=raw_depth,
             point_cloud=point_cloud,
             point_cloud_scale=1.0,
         )
-
-    @staticmethod
-    def _orient_point_cloud_like_image(point_cloud):
-        point_cloud.transform(OPEN3D_CAMERA_TO_IMAGE_VIEW_TRANSFORM)
-        return point_cloud
 
     @staticmethod
     def _depth_array_to_rgbd_depth(

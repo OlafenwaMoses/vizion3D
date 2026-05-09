@@ -22,7 +22,7 @@ Input contract for the depth estimation task. All inference parameters are decla
 
 ## DepthEstimationAdvanceConfig
 
-Camera intrinsics and depth range settings. Pass an instance of this model as `advanced_config` on `DepthEstimationCommand` to override the PrimeSense defaults used for point cloud unprojection.
+Camera intrinsics and depth range settings. Pass an instance of this model as `advanced_config` on `DepthEstimationCommand` to override the PrimeSense defaults used for point cloud unprojection. See [Camera Intrinsics Matrix](../concepts/camera_intrinsics.md) for a full explanation of `fx`, `fy`, `cx`, and `cy`.
 
 ::: vizion3d.lifting.models.DepthEstimationAdvanceConfig
 
