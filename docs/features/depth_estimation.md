@@ -1,5 +1,77 @@
 # Depth Estimation
 
+<figure>
+  <img src="../../assets/images/Drawing_Room.jpg" alt="Drawing_Room.jpg" style="width:100%;border-radius:6px;">
+  <figcaption style="color:#aaa;font-size:0.8em;margin-top:0.3rem;">input image</figcaption>
+</figure>
+
+<figure>
+  <div id="ply-viewer" style="width:105%;margin-left:-3.5%;margin-right:-3.5%;height:480px;overflow:hidden;border-radius:6px;background:#d8d8d8;"></div>
+  <figcaption style="color:#aaa;font-size:0.8em;margin-top:0.3rem;">Generated Point cloud from depth estimation</figcaption>
+</figure>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { PLYLoader } from 'three/addons/loaders/PLYLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const container = document.getElementById('ply-viewer');
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(window.devicePixelRatio);
+
+// Set canvas to fill the container via CSS; Three.js buffer stays in sync via ResizeObserver.
+renderer.setSize(container.clientWidth || 800, container.clientHeight || 480, false);
+renderer.domElement.style.cssText = 'width:100%;height:100%;display:block;';
+container.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(60, (container.clientWidth || 800) / (container.clientHeight || 480), 0.001, 1000);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+
+new ResizeObserver(() => {
+  const w = renderer.domElement.clientWidth;
+  const h = renderer.domElement.clientHeight;
+  if (w > 0 && h > 0) {
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+}).observe(renderer.domElement);
+
+new PLYLoader().load('../../assets/pointclouds/Drawing_Room.ply', (geometry) => {
+  const material = new THREE.PointsMaterial({ size: 0.003, vertexColors: true });
+  const points = new THREE.Points(geometry, material);
+  scene.add(points);
+  geometry.computeBoundingBox();
+  const center = new THREE.Vector3();
+  geometry.boundingBox.getCenter(center);
+  points.position.sub(center);
+  const size = geometry.boundingBox.getSize(new THREE.Vector3()).length();
+  camera.position.set(0, size * 0.3, size * 0.6);
+  camera.far = size * 10;
+  camera.updateProjectionMatrix();
+  controls.target.set(0, 0, 0);
+  controls.maxDistance = size * 5;
+  controls.update();
+});
+
+(function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+})();
+</script>
+
 **Category:** Lifting (2D → 3D)  
 **Experimental:** No
 
@@ -38,9 +110,10 @@ Set `VIZION3D_MODEL_CACHE` in your environment to change the default cache direc
 |---|---|---|---|---|
 | `image_input` | `str \| bytes` | **Yes** | — | Image to process. Pass a file path string or raw image bytes. |
 | `model_backend` | `str` | No | vizion3D release checkpoint URL | Model backend identifier. See [Model backends](#model-backends) above. |
-| `return_depth_image` | `bool` | No | `False` | If `True`, the result includes a 16-bit grayscale Open3D Image of the depth map. |
+| `return_depth_image` | `bool` | No | `True` | If `True`, the result includes a 16-bit grayscale Open3D Image. Depth Anything V2 outputs inverse relative depth (higher = closer), so higher uint16 values = closer pixels. |
+| `return_raw_depth` | `bool` | No | `True` | If `True`, the result includes the raw depth as a float32 numpy array `(H, W)` — unmodified model output, relative values (not metric). |
 | `return_point_cloud` | `bool` | No | `False` | If `True`, the result includes an Open3D PointCloud unprojected from the RGB-D image. |
-| `advanced_config` | `DepthEstimationAdvanceConfig` | No | PrimeSense defaults | Camera intrinsics and depth range settings. See [Advanced config](#10-advanced-config-camera-intrinsics-depth-range) below. |
+| `advanced_config` | `DepthEstimationAdvanceConfig` | No | PrimeSense defaults | Camera intrinsics and depth range settings. See [Advanced config](#10-advanced-config-camera-intrinsics-depth-range) below. Not sure what intrinsics are? See [Camera Intrinsics Matrix](../concepts/camera_intrinsics.md). |
 
 ---
 
@@ -54,7 +127,8 @@ Set `VIZION3D_MODEL_CACHE` in your environment to change the default cache direc
 | `min_depth` | `float` | Yes | Minimum value in `depth_map`. |
 | `max_depth` | `float` | Yes | Maximum value in `depth_map`. Guaranteed `max_depth >= min_depth`. |
 | `backend_used` | `str` | Yes | Resolved model identifier that processed the request (local file path). |
-| `depth_image` | `open3d.geometry.Image \| None` | When `return_depth_image=True` | 16-bit grayscale image, dtype `uint16`, shape `(H, W)`. The full 0–65535 range maps to `[min_depth, max_depth]`. |
+| `depth_image` | `open3d.geometry.Image \| None` | Yes (set `return_depth_image=False` to suppress) | 16-bit grayscale image, dtype `uint16`, shape `(H, W)`. Inverse relative depth: higher values = closer pixels. |
+| `raw_depth` | `np.ndarray \| None` | Yes (set `return_raw_depth=False` to suppress) | Float32 array, shape `(H, W)`. Raw model output — relative values, not metric. |
 | `point_cloud` | `open3d.geometry.PointCloud \| None` | When `return_point_cloud=True` | Coloured 3D point cloud unprojected from the RGB-D image using the intrinsics in `advanced_config`. Coordinates are in metres. |
 | `point_cloud_scale` | `float` | Yes | Scale factor: multiply any distance measured between two points in the point cloud by this value to get the equivalent distance in metres. Always `1.0` — Open3D produces point cloud coordinates directly in metres. |
 
@@ -117,6 +191,11 @@ print(f"Depth image shape: {depth_array.shape}, dtype: {depth_array.dtype}")
 # Save as 16-bit PNG via PIL
 PILImage.fromarray(depth_array).save("depth.png")
 ```
+
+<figure>
+  <img src="../../assets/images/Drawing_Room_depth.png" alt="Drawing_Room_depth.png" style="width:100%;border-radius:6px;">
+  <figcaption style="color:#aaa;font-size:0.8em;margin-top:0.3rem;">depth map</figcaption>
+</figure>
 
 ---
 

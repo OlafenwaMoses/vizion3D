@@ -1,5 +1,96 @@
 # Stereo Depth
 
+<div style="display:flex;gap:0.5rem;">
+  <figure style="flex:1;margin:0;">
+    <img src="../../assets/images/stereo_im0.png" alt="stereo_im0.png" style="width:100%;border-radius:6px;">
+    <figcaption style="color:#aaa;font-size:0.8em;margin-top:0.3rem;">left input image</figcaption>
+  </figure>
+  <figure style="flex:1;margin:0;">
+    <img src="../../assets/images/stereo_im1.png" alt="stereo_im1.png" style="width:100%;border-radius:6px;">
+    <figcaption style="color:#aaa;font-size:0.8em;margin-top:0.3rem;">right input image</figcaption>
+  </figure>
+</div>
+
+<figure>
+<pre style="background:var(--md-code-bg-color,#f5f5f5);padding:1rem;border-radius:6px;font-size:0.85em;line-height:1.5;overflow-x:auto;margin:0;">cam0=[1733.74 0 792.27; 0 1733.74 541.89; 0 0 1]
+cam1=[1733.74 0 792.27; 0 1733.74 541.89; 0 0 1]
+doffs=0
+baseline=536.62
+width=1920
+height=1080
+ndisp=170
+vmin=55
+vmax=142</pre>
+  <figcaption style="color:#aaa;font-size:0.8em;margin-top:0.3rem;">stereo_calib.txt</figcaption>
+</figure>
+
+<figure>
+  <div id="stereo-ply-viewer" style="width:101%;margin-left:-2.5%;margin-right:-2.5%;height:480px;overflow:hidden;border-radius:6px;background:#d8d8d8;"></div>
+  <figcaption style="color:#aaa;font-size:0.8em;margin-top:0.3rem;">Generated point cloud from stereo depth</figcaption>
+</figure>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { PLYLoader } from 'three/addons/loaders/PLYLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const container = document.getElementById('stereo-ply-viewer');
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(window.devicePixelRatio);
+
+// Set canvas to fill the container via CSS; Three.js buffer stays in sync via ResizeObserver.
+renderer.setSize(container.clientWidth || 800, container.clientHeight || 480, false);
+renderer.domElement.style.cssText = 'width:100%;height:100%;display:block;';
+container.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(60, (container.clientWidth || 800) / (container.clientHeight || 480), 0.001, 1000);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+
+new ResizeObserver(() => {
+  const w = renderer.domElement.clientWidth;
+  const h = renderer.domElement.clientHeight;
+  if (w > 0 && h > 0) {
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+}).observe(renderer.domElement);
+
+new PLYLoader().load('../../assets/pointclouds/stereo_result.ply', (geometry) => {
+  const material = new THREE.PointsMaterial({ size: 0.003, vertexColors: true });
+  const points = new THREE.Points(geometry, material);
+  scene.add(points);
+  geometry.computeBoundingBox();
+  const center = new THREE.Vector3();
+  geometry.boundingBox.getCenter(center);
+  points.position.sub(center);
+  const size = geometry.boundingBox.getSize(new THREE.Vector3()).length();
+  camera.position.set(0, size * 0.3, size * 0.6);
+  camera.far = size * 10;
+  camera.updateProjectionMatrix();
+  controls.target.set(0, 0, 0);
+  controls.maxDistance = size * 5;
+  controls.update();
+});
+
+(function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+})();
+</script>
+
 **Category:** Lifting (2D → 3D)  
 **Experimental:** No
 
@@ -54,9 +145,10 @@ The S2M2 architecture comes in four size variants.  The correct one is detected 
 | `left_image` | `str \| bytes` | **Yes** | — | Left-camera image. Pass a file path string or raw image bytes. |
 | `right_image` | `str \| bytes` | **Yes** | — | Right-camera image (same resolution, horizontally offset from `left_image`). |
 | `model_backend` | `str` | No | vizion3D release checkpoint URL | S2M2 checkpoint. See [Model backends](#model-backends) above. |
-| `return_depth_image` | `bool` | No | `False` | If `True`, the result includes a 16-bit grayscale Open3D Image of the depth map. |
+| `return_depth_image` | `bool` | No | `True` | If `True`, the result includes a 16-bit grayscale Open3D Image where closer = brighter (65535 = `min_depth`, 0 = `max_depth`). |
+| `return_raw_depth` | `bool` | No | `True` | If `True`, the result includes the metric depth as a float32 numpy array `(H, W)` in metres — unmodified, before any normalisation. |
 | `return_point_cloud` | `bool` | No | `False` | If `True`, the result includes an Open3D PointCloud in metres. |
-| `advanced_config` | `StereoDepthAdvancedConfig` | No | 1280×720 @ 100 mm baseline defaults | Camera intrinsics and inference settings. See [Advanced config](#advanced-config) below. |
+| `advanced_config` | `StereoDepthAdvancedConfig` | No | 1280×720 @ 100 mm baseline defaults | Camera intrinsics and inference settings. See [Advanced config](#advanced-config) below. Not sure what intrinsics are? See [Camera Intrinsics Matrix](../concepts/camera_intrinsics.md). |
 
 ---
 
@@ -71,7 +163,8 @@ The S2M2 architecture comes in four size variants.  The correct one is detected 
 | `min_depth` | `float` | Yes | Minimum value in `depth_map` (metres). |
 | `max_depth` | `float` | Yes | Maximum value in `depth_map`. Guaranteed `max_depth >= min_depth`. |
 | `backend_used` | `str` | Yes | Resolved local file path of the checkpoint used. |
-| `depth_image` | `open3d.geometry.Image \| None` | When `return_depth_image=True` | 16-bit grayscale image, dtype `uint16`. The full 0–65535 range maps to `[min_depth, max_depth]` in metres. |
+| `depth_image` | `open3d.geometry.Image \| None` | Yes (set `return_depth_image=False` to suppress) | 16-bit grayscale image, dtype `uint16`. 65535 = `min_depth` (closest, brightest); 0 = `max_depth` (farthest, darkest). |
+| `raw_depth` | `np.ndarray \| None` | Yes (set `return_raw_depth=False` to suppress) | Float32 array, shape `(H, W)`, metric depth in **metres**. Unmodified values before any normalisation or encoding. |
 | `point_cloud` | `open3d.geometry.PointCloud \| None` | When `return_point_cloud=True` | Coloured 3D point cloud, coordinates in **metres**. |
 | `point_cloud_scale` | `float` | Yes | Always `1.0` — stereo depth produces real metric coordinates. |
 
@@ -146,6 +239,11 @@ result = StereoDepth().run(cmd)
 depth_array = np.asarray(result.depth_image)   # shape (H, W), dtype uint16
 PILImage.fromarray(depth_array).save("depth.png")
 ```
+
+<figure>
+  <img src="../../assets/images/stereo_depth.png" alt="stereo_depth.png" style="width:100%;border-radius:6px;">
+  <figcaption style="color:#aaa;font-size:0.8em;margin-top:0.3rem;">depth map</figcaption>
+</figure>
 
 ---
 

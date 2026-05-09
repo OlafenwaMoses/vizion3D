@@ -26,8 +26,13 @@ class DepthEstimationCommand(Command[DepthEstimationResult]):
               checkpoint.
 
         return_depth_image: When `True`, the result includes a 16-bit grayscale
-            `open3d.geometry.Image` (dtype `uint16`) mapping `[min_depth, max_depth]`
-            to the full 0–65535 range. Requires Open3D (Python 3.12).
+            `open3d.geometry.Image` (dtype `uint16`).  Depth Anything V2 outputs
+            inverse relative depth (higher = closer), so higher uint16 values
+            correspond to closer pixels — closer = brighter.
+            Requires Open3D (Python 3.12).
+        return_raw_depth: When `True`, the result includes the raw depth array
+            as a float32 numpy array of shape `(H, W)`.  Values are relative
+            (not metric) for monocular depth — unmodified output from the model.
         return_point_cloud: When `True`, the result includes an
             `open3d.geometry.PointCloud` unprojected from the RGB-D image using
             the camera intrinsics in `advanced_config`. Point coordinates are in metres.
@@ -40,7 +45,8 @@ class DepthEstimationCommand(Command[DepthEstimationResult]):
 
     image_input: str | bytes
     model_backend: str = DEFAULT_DEPTH_MODEL_URL
-    return_depth_image: bool = False
+    return_depth_image: bool = True
+    return_raw_depth: bool = True
     return_point_cloud: bool = False
     advanced_config: DepthEstimationAdvanceConfig = field(
         default_factory=DepthEstimationAdvanceConfig

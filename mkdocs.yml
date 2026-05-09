@@ -32,5 +32,7 @@ nav:
       - Stereo Depth:
           - Overview: features/stereo_depth.md
       - Depth Estimation vs Stereo Depth: features/depth_estimation_vs_stereo_depth.md
+  - Concepts:
+      - Camera Intrinsics Matrix: concepts/camera_intrinsics.md
   - API Reference:
       - Lifting (2D → 3D): api/lifting.md
