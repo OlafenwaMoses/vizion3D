@@ -4,6 +4,7 @@ Data models for the Stereo Depth task.
 Defines the camera-configuration Pydantic model and the result payload.
 """
 
+import numpy as np
 from open3d.geometry import Image as O3dImage  # type: ignore[import-untyped]
 from open3d.geometry import PointCloud as O3dPointCloud  # type: ignore[import-untyped]
 from pydantic import BaseModel, ConfigDict
@@ -68,8 +69,12 @@ class StereoDepthResult(BaseModel):
             ``max_depth >= min_depth``.
         backend_used: Resolved local file path of the checkpoint used.
         depth_image: 16-bit grayscale ``open3d.geometry.Image`` (dtype ``uint16``)
-            where the full 0–65535 range maps linearly to ``[min_depth, max_depth]``.
+            where 65535 = ``min_depth`` (closest, brightest) and 0 = ``max_depth``
+            (farthest, darkest) — closer = brighter.
             Present when ``return_depth_image=True`` was set on the command.
+        raw_depth: Metric depth map as a float32 numpy array of shape ``(H, W)``,
+            in metres.  Unmodified values before any normalisation or encoding.
+            Present when ``return_raw_depth=True`` was set on the command.
         point_cloud: Coloured ``open3d.geometry.PointCloud`` unprojected from the
             RGB-D image using the camera intrinsics in ``advanced_config``.
             Coordinates are in metres.  Present when ``return_point_cloud=True``.
@@ -85,6 +90,7 @@ class StereoDepthResult(BaseModel):
     max_depth: float
     backend_used: str
     depth_image: O3dImage | None = None
+    raw_depth: np.ndarray | None = None
     point_cloud: O3dPointCloud | None = None
     point_cloud_scale: float = 1.0
 

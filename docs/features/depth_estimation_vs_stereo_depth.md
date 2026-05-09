@@ -123,7 +123,7 @@ print(f"point_cloud_scale: {result.point_cloud_scale}")   # 1.0 (accurate)
 
 ## Advanced config comparison
 
-Both tasks expose a camera configuration object, but the fields are different because the underlying geometry differs:
+Both tasks expose a camera configuration object, but the fields are different because the underlying geometry differs. For a full explanation of the intrinsic parameters (`fx`, `fy`, `cx`, `cy`) and the K matrix they come from, see [Camera Intrinsics Matrix](../concepts/camera_intrinsics.md).
 
 ### DepthEstimationAdvanceConfig (monocular)
 

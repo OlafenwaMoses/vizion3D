@@ -3,7 +3,6 @@ from PIL import Image
 
 from vizion3d.lifting import DepthEstimation, DepthEstimationCommand
 from vizion3d.lifting.defaults import DEFAULT_DEPTH_MODEL_FILENAME
-from vizion3d.lifting.handlers import DepthEstimationHandler
 
 o3d = pytest.importorskip(
     "open3d",
@@ -19,22 +18,58 @@ def test_depth_estimation_basic(dummy_image_bytes):
     assert isinstance(res.depth_map[0], list)
     assert res.max_depth >= res.min_depth
     assert res.backend_used.endswith(DEFAULT_DEPTH_MODEL_FILENAME)
-    assert res.depth_image is None
+    assert isinstance(res.depth_image, o3d.geometry.Image), "depth_image must be present by default"
+    assert res.raw_depth is not None, "raw_depth must be present by default"
     assert res.point_cloud is None
     assert res.point_cloud_scale == 1.0
 
 
+def test_depth_estimation_suppresses_depth_image_and_raw_depth(dummy_image_bytes):
+    res = DepthEstimation().run(
+        DepthEstimationCommand(
+            image_input=dummy_image_bytes,
+            return_depth_image=False,
+            return_raw_depth=False,
+        )
+    )
+    assert res.depth_image is None
+    assert res.raw_depth is None
+
+
 def test_depth_estimation_returns_depth_image(dummy_image_bytes):
+    import numpy as np
+
     res = DepthEstimation().run(
         DepthEstimationCommand(image_input=dummy_image_bytes, return_depth_image=True)
     )
 
     assert isinstance(res.depth_image, o3d.geometry.Image)
-    import numpy as np
-
     arr = np.asarray(res.depth_image)
     assert arr.dtype == np.uint16
     assert arr.shape == (100, 100)
+
+
+def test_depth_estimation_returns_raw_depth(dummy_image_bytes):
+    import numpy as np
+
+    res = DepthEstimation().run(
+        DepthEstimationCommand(image_input=dummy_image_bytes, return_raw_depth=True)
+    )
+
+    assert res.raw_depth is not None
+    assert res.raw_depth.dtype == np.float32
+    assert res.raw_depth.shape == (100, 100)
+
+
+def test_raw_depth_matches_depth_map(dummy_image_bytes):
+    import numpy as np
+
+    res = DepthEstimation().run(
+        DepthEstimationCommand(image_input=dummy_image_bytes, return_raw_depth=True)
+    )
+
+    depth_map_arr = np.array(res.depth_map, dtype=np.float32)
+    np.testing.assert_array_equal(res.raw_depth, depth_map_arr)
 
 
 def test_depth_estimation_returns_point_cloud(dummy_image_bytes):
@@ -71,24 +106,19 @@ def test_point_cloud_scale_is_metres_per_unit(dummy_image_bytes):
     assert dist_metres == pytest.approx(dist_units)
 
 
-def test_point_cloud_orientation_keeps_image_top_up():
+def test_point_cloud_is_in_camera_space(dummy_image_bytes):
+    """Point cloud must be in standard camera-space coordinates:
+    X+ right, Y+ down, Z+ forward (all valid Z positive).
+    """
     import numpy as np
 
-    pcd = o3d.geometry.PointCloud()
-    pcd.points = o3d.utility.Vector3dVector(
-        np.array(
-            [
-                [0.0, -1.0, 2.0],  # image top in Open3D camera coordinates
-                [0.0, 1.0, 2.0],  # image bottom in Open3D camera coordinates
-            ]
-        )
+    res = DepthEstimation().run(
+        DepthEstimationCommand(image_input=dummy_image_bytes, return_point_cloud=True)
     )
+    points = np.asarray(res.point_cloud.points)
 
-    DepthEstimationHandler._orient_point_cloud_like_image(pcd)
-    points = np.asarray(pcd.points)
-
-    assert points[0, 1] > points[1, 1]
-    assert np.all(points[:, 2] > 0)
+    assert points.shape[1] == 3
+    assert np.all(points[:, 2] > 0), "Z must be positive (forward from camera)"
 
 
 def test_depth_estimation_accepts_file_path(tmp_path):

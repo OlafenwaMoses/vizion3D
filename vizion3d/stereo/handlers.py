@@ -15,17 +15,12 @@ import numpy as np
 from PIL import Image
 
 from vizion3d.core.cqrs import CommandHandler
-from vizion3d.lifting.handlers import OPEN3D_CAMERA_TO_IMAGE_VIEW_TRANSFORM
 
 from .arch import build_s2m2
 from .arch.utils import image_crop, image_pad
 from .commands import StereoDepthCommand
 from .defaults import resolve_stereo_model_backend
 from .models import StereoDepthResult
-
-# Flip-Y transform reused from the depth estimation handler so point-cloud
-# orientation matches the image-plane convention (Y increases downward).
-_CAMERA_TO_IMAGE_VIEW = OPEN3D_CAMERA_TO_IMAGE_VIEW_TRANSFORM
 
 
 class StereoDepthHandler(CommandHandler[StereoDepthCommand, StereoDepthResult]):
@@ -99,11 +94,13 @@ class StereoDepthHandler(CommandHandler[StereoDepthCommand, StereoDepthResult]):
                 )
             depth_range = max_depth - min_depth
             if depth_range > 0:
-                normalized = (depth_m - min_depth) / depth_range
+                normalized = 1.0 - (depth_m - min_depth) / depth_range
             else:
                 normalized = np.zeros_like(depth_m)
             depth_16bit = (normalized * 65535).astype(np.uint16)
             depth_image = o3d.geometry.Image(depth_16bit)
+
+        raw_depth = depth_m.copy() if command.return_raw_depth else None
 
         point_cloud = None
         if command.return_point_cloud:
@@ -130,6 +127,7 @@ class StereoDepthHandler(CommandHandler[StereoDepthCommand, StereoDepthResult]):
             max_depth=max_depth,
             backend_used=model_id,
             depth_image=depth_image,
+            raw_depth=raw_depth,
             point_cloud=point_cloud,
             point_cloud_scale=1.0,
         )
@@ -325,9 +323,6 @@ class StereoDepthHandler(CommandHandler[StereoDepthCommand, StereoDepthResult]):
         pcd = o3d.geometry.PointCloud()
         pcd.points = o3d.utility.Vector3dVector(pts)
         pcd.colors = o3d.utility.Vector3dVector(cols)
-
-        # Flip Y so Y increases downward in the viewer, matching image-plane orientation.
-        pcd.transform(_CAMERA_TO_IMAGE_VIEW)
 
         return pcd
 
