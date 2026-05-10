@@ -6,7 +6,9 @@ from this module.  Import the router in ``app.py`` and call
 ``app.include_router(lifting_router)``.
 """
 
+import orjson
 from fastapi import APIRouter, File, Form, UploadFile
+from fastapi.responses import Response
 
 from vizion3d.lifting import DepthEstimation, DepthEstimationCommand
 from vizion3d.lifting.defaults import DEFAULT_DEPTH_MODEL_URL
@@ -85,7 +87,7 @@ async def depth_estimation(
         advanced_config=advanced_config,
     )
     result = DepthEstimation().run(cmd)
-    return {
+    payload = {
         "depth_map": result.depth_map,
         "min_depth": result.min_depth,
         "max_depth": result.max_depth,
@@ -101,3 +103,4 @@ async def depth_estimation(
             else None
         ),
     }
+    return Response(content=orjson.dumps(payload), media_type="application/json")

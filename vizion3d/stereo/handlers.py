@@ -167,6 +167,11 @@ class StereoDepthHandler(CommandHandler[StereoDepthCommand, StereoDepthResult]):
             model.my_load_state_dict(state_dict)
             model = model.to(device).eval()
 
+            if device == "cuda":
+                torch.backends.cudnn.benchmark = True
+                torch.backends.cuda.matmul.allow_tf32 = True
+                torch.backends.cudnn.allow_tf32 = True
+
             self._stereo_models[model_path] = (model, torch, device)
             return self._stereo_models[model_path]
 
@@ -222,8 +227,8 @@ class StereoDepthHandler(CommandHandler[StereoDepthCommand, StereoDepthResult]):
             left_t_inp = left_t
             right_t_inp = right_t
 
-        left_pad = image_pad(left_t_inp, 32).to(device)
-        right_pad = image_pad(right_t_inp, 32).to(device)
+        left_pad = image_pad(left_t_inp, 32).to(device, non_blocking=True)
+        right_pad = image_pad(right_t_inp, 32).to(device, non_blocking=True)
 
         device_type = device if isinstance(device, str) else device.type
         if device_type == "cuda":
