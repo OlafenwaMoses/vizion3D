@@ -231,6 +231,7 @@ __marimo__/
 
 # Local scratch / output files
 *.ply
+!docs/assets/pointclouds/*.ply
 image.png
 image2.png
 sample.py
