@@ -39,16 +39,16 @@ o3d = pytest.importorskip(
 
 W, H = 20, 16
 FX = FY = 200.0
-CX, CY = 9.5, 7.5   # exact centre of 20 × 16
+CX, CY = 9.5, 7.5  # exact centre of 20 × 16
 
 _STEREO_CFG = StereoDepthAdvancedConfig(
     focal_length=FX,
     cx=CX,
     cy=CY,
-    baseline=100.0,   # 100 mm
+    baseline=100.0,  # 100 mm
     doffs=0.0,
     z_far=1000.0,
-    conf_threshold=0.0,   # accept all pixels
+    conf_threshold=0.0,  # accept all pixels
     occ_threshold=0.0,
 )
 
@@ -95,9 +95,7 @@ def _run_depth(depth: np.ndarray, cfg: DepthEstimationAdvanceConfig = _DEPTH_CFG
     """Run DepthEstimation with a mocked depth array and return the result."""
     h, w = depth.shape
     img = _image_bytes(w, h)
-    with patch.object(
-        DepthEstimationHandler, "_run_depth_anything_checkpoint", return_value=depth
-    ):
+    with patch.object(DepthEstimationHandler, "_run_depth_anything_checkpoint", return_value=depth):
         return DepthEstimation().run(
             DepthEstimationCommand(
                 image_input=img,
@@ -302,8 +300,8 @@ class TestDepthOrdering:
     """Closer objects (larger disparity) must appear at smaller Z."""
 
     def test_stereo_larger_disparity_means_smaller_z(self):
-        disp_near = np.full((H, W), 50.0, dtype=np.float32)   # closer
-        disp_far = np.full((H, W), 10.0, dtype=np.float32)    # further
+        disp_near = np.full((H, W), 50.0, dtype=np.float32)  # closer
+        disp_far = np.full((H, W), 10.0, dtype=np.float32)  # further
         pts_near = np.asarray(_run_stereo(disp_near).point_cloud.points)
         pts_far = np.asarray(_run_stereo(disp_far).point_cloud.points)
         assert pts_near[:, 2].mean() < pts_far[:, 2].mean(), (
