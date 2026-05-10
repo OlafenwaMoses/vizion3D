@@ -6,7 +6,9 @@ module.  Import the router in ``app.py`` and call
 ``app.include_router(router)``.
 """
 
+import orjson
 from fastapi import APIRouter, File, Form, UploadFile
+from fastapi.responses import Response
 
 from vizion3d.stereo import StereoDepth, StereoDepthCommand
 from vizion3d.stereo.defaults import DEFAULT_STEREO_MODEL_URL
@@ -101,7 +103,7 @@ async def stereo_depth(
         advanced_config=advanced_config,
     )
     result = StereoDepth().run(cmd)
-    return {
+    payload = {
         "depth_map": result.depth_map,
         "disparity_map": result.disparity_map,
         "min_depth": result.min_depth,
@@ -118,3 +120,4 @@ async def stereo_depth(
             else None
         ),
     }
+    return Response(content=orjson.dumps(payload), media_type="application/json")

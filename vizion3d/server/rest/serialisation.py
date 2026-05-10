@@ -18,7 +18,7 @@ def o3d_depth_image_to_png_bytes(o3d_image) -> bytes:
     """Encode an Open3D uint16 depth image as a PNG byte string."""
     arr = np.asarray(o3d_image)
     buf = io.BytesIO()
-    Image.fromarray(arr).save(buf, format="PNG")
+    Image.fromarray(arr).save(buf, format="PNG", compress_level=1)
     return buf.getvalue()
 
 

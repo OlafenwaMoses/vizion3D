@@ -213,8 +213,8 @@ class TestHandlerOptionalOutputs:
         # Use a disparity field where the top-left quadrant has much higher
         # disparity (closer) so we can verify the inversion.
         near_far = fake_disp.copy()
-        near_far[:24, :32] = 200.0   # very close (high disparity)
-        near_far[24:, 32:] = 1.0     # very far   (low disparity)
+        near_far[:24, :32] = 200.0  # very close (high disparity)
+        near_far[24:, 32:] = 1.0  # very far   (low disparity)
         with patch.object(StereoDepthHandler, "_run_s2m2", return_value=near_far):
             result = StereoDepthHandler().handle(
                 StereoDepthCommand(
@@ -272,7 +272,7 @@ class TestHandlerOptionalOutputs:
                     advanced_config=cfg,
                 )
             )
-        expected = (100.0 * 1000.0) / (10.0 * 1000.0)   # = 10.0 m
+        expected = (100.0 * 1000.0) / (10.0 * 1000.0)  # = 10.0 m
         np.testing.assert_allclose(result.raw_depth, expected, rtol=1e-5)
 
     def test_return_point_cloud_requires_open3d(self, dummy_image_bytes, fake_disp):

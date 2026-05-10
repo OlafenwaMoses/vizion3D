@@ -17,6 +17,7 @@ from .models import DepthEstimationResult
 _DEFAULT_DEPTH_SCALE = 1000.0
 _DEFAULT_DEPTH_TRUNC = 10.0
 
+
 class DepthEstimationHandler(CommandHandler[DepthEstimationCommand, DepthEstimationResult]):
     _depth_anything_models = {}
     _model_lock = threading.Lock()
@@ -156,6 +157,12 @@ class DepthEstimationHandler(CommandHandler[DepthEstimationCommand, DepthEstimat
             model.load_state_dict(state_dict)
             device = self._torch_device(torch)
             model = model.to(device).eval()
+
+            if device == "cuda":
+                torch.backends.cudnn.benchmark = True
+                torch.backends.cuda.matmul.allow_tf32 = True
+                torch.backends.cudnn.allow_tf32 = True
+
             processor = DPTImageProcessor(
                 size={"height": 518, "width": 518},
                 do_resize=True,
