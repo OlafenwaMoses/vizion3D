@@ -98,7 +98,7 @@ new PLYLoader().load('assets/pointclouds/Drawing_Room.ply', (geometry) => {
 
 Requires **Python 3.12** (Open3D constraint).
 
-PyTorch is **not bundled** in the base install — choose the extra that matches your hardware (see [Hardware Acceleration](hardware_acceleration.md)). For most users the `cpu` extra is the right default; it installs the standard PyTorch wheel which covers CPU, NVIDIA CUDA, and Apple Silicon MPS automatically.
+PyTorch is **not bundled** in the base install — choose the extra that matches your hardware (see [Hardware Acceleration](hardware_acceleration.md)). For CPU and Apple Silicon MPS, the extra installs PyTorch automatically. For NVIDIA CUDA and AMD ROCm, the matching PyTorch wheel must be installed first from PyTorch's own index — see the [Hardware Acceleration](hardware_acceleration.md) page for pinned install commands.
 
 **pip**
 ```bash 
