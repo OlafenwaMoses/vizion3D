@@ -1,6 +1,6 @@
 # Hardware Acceleration
 
-vizion3d detects the best available device automatically at runtime — no code changes required. Choose the install extra that matches your hardware.
+vizion3d detects the best available device automatically at runtime — no code changes required. Choose the install path that matches your hardware.
 
 | Backend | Hardware | Platforms | What drives inference |
 |---|---|---|---|
@@ -11,9 +11,9 @@ vizion3d detects the best available device automatically at runtime — no code 
 
 ---
 
-## CPU (default)
+## CPU
 
-Works on every platform with no additional drivers. **This is the recommended install for most users.** Inference runs on PyTorch's CPU backend and automatically upgrades to NVIDIA CUDA or Apple Silicon MPS if detected at runtime — no separate install needed for those.
+Works on every platform with no additional drivers.
 
 **pip**
 ```bash
@@ -25,23 +25,92 @@ pip install "vizion3d[cpu]"
 uv add "vizion3d[cpu]"
 ```
 
-> **Mac M-series users:** the standard CPU extra automatically includes Metal Performance Shaders (MPS) support — no separate install needed. vizion3d will use your GPU via MPS as long as you are on macOS 12.3 or later with PyTorch ≥ 2.0.
+---
+
+## Apple Silicon MPS
+
+Apple Silicon Macs (M1 and later) run inference on the GPU via Metal Performance Shaders. The `mps` extra installs the same standard PyTorch wheel as `cpu` — MPS support is built into the macOS wheel.
+
+Requires macOS 12.3 or later.
+
+**pip**
+```bash
+pip install "vizion3d[mps]"
+```
+
+**uv**
+```bash
+uv add "vizion3d[mps]"
+```
+
+vizion3d detects MPS via `torch.backends.mps.is_available()` at runtime and moves models to the GPU automatically. After inference, `torch.mps.empty_cache()` is called to prevent memory accumulation across repeated calls.
 
 ---
 
 ## NVIDIA CUDA
 
-Delivers the highest throughput for depth estimation. On NVIDIA Ampere GPUs and newer (RTX 30xx / A100 and above), PyTorch additionally uses Tensor Cores for mixed-precision acceleration.
+Delivers the highest throughput for depth estimation. On Ampere GPUs and newer (RTX 30xx / A100 and above), PyTorch uses Tensor Cores for mixed-precision (float16) acceleration.
 
 ### Prerequisites
 
-| Requirement | Minimum version | Link |
+| Requirement | Notes | Link |
 |---|---|---|
-| NVIDIA GPU driver | 520.61.05 (Linux) / 528.33 (Windows) | [Driver downloads](https://www.nvidia.com/drivers) |
-| CUDA Toolkit | 11.8 | [CUDA Toolkit installer](https://developer.nvidia.com/cuda-downloads) |
-| cuDNN | 8.x | [cuDNN install guide](https://developer.nvidia.com/cudnn) |
+| NVIDIA GPU driver | ≥ 450.80 (Linux) / ≥ 452.39 (Windows) — see install table below for per-version minimums | [Driver downloads](https://www.nvidia.com/drivers) |
+| CUDA Toolkit | Not required for inference — the PyTorch wheel bundles its own CUDA runtime (`cudart`, `cuBLAS`, `cuDNN`, NCCL). Required only if compiling custom CUDA extensions. | — |
 
-Install CUDA and cuDNN **before** installing vizion3d. The PyTorch wheel bundled with the `cuda` extra already includes its own CUDA runtime libraries, but the driver must be present on the host.
+### Install
+
+PyTorch CUDA wheels bundle their own CUDA runtime (`cudart`, `cuBLAS`, `cuDNN`, NCCL) — you do **not** need a matching CUDA Toolkit installed. What determines which wheel to use is your **NVIDIA driver version**:
+
+| Wheel | Minimum driver (Linux) | Minimum driver (Windows) |
+|---|---|---|
+| `+cu124` (recommended) | 550.54.14 | 551.61 |
+| `+cu121` | 525.60.13 | 527.41 |
+| `+cu118` | 450.80.02 | 452.39 |
+
+Use `+cu124` unless your driver is older than 550. To check: `nvidia-smi` → look at the top-right "CUDA Version" field.
+
+Wheels must be installed **before** vizion3d using a pinned version — pinning ensures the bundled NCCL is consistent and avoids load-time `undefined symbol: ncclCommWindowDeregister` errors that occur when pip resolves torch from PyPI.
+
+**Step 1 — install CUDA PyTorch**
+
+*=== "driver ≥ 550 — CUDA 12.4 (recommended)"*
+
+**pip**
+```bash
+pip install torch==2.5.1+cu124 torchvision==0.20.1+cu124 --index-url https://download.pytorch.org/whl/cu124
+```
+
+**uv**
+```bash
+uv pip install torch==2.5.1+cu124 torchvision==0.20.1+cu124 --index-url https://download.pytorch.org/whl/cu124
+```
+
+*=== "driver ≥ 525 — CUDA 12.1"*
+
+**pip**
+```bash
+pip install torch==2.5.1+cu121 torchvision==0.20.1+cu121 --index-url https://download.pytorch.org/whl/cu121
+```
+
+**uv**
+```bash
+uv pip install torch==2.5.1+cu121 torchvision==0.20.1+cu121 --index-url https://download.pytorch.org/whl/cu121
+```
+
+*=== "driver ≥ 450 — CUDA 11.8"*
+
+**pip**
+```bash
+pip install torch==2.5.1+cu118 torchvision==0.20.1+cu118 --index-url https://download.pytorch.org/whl/cu118
+```
+
+**uv**
+```bash
+uv pip install torch==2.5.1+cu118 torchvision==0.20.1+cu118 --index-url https://download.pytorch.org/whl/cu118
+```
+
+**Step 2 — install vizion3d**
 
 **pip**
 ```bash
@@ -53,7 +122,9 @@ pip install "vizion3d[cuda]"
 uv add "vizion3d[cuda]"
 ```
 
-vizion3d detects CUDA via `torch.cuda.is_available()` at runtime and moves models and tensors to the GPU automatically — no configuration needed.
+Because `vizion3d[cuda]` declares no torch dependency, pip will not touch the CUDA wheel installed in step 1.
+
+vizion3d detects CUDA via `torch.cuda.is_available()` at runtime and moves models and tensors to the GPU automatically.
 
 ---
 
@@ -83,27 +154,66 @@ Install the ROCm stack on your system before installing the PyTorch ROCm wheel. 
 
 ### Install
 
-Because the ROCm PyTorch wheel is hosted on PyTorch's own index (not PyPI), it must be installed **before** vizion3d — vizion3d's base install has no torch dependency and will not overwrite it.
+ROCm PyTorch wheels are hosted on PyTorch's own index, not PyPI. Install a pinned version before vizion3d.
 
 **Step 1 — install ROCm PyTorch**
+
+*=== "ROCm 6.2 (recommended)"*
+
+    **pip**
 ```bash
-pip3 install --pre torch torchvision torchaudio \
-  --index-url https://download.pytorch.org/whl/nightly/rocm7.2
+pip install torch==2.5.1+rocm6.2 torchvision==0.20.1+rocm6.2 --index-url https://download.pytorch.org/whl/rocm6.2
 ```
 
-For the full list of available ROCm wheel versions see [PyTorch ROCm install guide](https://rocm.docs.amd.com/projects/install-on-linux/en/latest/install/3rd-party/pytorch-install.html#using-wheels-package).
-
-**Step 2 — install vizion3d (no extra needed)**
+    **uv**
 ```bash
-pip install vizion3d
+uv pip install torch==2.5.1+rocm6.2 torchvision==0.20.1+rocm6.2 --index-url https://download.pytorch.org/whl/rocm6.2
 ```
 
-Because `vizion3d` declares no torch dependency in its base install, pip will not touch the ROCm wheel you installed in step 1.
+*=== "ROCm 6.1"*
 
-> **Warning:** do **not** run `pip install "vizion3d[cpu]"` or `pip install "vizion3d[cuda]"` after installing the ROCm wheel — those extras pull a standard PyPI torch build and will replace your ROCm installation.
+    **pip**
+```bash
+pip install torch==2.5.1+rocm6.1 torchvision==0.20.1+rocm6.1 --index-url https://download.pytorch.org/whl/rocm6.1
+```
+
+    **uv**
+```bash
+uv pip install torch==2.5.1+rocm6.1 torchvision==0.20.1+rocm6.1 --index-url https://download.pytorch.org/whl/rocm6.1
+```
+
+**Step 2 — install vizion3d**
+
+**pip**
+```bash
+pip install "vizion3d[amd]"
+```
+
+**uv**
+```bash
+uv add "vizion3d[amd]"
+```
+
+Because `vizion3d[amd]` declares no torch dependency, pip will not touch the ROCm wheel installed in step 1.
 
 ### Limitations
 
 - Linux only — ROCm does not run on Windows or macOS.
 - Only GPUs on AMD's official support list are guaranteed to work; consumer RDNA1 cards (RX 5000 series) are not supported.
 - Some PyTorch operations fall back to CPU on ROCm; performance for those ops will match CPU speed.
+
+---
+
+## Google Colab
+
+Colab runtimes ship with a CUDA-enabled PyTorch pre-installed and pinned to the runtime's CUDA driver and NCCL version. Installing vizion3d with any torch extra will upgrade torch from PyPI, which can cause an NCCL symbol mismatch (`undefined symbol: ncclCommWindowDeregister`).
+
+Install vizion3d without touching torch:
+
+**pip**
+```bash
+pip install vizion3d --no-deps
+pip install fastapi "clean-ioc>=1.3.0" "pydantic>=2.0.0" grpcio grpcio-tools uvicorn python-multipart "transformers>=5.6.2" "pillow>=12.2.0" "open3d>=0.18.0"
+```
+
+This installs all non-torch dependencies and leaves Colab's pre-installed torch untouched.
