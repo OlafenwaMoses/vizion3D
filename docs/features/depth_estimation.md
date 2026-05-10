@@ -22,7 +22,7 @@
 <script type="module">
 import * as THREE from 'three';
 import { PLYLoader } from 'three/addons/loaders/PLYLoader.js';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { TrackballControls } from 'three/addons/controls/TrackballControls.js';
 
 const container = document.getElementById('ply-viewer');
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -35,8 +35,9 @@ container.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(60, (container.clientWidth || 800) / (container.clientHeight || 480), 0.001, 1000);
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
+const controls = new TrackballControls(camera, renderer.domElement);
+controls.rotateSpeed = 1.0;
+controls.dynamicDampingFactor = 0.2;
 
 new ResizeObserver(() => {
   const w = renderer.domElement.clientWidth;
