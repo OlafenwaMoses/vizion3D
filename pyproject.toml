@@ -39,9 +39,55 @@ dependencies = [
     "open3d>=0.18.0",
 ]
 
+# ---------------------------------------------------------------------------
+# Hardware extras
+#
+# cpu / mps
+#   Wheels are on PyPI — pip resolves them automatically.
+#
+#   pip install vizion3d[cpu]
+#   pip install vizion3d[mps]
+#
+# cuda
+#   CUDA wheels bundle their own NCCL and are NOT on PyPI.
+#   Install the matching wheel BEFORE `pip install vizion3d[cuda]`.
+#   Using pinned versions avoids NCCL symbol mismatches (e.g. ncclCommWindowDeregister).
+#
+#   CUDA 12.4 (recommended):
+#     pip install torch==2.5.1+cu124 torchvision==0.20.1+cu124 \
+#       --index-url https://download.pytorch.org/whl/cu124
+#
+#   CUDA 12.1:
+#     pip install torch==2.5.1+cu121 torchvision==0.20.1+cu121 \
+#       --index-url https://download.pytorch.org/whl/cu121
+#
+#   CUDA 11.8:
+#     pip install torch==2.5.1+cu118 torchvision==0.20.1+cu118 \
+#       --index-url https://download.pytorch.org/whl/cu118
+#
+# amd
+#   ROCm wheels are also NOT on PyPI.  Install first:
+#
+#   ROCm 6.2 (recommended):
+#     pip install torch==2.5.1+rocm6.2 torchvision==0.20.1+rocm6.2 \
+#       --index-url https://download.pytorch.org/whl/rocm6.2
+#
+#   ROCm 6.1:
+#     pip install torch==2.5.1+rocm6.1 torchvision==0.20.1+rocm6.1 \
+#       --index-url https://download.pytorch.org/whl/rocm6.1
+#
+# Colab
+#   torch + CUDA is pre-installed — do not use any extras:
+#     pip install vizion3d --no-deps
+#     pip install fastapi "clean-ioc>=1.3.0" "pydantic>=2.0.0" grpcio grpcio-tools \
+#       uvicorn python-multipart "transformers>=5.6.2" "pillow>=12.2.0" "open3d>=0.18.0"
+#
+# If a matching torch is already present, pip will not downgrade it.
+# ---------------------------------------------------------------------------
 [project.optional-dependencies]
-cpu  = ["torch>=2.11.0", "torchvision>=0.26.0"]
-cuda = ["torch>=2.11.0", "torchvision>=0.26.0"]
+cpu  = ["torch>=2.4.0", "torchvision>=0.19.0"]
+mps  = ["torch>=2.4.0", "torchvision>=0.19.0"]
+cuda = []
 amd  = []
 
 [project.urls]
