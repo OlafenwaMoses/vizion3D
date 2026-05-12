@@ -155,9 +155,9 @@ class TestDepthMetricConversion:
                     advanced_config=StereoDepthAdvancedConfig(focal_length=1000.0, baseline=100.0),
                 )
             )
-        # Zero disparity → zero depth; non-zero depth present for (0,0)
-        assert result.min_depth == pytest.approx(0.0)
-        assert result.max_depth > 0.0
+        # Zero-disparity pixels are excluded; only the valid pixel at (0,0) sets the range
+        assert result.min_depth > 0.0
+        assert result.max_depth == pytest.approx(result.min_depth)
 
 
 # ── Optional outputs ──────────────────────────────────────────────────────────

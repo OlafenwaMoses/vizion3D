@@ -16,7 +16,7 @@ X = (u - cx) * d / fx
 Y = (v - cy) * d / fy
 ```
 
-All four intrinsic parameters — `fx`, `fy`, `cx`, `cy` — appear in this formula. Getting them wrong produces a point cloud that is geometrically distorted: correct topology but wrong angles, skewed shapes, or objects that appear compressed or stretched.
+All four intrinsic parameters — `fx`, `fy`, `cx`, `cy` — appear in this formula. Values that do not match your camera produce a point cloud that is geometrically distorted: correct topology but skewed angles, compressed shapes, or stretched geometry.
 
 ---
 
@@ -44,7 +44,7 @@ fx = (image_width / 2) / tan(FoV_h / 2)
 
 The vertical focal length in pixels. For cameras with square pixels, `fy ≈ fx`. Cameras with non-square sensors may have `fy ≠ fx`.
 
-**Effect on the point cloud:** Controls vertical spread analogously to `fx`. Incorrect `fy` produces vertically compressed or stretched geometry.
+**Effect on the point cloud:** Controls vertical spread analogously to `fx`. A `fy` that does not match your sensor produces vertically compressed or stretched geometry.
 
 **How to find it:** `K[1][1]` from the calibration matrix, or:
 
@@ -60,7 +60,7 @@ fy = (image_height / 2) / tan(FoV_v / 2)
 
 The horizontal image coordinate of the optical axis — ideally the exact centre of the sensor. For a 640-wide image the ideal value is `319.5`; for a 1920-wide image it is typically near `959.5`.
 
-**Effect on the point cloud:** Shifts the entire point cloud left or right. A wrong `cx` makes the scene appear to be viewed from an off-centre vantage point, introducing a lateral tilt.
+**Effect on the point cloud:** Shifts the entire point cloud left or right. A `cx` that does not match your sensor makes the scene appear viewed from an off-centre vantage point, introducing a lateral tilt.
 
 ---
 
@@ -70,7 +70,7 @@ The horizontal image coordinate of the optical axis — ideally the exact centre
 
 The vertical image coordinate of the optical axis. For a 480-tall image the ideal value is `239.5`.
 
-**Effect on the point cloud:** Shifts the entire point cloud up or down. Like `cx`, an incorrect value introduces a tilt — vertical in this case.
+**Effect on the point cloud:** Shifts the entire point cloud up or down. Like `cx`, a value that does not match your sensor introduces a tilt — vertical in this case.
 
 ---
 

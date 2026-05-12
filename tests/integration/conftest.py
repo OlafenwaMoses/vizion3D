@@ -202,6 +202,32 @@ def local_stereo_model_path(tmp_path_factory) -> str:
     return str(dest)
 
 
+@pytest.fixture(scope="session")
+def local_annotation_model_path(tmp_path_factory) -> str:
+    """Provide a local .pt path for the YOLO11-seg annotation model.
+
+    Symlinks from the vizion3d cache if the model is already downloaded;
+    otherwise downloads it fresh into a session-scoped tmp directory.
+    """
+    from vizion3d.annotation.defaults import (
+        DEFAULT_ANNOTATION_MODEL_FILENAME,
+        DEFAULT_ANNOTATION_MODEL_URL,
+    )
+    from vizion3d.lifting.defaults import default_model_cache_dir, download_model
+
+    default_cache = default_model_cache_dir() / DEFAULT_ANNOTATION_MODEL_FILENAME
+    tmp_dir = tmp_path_factory.mktemp("local_annotation_model")
+    dest = tmp_dir / DEFAULT_ANNOTATION_MODEL_FILENAME
+
+    if default_cache.exists():
+        dest.symlink_to(default_cache.resolve())
+    else:
+        download_model(DEFAULT_ANNOTATION_MODEL_URL, cache_dir=tmp_dir)
+
+    assert dest.exists() or dest.is_symlink(), f"Annotation model not found at {dest}"
+    return str(dest)
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # gRPC server + client stub fixture
 # ──────────────────────────────────────────────────────────────────────────────

@@ -4,7 +4,6 @@ from .commands import DepthEstimationCommand
 from .handlers import DepthEstimationHandler
 from .models import DepthEstimationAdvanceConfig, DepthEstimationResult
 
-# Register handlers on import or application startup
 register_command_handler(DepthEstimationCommand, DepthEstimationHandler)
 
 

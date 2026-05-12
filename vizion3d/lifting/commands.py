@@ -14,16 +14,10 @@ class DepthEstimationCommand(Command[DepthEstimationResult]):
     Attributes:
         image_input: The input image. Pass a file-path string or raw image bytes.
             The handler auto-detects which form is supplied.
-        model_backend: Model backend to use for inference.
-
-            - Default value is the vizion3D release checkpoint URL
-              (`depth_anything_v2_vitb.pth`), which is downloaded on first use and
-              cached under `~/.cache/vizion3d/models/`.
-              Set `VIZION3D_MODEL_CACHE` to override the cache directory.
-            - A local `.pth` or `.pt` path is loaded directly as a Depth Anything V2
-              checkpoint — no download occurs.
-            - Any HTTPS URL is downloaded to the cache directory and loaded as a
-              checkpoint.
+        model_backend: Depth Anything V2 checkpoint URL or local path.  Defaults
+            to the vizion3D release checkpoint (`depth_anything_v2_vitb.pth`),
+            downloaded on first use and cached under `~/.cache/vizion3d/models/`.
+            Set `VIZION3D_MODEL_CACHE` to override the cache directory.
 
         return_depth_image: When `True`, the result includes a 16-bit grayscale
             `open3d.geometry.Image` (dtype `uint16`).  Depth Anything V2 outputs

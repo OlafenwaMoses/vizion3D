@@ -220,7 +220,6 @@ def test_stereo_depth_passes_form_fields_to_command(stereo_files):
                 "return_depth_image": "true",
                 "focal_length": "1733.74",
                 "baseline": "536.62",
-                "scale_factor": "0.5",
             },
         )
     called_cmd = mock_cls.return_value.run.call_args[0][0]
@@ -228,7 +227,7 @@ def test_stereo_depth_passes_form_fields_to_command(stereo_files):
     assert called_cmd.return_depth_image is True
     assert called_cmd.advanced_config.focal_length == pytest.approx(1733.74)
     assert called_cmd.advanced_config.baseline == pytest.approx(536.62)
-    assert called_cmd.advanced_config.scale_factor == pytest.approx(0.5)
+    assert called_cmd.advanced_config.scale_factor is None  # auto-computed in handler
 
 
 def test_create_app_depth_only_disables_stereo_endpoint(stereo_files, image_file):

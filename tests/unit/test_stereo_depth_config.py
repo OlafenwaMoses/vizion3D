@@ -44,10 +44,10 @@ class TestStereoDepthAdvancedConfig:
         assert cfg.cy == 360.0
         assert cfg.baseline == 100.0
         assert cfg.doffs == 0.0
-        assert cfg.z_far == 10.0
+        assert cfg.z_far == 50.0
         assert cfg.conf_threshold == 0.1
         assert cfg.occ_threshold == 0.5
-        assert cfg.scale_factor == 1.0
+        assert cfg.scale_factor is None  # auto-selected at inference time
 
     def test_partial_override_keeps_other_defaults(self):
         cfg = StereoDepthAdvancedConfig(focal_length=1733.74, baseline=536.62)
@@ -201,7 +201,7 @@ class TestStereoRestAdvancedConfig:
         assert cmd.advanced_config.baseline == 100.0
         assert cmd.advanced_config.cx == 640.0
         assert cmd.advanced_config.cy == 360.0
-        assert cmd.advanced_config.z_far == 10.0
+        assert cmd.advanced_config.z_far == 50.0
 
     def test_custom_focal_length_forwarded(self):
         cmd = self._post({"focal_length": "1733.74"})
@@ -220,10 +220,6 @@ class TestStereoRestAdvancedConfig:
     def test_custom_z_far_forwarded(self):
         cmd = self._post({"z_far": "5.0"})
         assert cmd.advanced_config.z_far == pytest.approx(5.0)
-
-    def test_custom_scale_factor_forwarded(self):
-        cmd = self._post({"scale_factor": "0.5"})
-        assert cmd.advanced_config.scale_factor == pytest.approx(0.5)
 
     def test_partial_override_does_not_affect_other_fields(self):
         cmd = self._post({"focal_length": "800.0"})

@@ -28,13 +28,19 @@ Provided the camera calibration is accurate, the output is **real metric depth i
 |---|---|---|
 | **Input** | Rectified left + right image pair | Single RGB image |
 | **Depth type** | Metric (real metres) | Relative (inverse depth, arbitrary scale) |
-| **Coordinate system** | Camera space | Camera space |
-| **Units** | Metres (real) | Metres (fictitious — mapped to `[0, depth_trunc]`) |
+| **Coordinate system** | Camera space (X right, Y down, Z forward) | Camera space (X right, Y down, Z forward) |
+| **Z ordering** | Near objects have smaller Z | Near objects have larger Z — relative depth only, not physical ordering |
+| **Units** | Metres (real) | Metres (relative, mapped to `[0, depth_trunc]`) |
 | **Object at 2.4 m reads as 2.4 m** | Yes — if calibration is correct | No — depends on scene content |
-| **Scale factor to world** | 1.0 (accurate) | Unknown, scene-dependent |
-| **`point_cloud_scale` field** | 1.0 (accurate) | 1.0 (misleading — not real metres) |
+| **Scale factor to world** | 1.0 (real) | Unknown, scene-dependent |
+| **`point_cloud_scale` field** | 1.0 (real metres) | 1.0 (relative, not real metres) |
 | **Shape / topology correct** | Yes | Yes, if correct intrinsics supplied via `DepthEstimationAdvanceConfig` |
 | **Camera calibration needed** | Yes — `focal_length`, `baseline`, `cx`, `cy` | Optional — only affects point cloud geometry |
+| **Compatible with annotation task** | ✅ | ✅ back-projection is self-consistent |
+| **Compatible with other 3D tools** | ✅ registration, reconstruction, metric tools | ⚠️ Z ordering is relative — not directly interoperable with metric clouds |
+| **Output format** | Open3D `PointCloud` | Open3D `PointCloud` |
+| **PLY export** | ✅ | ✅ |
+| **MPS inference** | float32 | float32 |
 | **Input requirements** | Stereo rig, rectified images | Any single photo |
 | **Depth completeness** | Gaps in occluded / textureless regions | Dense — every pixel has a prediction |
 | **Runtime** | Moderate (transformer-based matching) | Moderate (ViT-based encoder-decoder) |
@@ -78,7 +84,7 @@ result = DepthEstimation().run(
 points = np.asarray(result.point_cloud.points)  # shape (N, 3)
 # point_cloud_scale == 1.0, but distances are NOT real metres —
 # the depth model output is relative and mapped to depth_trunc.
-print(f"point_cloud_scale: {result.point_cloud_scale}")  # 1.0 (misleading)
+print(f"point_cloud_scale: {result.point_cloud_scale}")  # 1.0 (relative, not real metres)
 ```
 
 ### Stereo point cloud (Stereo Depth)
@@ -113,10 +119,10 @@ print(f"point_cloud_scale: {result.point_cloud_scale}")   # 1.0 (accurate)
 
 | Output field | Depth Estimation | Stereo Depth |
 |---|---|---|
-| `depth_map` | Relative depth (fictitious metres) | Metric depth (real metres) |
+| `depth_map` | Relative depth (not real metres) | Metric depth (real metres) |
 | `disparity_map` | Not present | Pixel disparity (always returned) |
 | `min_depth` / `max_depth` | Relative range | Real range in metres |
-| `point_cloud_scale` | 1.0 (misleading) | 1.0 (accurate) |
+| `point_cloud_scale` | 1.0 (relative, not real metres) | 1.0 (real metres) |
 | `backend_used` | Local path to Depth Anything V2 `.pth` | Local path to S2M2 `.pth` |
 
 ---
@@ -155,10 +161,10 @@ cfg = StereoDepthAdvancedConfig(
     cy=360.0,             # principal point y
     baseline=100.0,       # stereo baseline in millimetres
     doffs=0.0,            # disparity offset (Middlebury-style calibration)
-    z_far=10.0,           # max depth in metres
+    z_far=50.0,           # max depth in metres
     conf_threshold=0.1,   # min confidence score for point inclusion
     occ_threshold=0.5,    # min occlusion score for point inclusion
-    scale_factor=1.0,     # input downscale for speed/quality tradeoff
+    # input is auto-resized to fit 960×540 before inference
 )
 ```
 

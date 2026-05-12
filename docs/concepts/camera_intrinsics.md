@@ -159,7 +159,7 @@ K  =    |   0.0  525.0   239.5 |
         |   0.0    0.0     1.0 |
 ```
 
-For a different camera or resolution, always supply calibrated values — wrong intrinsics produce correct topology but geometrically distorted metric scale.
+For a different camera or resolution, always supply calibrated values — intrinsics that do not match your camera produce correct topology but geometrically distorted metric scale.
 
 See the full field reference and per-entry-point usage examples in the Advanced Config pages:
 
