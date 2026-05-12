@@ -185,9 +185,9 @@ class DepthEstimationHandler(CommandHandler[DepthEstimationCommand, DepthEstimat
         device_type = device if isinstance(device, str) else device.type
         if device_type == "cuda":
             autocast_ctx = torch.amp.autocast(device_type="cuda", dtype=torch.float16, enabled=True)
-        elif device_type == "mps":
-            autocast_ctx = torch.amp.autocast(device_type="mps", dtype=torch.float16, enabled=True)
         else:
+            # MPS float16 can produce degraded depth maps due to limited precision
+            # in transformer attention operations.  CPU has no autocast benefit.
             autocast_ctx = contextlib.nullcontext()
 
         with torch.inference_mode(), autocast_ctx:

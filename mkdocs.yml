@@ -25,13 +25,16 @@ plugins:
 nav:
   - Home: index.md
   - Hardware Acceleration: hardware_acceleration.md
-  - Features:
-      - Depth Estimation:
-          - Overview: features/depth_estimation.md
-          - Advanced Config: features/depth_estimation_advanced_config.md
-      - Stereo Depth:
-          - Overview: features/stereo_depth.md
-      - Depth Estimation vs Stereo Depth: features/depth_estimation_vs_stereo_depth.md
+  - Tasks:
+      - Lifting:
+          - Depth Estimation:
+              - Overview: features/depth_estimation.md
+              - Advanced Config: features/depth_estimation_advanced_config.md
+          - Stereo Depth:
+              - Overview: features/stereo_depth.md
+          - Depth Estimation vs Stereo Depth: features/depth_estimation_vs_stereo_depth.md
+      - Annotation:
+          - Object Mask Annotation 3D: annotation/object_mask_annotation_3d.md
   - Concepts:
       - Camera Intrinsics Matrix: concepts/camera_intrinsics.md
   - API Reference:

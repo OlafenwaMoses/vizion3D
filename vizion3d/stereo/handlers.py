@@ -76,11 +76,15 @@ class StereoDepthHandler(CommandHandler[StereoDepthCommand, StereoDepthResult]):
         # Disparity → metric depth (millimetre formula → metres)
         with np.errstate(divide="ignore", invalid="ignore"):
             depth_mm = cfg.baseline * cfg.focal_length / (disp_np + cfg.doffs)
+        # Zero out: zero/negative disparity, infinite depth, NaN, negative depth
         depth_mm[disp_np <= 0] = 0.0
+        depth_mm[~np.isfinite(depth_mm)] = 0.0
+        depth_mm[depth_mm < 0] = 0.0
         depth_m = depth_mm / 1000.0
 
-        min_depth = float(np.min(depth_m))
-        max_depth = float(np.max(depth_m))
+        positive = depth_m[depth_m > 0]
+        min_depth = float(positive.min()) if positive.size else 0.0
+        max_depth = float(positive.max()) if positive.size else 0.0
         depth_map: list[list[float]] = depth_m.astype(np.float32).tolist()
         disparity_map: list[list[float]] = disp_np.astype(np.float32).tolist()
 
@@ -92,11 +96,13 @@ class StereoDepthHandler(CommandHandler[StereoDepthCommand, StereoDepthResult]):
                 raise ImportError(
                     "open3d is required for depth image output. Pin to Python 3.12 and run: uv sync"
                 )
+            normalized = np.zeros_like(depth_m, dtype=np.float64)
+            valid = depth_m > 0
             depth_range = max_depth - min_depth
-            if depth_range > 0:
-                normalized = 1.0 - (depth_m - min_depth) / depth_range
-            else:
-                normalized = np.zeros_like(depth_m)
+            if depth_range > 0 and valid.any():
+                normalized[valid] = np.clip(
+                    1.0 - (depth_m[valid] - min_depth) / depth_range, 0.0, 1.0
+                )
             depth_16bit = (normalized * 65535).astype(np.uint16)
             depth_image = o3d.geometry.Image(depth_16bit)
 
@@ -207,7 +213,14 @@ class StereoDepthHandler(CommandHandler[StereoDepthCommand, StereoDepthResult]):
         left_t = torch.from_numpy(np.asarray(left).copy()).permute(2, 0, 1).unsqueeze(0).float()
         right_t = torch.from_numpy(np.asarray(right).copy()).permute(2, 0, 1).unsqueeze(0).float()
 
-        sf = cfg.scale_factor
+        # Auto-fit to 960×540: take the more restrictive of width and height constraints.
+        # Disparity is divided by sf after inference so metric depth and point cloud
+        # coordinates are always in the original full-resolution coordinate space.
+        sf = (
+            cfg.scale_factor
+            if cfg.scale_factor is not None
+            else min(1.0, 960 / img_w, 540 / img_h)
+        )
         if sf != 1.0:
             scaled_h = round(img_h * sf / 32) * 32
             scaled_w = round(img_w * sf / 32) * 32
@@ -233,9 +246,10 @@ class StereoDepthHandler(CommandHandler[StereoDepthCommand, StereoDepthResult]):
         device_type = device if isinstance(device, str) else device.type
         if device_type == "cuda":
             autocast_ctx = torch.amp.autocast(device_type="cuda", dtype=torch.float16, enabled=True)
-        elif device_type == "mps":
-            autocast_ctx = torch.amp.autocast(device_type="mps", dtype=torch.float16, enabled=True)
         else:
+            # MPS float16 can produce near-zero disparity for some image pairs due to
+            # limited dynamic range in the Sinkhorn OT log/exp operations.  Run float32
+            # on all non-CUDA devices; MPS still benefits from hardware acceleration.
             autocast_ctx = contextlib.nullcontext()
 
         with torch.inference_mode(), autocast_ctx:

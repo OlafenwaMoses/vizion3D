@@ -1,9 +1,11 @@
 """
 gRPC server for the vizion3d Lifting service.
 
-Exposes two RPC methods:
-- ``RunDepthEstimation`` — monocular depth from a single image.
-- ``RunStereoDepth``     — metric depth from a rectified stereo image pair.
+Exposes three RPC methods:
+- ``RunDepthEstimation``   — monocular depth from a single image.
+- ``RunStereoDepth``       — metric depth from a rectified stereo image pair.
+- ``RunObjectMaskAnnotation3D``— detect, instance-segment, and mask-annotate
+                               objects in a point cloud (image optional).
 
 Start with::
 
@@ -20,6 +22,9 @@ import grpc
 import numpy as np
 from PIL import Image
 
+from vizion3d.annotation import ObjectMaskAnnotation3D, ObjectMaskAnnotation3DCommand
+from vizion3d.annotation.defaults import DEFAULT_ANNOTATION_MODEL_URL
+from vizion3d.annotation.models import ObjectMaskAnnotation3DConfig
 from vizion3d.lifting import DepthEstimation, DepthEstimationCommand
 from vizion3d.lifting.defaults import DEFAULT_DEPTH_MODEL_URL
 from vizion3d.lifting.models import DepthEstimationAdvanceConfig
@@ -45,6 +50,30 @@ def _o3d_point_cloud_to_ply_bytes(pcd) -> bytes:
     points = np.asarray(pcd.points).astype(np.float32)
     colors = (np.asarray(pcd.colors) * 255).astype(np.uint8)
     return create_ply_binary(points, colors)
+
+
+def _mask_to_png_bytes(mask: np.ndarray) -> bytes:
+    """Encode a boolean 2-D mask as an 8-bit grayscale PNG (255=object)."""
+    buf = io.BytesIO()
+    Image.fromarray((mask.astype(np.uint8) * 255)).save(buf, format="PNG")
+    return buf.getvalue()
+
+
+def _ply_bytes_to_o3d_point_cloud(ply_bytes: bytes):
+    """Deserialise binary PLY bytes into an Open3D PointCloud via a temp file."""
+    import os
+    import tempfile
+
+    import open3d as o3d
+
+    fd, path = tempfile.mkstemp(suffix=".ply")
+    try:
+        os.write(fd, ply_bytes)
+        os.close(fd)
+        pcd = o3d.io.read_point_cloud(path)
+    finally:
+        os.unlink(path)
+    return pcd
 
 
 # ── gRPC Servicer ─────────────────────────────────────────────────────────────
@@ -166,6 +195,79 @@ class LiftingServiceServicer(lifting_pb2_grpc.LiftingServiceServicer):
             response.depth_image = _o3d_depth_image_to_png_bytes(result.depth_image)
         if result.point_cloud is not None:
             response.point_cloud_ply = _o3d_point_cloud_to_ply_bytes(result.point_cloud)
+        return response
+
+    # ── RunObjectAnnotation3D ─────────────────────────────────────────────────
+
+    def RunObjectMaskAnnotation3D(self, request, context):
+        """Handle a 3D object annotation request.
+
+        Deserialises the input point cloud from PLY bytes, unmarshals the proto
+        config, dispatches through the CQRS command bus, and packs the per-object
+        annotation results back into a proto response.
+
+        Args:
+            request: ``ObjectAnnotation3DRequest`` proto message.
+            context: gRPC server context.
+
+        Returns:
+            ``ObjectAnnotation3DResponse`` proto message.
+        """
+        point_cloud = _ply_bytes_to_o3d_point_cloud(request.point_cloud_ply)
+
+        base_cfg = ObjectMaskAnnotation3DConfig()
+        if request.HasField("advanced_config"):
+            proto_cfg = request.advanced_config
+
+            def _f(field: str, default):
+                return getattr(proto_cfg, field) if proto_cfg.HasField(field) else default
+
+            base_cfg = ObjectMaskAnnotation3DConfig(
+                fx=_f("fx", base_cfg.fx),
+                fy=_f("fy", base_cfg.fy),
+                cx=_f("cx", base_cfg.cx),
+                cy=_f("cy", base_cfg.cy),
+                conf_threshold=_f("conf_threshold", base_cfg.conf_threshold),
+                iou_threshold=_f("iou_threshold", base_cfg.iou_threshold),
+            )
+
+        # image_bytes empty in proto3 means no image was provided
+        image_input = request.image_bytes if request.image_bytes else None
+
+        cmd = ObjectMaskAnnotation3DCommand(
+            point_cloud=point_cloud,
+            image_input=image_input,
+            model_backend=request.model_backend or DEFAULT_ANNOTATION_MODEL_URL,
+            return_object_clouds=request.return_object_clouds,
+            return_annotated_cloud=request.return_annotated_cloud,
+            advanced_config=base_cfg,
+        )
+        result = ObjectMaskAnnotation3D().run(cmd)
+
+        response = lifting_pb2.ObjectMaskAnnotation3DResponse(
+            backend_used=result.backend_used,
+        )
+
+        for ann in result.annotations:
+            item = lifting_pb2.MaskAnnotation3DItem(
+                label=ann.label,
+                class_id=ann.class_id,
+                confidence=ann.confidence,
+                bbox_2d=ann.bbox_2d,
+                mask_image=_mask_to_png_bytes(ann.mask_2d),
+                point_indices=ann.point_indices,
+            )
+            for coord in ann.point_coords:
+                item.point_coords.append(lifting_pb2.FloatRow(values=coord))
+            if ann.object_cloud is not None:
+                item.object_cloud_ply = _o3d_point_cloud_to_ply_bytes(ann.object_cloud)
+            response.annotations.append(item)
+
+        if result.annotated_cloud is not None:
+            response.annotated_cloud_ply = _o3d_point_cloud_to_ply_bytes(
+                result.annotated_cloud
+            )
+
         return response
 
 

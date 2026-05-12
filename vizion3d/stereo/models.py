@@ -38,9 +38,6 @@ class StereoDepthAdvancedConfig(BaseModel):
         occ_threshold: Minimum occlusion score (in ``[0, 1]``) for a point to be
             included. Points with low occlusion scores are likely partially occluded
             in one view and produce less reliable depth estimates.
-        scale_factor: Input image downscale factor before inference.  ``1.0`` means
-            full resolution (highest quality, slowest).  ``0.5`` halves both spatial
-            dimensions (~3–4× faster at some quality cost).
     """
 
     focal_length: float = 1000.0
@@ -48,10 +45,11 @@ class StereoDepthAdvancedConfig(BaseModel):
     cy: float = 360.0
     baseline: float = 100.0
     doffs: float = 0.0
-    z_far: float = 10.0
+    z_far: float = 50.0
     conf_threshold: float = 0.1
     occ_threshold: float = 0.5
-    scale_factor: float = 1.0
+    # Internal: handler auto-computes min(1.0, 960/W, 540/H) when None.
+    scale_factor: float | None = None
 
 
 class StereoDepthResult(BaseModel):

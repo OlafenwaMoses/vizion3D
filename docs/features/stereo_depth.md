@@ -118,22 +118,9 @@ curl -L \
 
 | Value | What happens |
 |---|---|
-| *(default)* | Downloads the vizion3D release checkpoint (`stereo-depth-s2m2-L.pth`, the L variant) to `~/.cache/vizion3d/models/` on first use, then loads it |
-| An HTTPS URL ending in `.pth` or `.pt` | Downloaded to the cache directory on first use, then loaded as an S2M2 checkpoint |
-| A local `.pth` or `.pt` file path | Loaded directly — no download |
+| *(default)* | Downloads the vizion3D release checkpoint (`stereo-depth-s2m2-L.pth`) to `~/.cache/vizion3d/models/` on first use, then loads it |
 
 Models are kept in memory after the first inference.  Set `VIZION3D_MODEL_CACHE` to override the cache directory.
-
-### S2M2 variants
-
-The S2M2 architecture comes in four size variants.  The correct one is detected automatically from the checkpoint filename:
-
-| Variant | Channels | Transformers | Speed | Quality |
-|---|---|---|---|---|
-| S (`-S.pth`) | 128 | 1 | Fastest | Good |
-| M (`-M.pth`) | 192 | 2 | Fast | Better |
-| L (`-L.pth`) | 256 | 3 | Balanced | Best (default) |
-| XL (`-XL.pth`) | 384 | 3 | Slowest | Best |
 
 ---
 
@@ -306,22 +293,11 @@ o3d.io.write_point_cloud("scene.ply", result.point_cloud)
 
 ---
 
-## 7. Speed vs quality: scale factor
+## 7. Automatic input scaling
 
-Use `scale_factor < 1.0` to downsample input before inference for faster results:
+The handler automatically resizes both images to fit within **960 × 540** before inference, preserving the aspect ratio. This matches the resolution the model was trained near; running at higher resolutions collapses the internal correlation matrix to near-zero disparity and produces an empty point cloud.
 
-```python
-from vizion3d.stereo import StereoDepth, StereoDepthAdvancedConfig, StereoDepthCommand
-
-cmd = StereoDepthCommand(
-    left_image="left.png",
-    right_image="right.png",
-    advanced_config=StereoDepthAdvancedConfig(
-        scale_factor=0.5,   # half-resolution → ~3–4× faster
-    ),
-)
-result = StereoDepth().run(cmd)
-```
+The resize is transparent — disparity and point cloud are reprojected back to the original image dimensions before the result is returned, so all depth values and 3D coordinates are in the original pixel coordinate space. No adjustment to your intrinsics (`focal_length`, `cx`, `cy`) is needed regardless of the input resolution.
 
 ---
 
@@ -435,10 +411,10 @@ print(f"Backend   : {response.backend_used}")
 | `cy` | `float` | `360.0` | Principal point y (pixel row of optical axis). |
 | `baseline` | `float` | `100.0` | Stereo baseline in **millimetres**. |
 | `doffs` | `float` | `0.0` | Disparity offset (non-zero for Middlebury-style calibration). |
-| `z_far` | `float` | `10.0` | Max depth in metres for point cloud. |
+| `z_far` | `float` | `50.0` | Max depth in metres for point cloud. |
 | `conf_threshold` | `float` | `0.1` | Min per-pixel confidence score for point cloud inclusion. |
 | `occ_threshold` | `float` | `0.5` | Min occlusion score for point cloud inclusion. |
-| `scale_factor` | `float` | `1.0` | Input downscale factor (`0.5` = half-res, ~3–4× faster). |
+| *(input scaling)* | — | automatic | Images are automatically resized to fit within 960×540 before inference, preserving aspect ratio. Disparity and point cloud are reprojected back to the original resolution — metric depth and intrinsics are unaffected. |
 
 ### How to obtain camera intrinsics
 
@@ -492,8 +468,55 @@ cfg = StereoDepthAdvancedConfig(
 
 ---
 
+## 3D annotation from a stereo cloud
+
+A stereo point cloud is in camera space (Z = metric depth, origin at the left camera), making it directly compatible with [Object Mask Annotation 3D](../annotation/object_mask_annotation_3d.md). Pass the same intrinsics you used for stereo depth. Do not pass `image_input` — the annotation task synthesises the segmentation image from the point cloud's stored colours, which avoids having to pick between the left and right frames.
+
+```python
+import open3d as o3d
+from vizion3d.stereo import StereoDepth, StereoDepthCommand, StereoDepthAdvancedConfig
+from vizion3d.annotation import ObjectMaskAnnotation3D, ObjectMaskAnnotation3DCommand
+from vizion3d.annotation.models import ObjectMaskAnnotation3DConfig
+
+stereo_result = StereoDepth().run(
+    StereoDepthCommand(
+        left_image="left.png",
+        right_image="right.png",
+        return_point_cloud=True,
+        advanced_config=StereoDepthAdvancedConfig(
+            focal_length=1733.74,
+            cx=792.27,
+            cy=541.89,
+            baseline=536.62,
+        ),
+    )
+)
+
+annotation_result = ObjectMaskAnnotation3D().run(
+    ObjectMaskAnnotation3DCommand(
+        point_cloud=stereo_result.point_cloud,
+        return_annotated_cloud=True,
+        advanced_config=ObjectMaskAnnotation3DConfig(
+            fx=1733.74,
+            fy=1733.74,
+            cx=792.27,
+            cy=541.89,
+        ),
+    )
+)
+
+for ann in annotation_result.annotations:
+    print(f"{ann.label:20s}  conf={ann.confidence:.2f}  3D points={len(ann.point_indices)}")
+
+o3d.io.write_point_cloud("annotated.ply", annotation_result.annotated_cloud)
+```
+
+See [Object Mask Annotation 3D — Stereo integration](../annotation/object_mask_annotation_3d.md#5-stereo-point-cloud-integration) for the full walkthrough.
+
+---
+
 ## Known limitations
 
-- **Rectified pairs required** — images must be stereo-rectified so corresponding points lie on the same horizontal scanline.  Un-rectified pairs will produce incorrect results.
-- **Metric scale depends on calibration** — an incorrect `baseline` or `focal_length` scales all depth values uniformly.  Always use calibrated values for real applications.
+- **Rectified pairs required** — images must be stereo-rectified so corresponding points lie on the same horizontal scanline.  Un-rectified pairs will not produce reliable results.
+- **Metric scale depends on calibration** — an inaccurate `baseline` or `focal_length` scales all depth values uniformly.  Always use calibrated values for real applications.
 - **Python 3.12 required for Open3D** — `return_depth_image` and `return_point_cloud` require Open3D, which currently only supports Python 3.12 in this project.
