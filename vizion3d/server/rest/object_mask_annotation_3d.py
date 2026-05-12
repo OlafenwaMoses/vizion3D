@@ -22,8 +22,8 @@ from fastapi import APIRouter, File, Form, UploadFile
 from fastapi.responses import Response
 
 from vizion3d.annotation import ObjectMaskAnnotation3D, ObjectMaskAnnotation3DCommand
-from vizion3d.annotation.models import ObjectMaskAnnotation3DConfig
 from vizion3d.annotation.defaults import DEFAULT_ANNOTATION_MODEL_URL
+from vizion3d.annotation.models import ObjectMaskAnnotation3DConfig
 
 from .serialisation import (
     b64,

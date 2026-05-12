@@ -468,8 +468,55 @@ cfg = StereoDepthAdvancedConfig(
 
 ---
 
+## 3D annotation from a stereo cloud
+
+A stereo point cloud is in camera space (Z = metric depth, origin at the left camera), making it directly compatible with [Object Mask Annotation 3D](../annotation/object_mask_annotation_3d.md). Pass the same intrinsics you used for stereo depth. Do not pass `image_input` — the annotation task synthesises the segmentation image from the point cloud's stored colours, which avoids having to pick between the left and right frames.
+
+```python
+import open3d as o3d
+from vizion3d.stereo import StereoDepth, StereoDepthCommand, StereoDepthAdvancedConfig
+from vizion3d.annotation import ObjectMaskAnnotation3D, ObjectMaskAnnotation3DCommand
+from vizion3d.annotation.models import ObjectMaskAnnotation3DConfig
+
+stereo_result = StereoDepth().run(
+    StereoDepthCommand(
+        left_image="left.png",
+        right_image="right.png",
+        return_point_cloud=True,
+        advanced_config=StereoDepthAdvancedConfig(
+            focal_length=1733.74,
+            cx=792.27,
+            cy=541.89,
+            baseline=536.62,
+        ),
+    )
+)
+
+annotation_result = ObjectMaskAnnotation3D().run(
+    ObjectMaskAnnotation3DCommand(
+        point_cloud=stereo_result.point_cloud,
+        return_annotated_cloud=True,
+        advanced_config=ObjectMaskAnnotation3DConfig(
+            fx=1733.74,
+            fy=1733.74,
+            cx=792.27,
+            cy=541.89,
+        ),
+    )
+)
+
+for ann in annotation_result.annotations:
+    print(f"{ann.label:20s}  conf={ann.confidence:.2f}  3D points={len(ann.point_indices)}")
+
+o3d.io.write_point_cloud("annotated.ply", annotation_result.annotated_cloud)
+```
+
+See [Object Mask Annotation 3D — Stereo integration](../annotation/object_mask_annotation_3d.md#5-stereo-point-cloud-integration) for the full walkthrough.
+
+---
+
 ## Known limitations
 
-- **Rectified pairs required** — images must be stereo-rectified so corresponding points lie on the same horizontal scanline.  Un-rectified pairs will produce incorrect results.
-- **Metric scale depends on calibration** — an incorrect `baseline` or `focal_length` scales all depth values uniformly.  Always use calibrated values for real applications.
+- **Rectified pairs required** — images must be stereo-rectified so corresponding points lie on the same horizontal scanline.  Un-rectified pairs will not produce reliable results.
+- **Metric scale depends on calibration** — an inaccurate `baseline` or `focal_length` scales all depth values uniformly.  Always use calibrated values for real applications.
 - **Python 3.12 required for Open3D** — `return_depth_image` and `return_point_cloud` require Open3D, which currently only supports Python 3.12 in this project.

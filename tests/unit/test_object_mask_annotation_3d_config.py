@@ -13,12 +13,12 @@ import pytest
 from PIL import Image
 
 from vizion3d.annotation.commands import ObjectMaskAnnotation3DCommand
-from vizion3d.annotation.handlers import ObjectMaskAnnotation3DHandler
-from vizion3d.annotation.models import ObjectMaskAnnotation3DConfig, ObjectMaskAnnotation3DResult
 from vizion3d.annotation.defaults import (
     DEFAULT_ANNOTATION_MODEL_FILENAME,
     DEFAULT_ANNOTATION_MODEL_URL,
 )
+from vizion3d.annotation.handlers import ObjectMaskAnnotation3DHandler
+from vizion3d.annotation.models import ObjectMaskAnnotation3DConfig, ObjectMaskAnnotation3DResult
 
 o3d = pytest.importorskip("open3d", reason="open3d required")
 
@@ -116,9 +116,10 @@ class TestConfigPropagation:
 
 class TestRESTConfigParsing:
     def test_rest_default_config_accepted(self, dummy_image_bytes, small_point_cloud):
+        from fastapi.testclient import TestClient
+
         from vizion3d.lifting.utils import create_ply_binary
         from vizion3d.server.rest.app import app
-        from fastapi.testclient import TestClient
 
         pts = np.asarray(small_point_cloud.points).astype(np.float32)
         cols = (np.asarray(small_point_cloud.colors) * 255).astype(np.uint8)
@@ -145,9 +146,9 @@ class TestRESTConfigParsing:
 
 class TestGRPCConfigUnmarshalling:
     def test_grpc_default_config(self):
+        from vizion3d.lifting.utils import create_ply_binary
         from vizion3d.proto import lifting_pb2
         from vizion3d.server.grpc.server import LiftingServiceServicer
-        from vizion3d.lifting.utils import create_ply_binary
 
         pts = np.array([[0.0, 0.0, 1.0]], dtype=np.float32)
         cols = np.array([[128, 128, 128]], dtype=np.uint8)
@@ -171,9 +172,9 @@ class TestGRPCConfigUnmarshalling:
         assert received[0].conf_threshold == pytest.approx(0.25)
 
     def test_grpc_custom_config_applied(self):
+        from vizion3d.lifting.utils import create_ply_binary
         from vizion3d.proto import lifting_pb2
         from vizion3d.server.grpc.server import LiftingServiceServicer
-        from vizion3d.lifting.utils import create_ply_binary
 
         pts = np.array([[0.0, 0.0, 1.0]], dtype=np.float32)
         ply_bytes = create_ply_binary(pts, np.array([[128, 128, 128]], dtype=np.uint8))

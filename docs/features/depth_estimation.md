@@ -381,8 +381,6 @@ The same config is available in the REST and gRPC entry points. See [Advanced Co
 
 ---
 
----
-
 ## Known limitations
 
 - **Relative depth only** — the default monocular backend produces relative (inverse) depth, not metric depth. Point cloud distances are internally consistent but not calibrated to real-world scale without a known reference distance.

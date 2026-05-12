@@ -23,8 +23,8 @@ import numpy as np
 from PIL import Image
 
 from vizion3d.annotation import ObjectMaskAnnotation3D, ObjectMaskAnnotation3DCommand
-from vizion3d.annotation.models import ObjectMaskAnnotation3DConfig
 from vizion3d.annotation.defaults import DEFAULT_ANNOTATION_MODEL_URL
+from vizion3d.annotation.models import ObjectMaskAnnotation3DConfig
 from vizion3d.lifting import DepthEstimation, DepthEstimationCommand
 from vizion3d.lifting.defaults import DEFAULT_DEPTH_MODEL_URL
 from vizion3d.lifting.models import DepthEstimationAdvanceConfig

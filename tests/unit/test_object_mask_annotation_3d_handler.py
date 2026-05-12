@@ -122,12 +122,16 @@ class TestBackprojection:
 
 
 class TestFrontViewSynthesis:
-    def test_canvas_size_derived_from_intrinsics(self, small_point_cloud):
+    def test_canvas_size_derived_from_projected_extent(self, small_point_cloud):
         pts, cols = _extract_cloud_arrays(small_point_cloud)
         cfg = ObjectMaskAnnotation3DConfig(fx=100.0, fy=100.0, cx=32.0, cy=24.0)
         img = _render_front_view(pts, cols, cfg)
-        assert img.width == int(cfg.cx * 2) + 1
-        assert img.height == int(cfg.cy * 2) + 1
+        X, Y, Z = pts[:, 0], pts[:, 1], pts[:, 2]
+        valid = Z > 0
+        u = np.round(cfg.fx * X[valid] / Z[valid] + cfg.cx).astype(np.int32)
+        v = np.round(cfg.fy * Y[valid] / Z[valid] + cfg.cy).astype(np.int32)
+        assert img.width == max(int(u.max()) + 1, 1)
+        assert img.height == max(int(v.max()) + 1, 1)
 
     def test_returns_pil_image(self, small_point_cloud):
         pts, cols = _extract_cloud_arrays(small_point_cloud)

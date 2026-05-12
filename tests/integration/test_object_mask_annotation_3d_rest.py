@@ -70,7 +70,9 @@ def _run_group(model_backend, indoor_image_bytes, indoor_point_cloud_ply,
             ENDPOINT,
             files={
                 "image": ("scene.jpg", indoor_image_bytes, "image/jpeg"),
-                "point_cloud_ply": ("cloud.ply", indoor_point_cloud_ply, "application/octet-stream"),
+                "point_cloud_ply": (
+                    "cloud.ply", indoor_point_cloud_ply, "application/octet-stream"
+                ),
             },
             data={"model_backend": model_backend, "return_annotated_cloud": "true"},
         )

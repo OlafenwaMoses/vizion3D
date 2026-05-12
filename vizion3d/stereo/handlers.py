@@ -216,7 +216,11 @@ class StereoDepthHandler(CommandHandler[StereoDepthCommand, StereoDepthResult]):
         # Auto-fit to 960×540: take the more restrictive of width and height constraints.
         # Disparity is divided by sf after inference so metric depth and point cloud
         # coordinates are always in the original full-resolution coordinate space.
-        sf = cfg.scale_factor if cfg.scale_factor is not None else min(1.0, 960 / img_w, 540 / img_h)
+        sf = (
+            cfg.scale_factor
+            if cfg.scale_factor is not None
+            else min(1.0, 960 / img_w, 540 / img_h)
+        )
         if sf != 1.0:
             scaled_h = round(img_h * sf / 32) * 32
             scaled_w = round(img_w * sf / 32) * 32
