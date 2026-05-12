@@ -5,6 +5,7 @@ package vizion3d.lifting;
 service LiftingService {
   rpc RunDepthEstimation (DepthEstimationRequest) returns (DepthEstimationResponse);
   rpc RunStereoDepth (StereoDepthRequest) returns (StereoDepthResponse);
+  rpc RunObjectMaskAnnotation3D (ObjectMaskAnnotation3DRequest) returns (ObjectMaskAnnotation3DResponse);
 }
 
 // ── Depth Estimation ──────────────────────────────────────────────────────────
@@ -71,4 +72,42 @@ message StereoDepthResponse {
   string backend_used = 5;
   bytes depth_image = 6;
   bytes point_cloud_ply = 7;
+}
+
+// ── ObjectMaskAnnotation3D ────────────────────────────────────────────────────
+
+message ObjectMaskAnnotation3DConfig {
+  optional float fx = 1;
+  optional float fy = 2;
+  optional float cx = 3;
+  optional float cy = 4;
+  optional float conf_threshold = 5;
+  optional float iou_threshold = 6;
+}
+
+message ObjectMaskAnnotation3DRequest {
+  bytes image_bytes = 1;          // optional: empty = synthesise from point cloud
+  bytes point_cloud_ply = 2;
+  string model_backend = 3;
+  bool return_object_clouds = 4;
+  bool return_annotated_cloud = 5;
+  optional ObjectMaskAnnotation3DConfig advanced_config = 6;
+}
+
+// Per-object mask annotation entry in the response.
+message MaskAnnotation3DItem {
+  string label = 1;
+  int32 class_id = 2;
+  float confidence = 3;
+  repeated float bbox_2d = 4;         // [x1, y1, x2, y2] in pixels
+  bytes mask_image = 5;               // PNG-encoded uint8 grayscale mask (255=object)
+  repeated int32 point_indices = 6;   // indices into the input point cloud
+  repeated FloatRow point_coords = 7; // Nx3 [x, y, z] coordinates in metres
+  bytes object_cloud_ply = 8;         // optional extracted PLY for this object
+}
+
+message ObjectMaskAnnotation3DResponse {
+  repeated MaskAnnotation3DItem annotations = 1;
+  bytes annotated_cloud_ply = 2;  // optional full cloud with object colours
+  string backend_used = 3;
 }

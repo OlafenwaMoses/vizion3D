@@ -114,7 +114,7 @@ Set `VIZION3D_MODEL_CACHE` in your environment to change the default cache direc
 | `return_depth_image` | `bool` | No | `True` | If `True`, the result includes a 16-bit grayscale Open3D Image. Depth Anything V2 outputs inverse relative depth (higher = closer), so higher uint16 values = closer pixels. |
 | `return_raw_depth` | `bool` | No | `True` | If `True`, the result includes the raw depth as a float32 numpy array `(H, W)` — unmodified model output, relative values (not metric). |
 | `return_point_cloud` | `bool` | No | `False` | If `True`, the result includes an Open3D PointCloud unprojected from the RGB-D image. |
-| `advanced_config` | `DepthEstimationAdvanceConfig` | No | PrimeSense defaults | Camera intrinsics and depth range settings. See [Advanced config](#10-advanced-config-camera-intrinsics-depth-range) below. Not sure what intrinsics are? See [Camera Intrinsics Matrix](../concepts/camera_intrinsics.md). |
+| `advanced_config` | `DepthEstimationAdvanceConfig` | No | PrimeSense defaults | Camera intrinsics and depth range settings. See [Advanced config](#8-advanced-config-camera-intrinsics-depth-range) below. Not sure what intrinsics are? See [Camera Intrinsics Matrix](../concepts/camera_intrinsics.md). |
 
 ---
 
@@ -261,36 +261,7 @@ o3d.io.write_point_cloud("scene.ply", pcd)
 
 ---
 
-## 6. Custom model backend
-
-Use a local `.pth` checkpoint or a remote URL to a `.pth` file.
-
-```python
-from vizion3d.lifting import DepthEstimation, DepthEstimationCommand
-
-# Local checkpoint
-cmd = DepthEstimationCommand(
-    image_input="scene.png",
-    model_backend="/models/depth_anything_v2_vitl.pth",
-)
-result = DepthEstimation().run(cmd)
-print(f"Backend: {result.backend_used}")
-
-# Remote checkpoint URL (downloaded and cached on first use)
-cmd = DepthEstimationCommand(
-    image_input="scene.png",
-    model_backend=(
-        "https://github.com/OlafenwaMoses/vizion3D/releases/download/"
-        "essentials-v1/depth_anything_v2_vitb.pth"
-    ),
-)
-result = DepthEstimation().run(cmd)
-print(f"Backend: {result.backend_used}")
-```
-
----
-
-## 7. REST API
+## 6. REST API
 
 Start the server with all REST features enabled:
 
@@ -341,7 +312,7 @@ The response is a JSON-serialised `DepthEstimationResult`. Binary fields (`depth
 
 ---
 
-## 8. gRPC API
+## 7. gRPC API
 
 Start the server:
 
@@ -380,7 +351,7 @@ print(f"Backend   : {response.backend_used}")
 
 ---
 
-## 9. Advanced config: camera intrinsics & depth range
+## 8. Advanced config: camera intrinsics & depth range
 
 `DepthEstimationAdvanceConfig` lets you supply the actual camera intrinsics and depth range for your sensor, replacing the built-in PrimeSense defaults. This is required for accurate metric 3D geometry when your camera is not a 640×480 PrimeSense sensor.
 

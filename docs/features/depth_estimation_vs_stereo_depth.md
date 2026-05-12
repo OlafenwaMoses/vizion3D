@@ -155,10 +155,10 @@ cfg = StereoDepthAdvancedConfig(
     cy=360.0,             # principal point y
     baseline=100.0,       # stereo baseline in millimetres
     doffs=0.0,            # disparity offset (Middlebury-style calibration)
-    z_far=10.0,           # max depth in metres
+    z_far=50.0,           # max depth in metres
     conf_threshold=0.1,   # min confidence score for point inclusion
     occ_threshold=0.5,    # min occlusion score for point inclusion
-    scale_factor=1.0,     # input downscale for speed/quality tradeoff
+    # input is auto-resized to fit 960×540 before inference
 )
 ```
 

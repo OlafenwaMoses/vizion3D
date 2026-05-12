@@ -195,3 +195,37 @@ Each task lives in its own module under `vizion3d/<category>/` and exposes exact
 | Monocular depth estimation | Stable | [Depth Estimation](features/depth_estimation.md) |
 | Stereo depth estimation | Stable | [Stereo Depth](features/stereo_depth.md) |
 
+### Annotation
+
+| Task | Status | Docs |
+|---|---|---|
+| Object mask annotation 3D | Stable | [Object Mask Annotation 3D](annotation/object_mask_annotation_3d.md) |
+
+---
+
+## Quick start — object mask annotation 3D
+
+Detect and instance-segment objects in a scene, then get the exact 3D point cloud subset for each detected object.
+
+```python
+import open3d as o3d
+from vizion3d.annotation import ObjectMaskAnnotation3D, ObjectMaskAnnotation3DCommand
+
+pcd = o3d.io.read_point_cloud("scene.ply")
+
+result = ObjectMaskAnnotation3D().run(
+    ObjectMaskAnnotation3DCommand(
+        point_cloud=pcd,
+        image_input="scene.jpg",   # optional — omit to synthesise from the cloud
+        return_annotated_cloud=True,
+    )
+)
+
+for ann in result.annotations:
+    print(f"{ann.label:20s}  conf={ann.confidence:.2f}  3D points={len(ann.point_indices)}")
+
+o3d.io.write_point_cloud("annotated.ply", result.annotated_cloud)
+```
+
+See [Object Mask Annotation 3D](annotation/object_mask_annotation_3d.md) for the full reference.
+

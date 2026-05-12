@@ -13,6 +13,7 @@ DEFAULT_DEPTH_MODEL_URL = (
     "essentials-v1/depth_anything_v2_vitb.pth"
 )
 DEFAULT_DEPTH_MODEL_FILENAME = "depth_anything_v2_vitb.pth"
+
 _DOWNLOAD_LOCK = threading.Lock()
 
 
@@ -59,3 +60,5 @@ def resolve_model_backend(model_backend: str, cache_dir: Path | None = None) -> 
         return str(download_model(model_backend, cache_dir=cache_dir))
 
     return model_backend
+
+

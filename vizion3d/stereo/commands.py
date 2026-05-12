@@ -25,14 +25,10 @@ class StereoDepthCommand(Command[StereoDepthResult]):
             image bytes.  The handler auto-detects which form is supplied.
         right_image: The right-camera image (same resolution as *left_image*,
             from a horizontally-offset camera).  Same path/bytes convention.
-        model_backend: S2M2 checkpoint to use for inference.
-
-            - Default value is the vizion3D release checkpoint URL
-              (``stereo-depth-s2m2-L.pth``), downloaded on first use and cached
-              under ``~/.cache/vizion3d/models/``.
-              Set ``VIZION3D_MODEL_CACHE`` to override the cache directory.
-            - A local ``.pth`` or ``.pt`` path is loaded directly.
-            - Any HTTPS URL is downloaded to the cache directory and loaded.
+        model_backend: S2M2 checkpoint URL or local path.  Defaults to the
+            vizion3D release checkpoint (``stereo-depth-s2m2-L.pth``), downloaded
+            on first use and cached under ``~/.cache/vizion3d/models/``.
+            Set ``VIZION3D_MODEL_CACHE`` to override the cache directory.
 
         return_depth_image: When ``True``, the result includes a 16-bit grayscale
             ``open3d.geometry.Image`` (dtype ``uint16``) where 65535 maps to

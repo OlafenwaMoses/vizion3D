@@ -55,7 +55,6 @@ async def stereo_depth(
     z_far: float | None = Form(None),
     conf_threshold: float | None = Form(None),
     occ_threshold: float | None = Form(None),
-    scale_factor: float | None = Form(None),
 ):
     """Run stereo depth estimation on a rectified left/right image pair.
 
@@ -69,10 +68,9 @@ async def stereo_depth(
         cx, cy: Principal point in pixels.
         baseline: Stereo baseline in millimetres (default 100.0).
         doffs: Disparity offset (default 0.0).
-        z_far: Max depth in metres for point cloud (default 10.0).
+        z_far: Max depth in metres for point cloud (default 50.0).
         conf_threshold: Minimum confidence for point inclusion (default 0.1).
         occ_threshold: Minimum occlusion score for point inclusion (default 0.5).
-        scale_factor: Input downscale factor for speed/quality tradeoff (default 1.0).
 
     Returns:
         JSON with ``depth_map``, ``disparity_map``, ``min_depth``, ``max_depth``,
@@ -92,7 +90,6 @@ async def stereo_depth(
         z_far=z_far if z_far is not None else base_cfg.z_far,
         conf_threshold=conf_threshold if conf_threshold is not None else base_cfg.conf_threshold,
         occ_threshold=occ_threshold if occ_threshold is not None else base_cfg.occ_threshold,
-        scale_factor=scale_factor if scale_factor is not None else base_cfg.scale_factor,
     )
     cmd = StereoDepthCommand(
         left_image=left_bytes,
