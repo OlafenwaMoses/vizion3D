@@ -60,5 +60,3 @@ def resolve_model_backend(model_backend: str, cache_dir: Path | None = None) -> 
         return str(download_model(model_backend, cache_dir=cache_dir))
 
     return model_backend
-
-

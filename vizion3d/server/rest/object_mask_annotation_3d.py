@@ -42,6 +42,7 @@ def configure_model(path: str) -> None:
     global _model_override
     _model_override = path
     from vizion3d.annotation.handlers import ObjectMaskAnnotation3DHandler
+
     ObjectMaskAnnotation3DHandler.preload(path)
 
 
@@ -116,7 +117,8 @@ async def object_mask_annotation_3d(
             "point_coords": ann.point_coords,
             "object_cloud_ply": b64(
                 o3d_point_cloud_to_ply_bytes(ann.object_cloud)
-                if ann.object_cloud is not None else None
+                if ann.object_cloud is not None
+                else None
             ),
         }
         annotations_out.append(ann_dict)
@@ -125,7 +127,8 @@ async def object_mask_annotation_3d(
         "annotations": annotations_out,
         "annotated_cloud_ply": b64(
             o3d_point_cloud_to_ply_bytes(result.annotated_cloud)
-            if result.annotated_cloud is not None else None
+            if result.annotated_cloud is not None
+            else None
         ),
         "backend_used": result.backend_used,
     }

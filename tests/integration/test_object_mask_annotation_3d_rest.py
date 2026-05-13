@@ -49,19 +49,23 @@ def indoor_point_cloud_ply(indoor_image_bytes, local_model_path) -> bytes:
 def _save_outputs(data: dict, run_dir: Path, run: int) -> None:
     run_dir.mkdir(parents=True, exist_ok=True)
     prefix = str(run_dir / f"run_{run:02d}")
-    Path(prefix + ".json").write_text(json.dumps({
-        "num_annotations": len(data["annotations"]),
-        "backend_used": data["backend_used"],
-        "labels": [a["label"] for a in data["annotations"]],
-    }, indent=2))
-    if data.get("annotated_cloud_ply"):
-        Path(prefix + "_annotated.ply").write_bytes(
-            base64.b64decode(data["annotated_cloud_ply"])
+    Path(prefix + ".json").write_text(
+        json.dumps(
+            {
+                "num_annotations": len(data["annotations"]),
+                "backend_used": data["backend_used"],
+                "labels": [a["label"] for a in data["annotations"]],
+            },
+            indent=2,
         )
+    )
+    if data.get("annotated_cloud_ply"):
+        Path(prefix + "_annotated.ply").write_bytes(base64.b64decode(data["annotated_cloud_ply"]))
 
 
-def _run_group(model_backend, indoor_image_bytes, indoor_point_cloud_ply,
-               run_dir, scenario, timing_collector):
+def _run_group(
+    model_backend, indoor_image_bytes, indoor_point_cloud_ply, run_dir, scenario, timing_collector
+):
     ObjectMaskAnnotation3DHandler._annotation_models.clear()
     timings = []
     for run in range(1, N_RUNS + 1):
@@ -71,7 +75,9 @@ def _run_group(model_backend, indoor_image_bytes, indoor_point_cloud_ply,
             files={
                 "image": ("scene.jpg", indoor_image_bytes, "image/jpeg"),
                 "point_cloud_ply": (
-                    "cloud.ply", indoor_point_cloud_ply, "application/octet-stream"
+                    "cloud.ply",
+                    indoor_point_cloud_ply,
+                    "application/octet-stream",
                 ),
             },
             data={"model_backend": model_backend, "return_annotated_cloud": "true"},
@@ -103,8 +109,11 @@ def _run_group(model_backend, indoor_image_bytes, indoor_point_cloud_ply,
 
 
 def test_rest_default_model(
-    indoor_image_bytes, indoor_point_cloud_ply, local_annotation_model_path,
-    tmp_path, timing_collector,
+    indoor_image_bytes,
+    indoor_point_cloud_ply,
+    local_annotation_model_path,
+    tmp_path,
+    timing_collector,
 ):
     _run_group(
         model_backend=local_annotation_model_path,
@@ -128,7 +137,10 @@ def test_rest_custom_intrinsics(
         },
         data={
             "model_backend": local_annotation_model_path,
-            "fx": "615.0", "fy": "615.0", "cx": "320.0", "cy": "240.0",
+            "fx": "615.0",
+            "fy": "615.0",
+            "cx": "320.0",
+            "cy": "240.0",
         },
     )
     assert resp.status_code == 200

@@ -168,13 +168,13 @@ def test_grpc_advanced_config_custom_intrinsics_accepted(
 def test_grpc_advanced_config_partial_override_accepted(
     indoor_image_bytes, local_model_path, grpc_client_stub
 ):
-    """A proto config with only depth_trunc set is accepted without errors."""
+    """A proto config with only intrinsics set is accepted without errors."""
     DepthEstimationHandler._depth_anything_models.clear()
 
     request = lifting_pb2.DepthEstimationRequest(
         image_bytes=indoor_image_bytes,
         model_backend=local_model_path,
-        advanced_config=lifting_pb2.DepthEstimationAdvanceConfig(depth_trunc=5.0),
+        advanced_config=lifting_pb2.DepthEstimationAdvanceConfig(fx=615.0, fy=615.0),
     )
     response = grpc_client_stub.RunDepthEstimation(request)
 

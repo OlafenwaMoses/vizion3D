@@ -43,13 +43,13 @@ def small_point_cloud():
 class TestConfigDefaults:
     def test_default_fx_fy(self):
         cfg = ObjectMaskAnnotation3DConfig()
-        assert cfg.fx == pytest.approx(525.0)
-        assert cfg.fy == pytest.approx(525.0)
+        assert cfg.fx is None
+        assert cfg.fy is None
 
     def test_default_cx_cy(self):
         cfg = ObjectMaskAnnotation3DConfig()
-        assert cfg.cx == pytest.approx(319.5)
-        assert cfg.cy == pytest.approx(239.5)
+        assert cfg.cx is None
+        assert cfg.cy is None
 
     def test_default_conf_threshold(self):
         assert ObjectMaskAnnotation3DConfig().conf_threshold == pytest.approx(0.25)
@@ -126,9 +126,7 @@ class TestRESTConfigParsing:
         ply_bytes = create_ply_binary(pts, cols)
 
         def _fake_run(*args, **kwargs):
-            return ObjectMaskAnnotation3DResult(
-                annotations=[], backend_used="/fake/model.pt"
-            )
+            return ObjectMaskAnnotation3DResult(annotations=[], backend_used="/fake/model.pt")
 
         client = TestClient(app, raise_server_exceptions=True)
         with patch(
@@ -168,7 +166,7 @@ class TestGRPCConfigUnmarshalling:
         with patch.object(ObjectMaskAnnotation3DHandler, "handle", _fake):
             LiftingServiceServicer().RunObjectMaskAnnotation3D(request, ctx)
 
-        assert received[0].fx == pytest.approx(525.0)
+        assert received[0].fx is None
         assert received[0].conf_threshold == pytest.approx(0.25)
 
     def test_grpc_custom_config_applied(self):
@@ -197,4 +195,4 @@ class TestGRPCConfigUnmarshalling:
 
         assert received[0].fx == pytest.approx(615.0)
         assert received[0].conf_threshold == pytest.approx(0.5)
-        assert received[0].cy == pytest.approx(239.5)  # unset → default
+        assert received[0].cy is None  # unset → None, handler resolves from image

@@ -162,35 +162,3 @@ def test_direct_advanced_config_custom_intrinsics(indoor_image_bytes, local_mode
     assert isinstance(result.depth_map, list) and len(result.depth_map) > 0
     assert result.point_cloud is not None
     assert result.point_cloud.has_points()
-
-
-def test_direct_advanced_config_tight_depth_trunc_yields_fewer_points(
-    indoor_image_bytes, local_model_path
-):
-    """A very tight depth_trunc maps depth values to near-zero → fewer/no points."""
-    DepthEstimationHandler._depth_anything_models.clear()
-
-    default_result = DepthEstimation().run(
-        DepthEstimationCommand(
-            image_input=indoor_image_bytes,
-            model_backend=local_model_path,
-            return_point_cloud=True,
-        )
-    )
-
-    tight_result = DepthEstimation().run(
-        DepthEstimationCommand(
-            image_input=indoor_image_bytes,
-            model_backend=local_model_path,
-            return_point_cloud=True,
-            advanced_config=DepthEstimationAdvanceConfig(depth_trunc=0.0001),
-        )
-    )
-
-    import numpy as np
-
-    default_pts = len(np.asarray(default_result.point_cloud.points))
-    tight_pts = len(np.asarray(tight_result.point_cloud.points))
-    assert tight_pts < default_pts, (
-        f"Expected tight depth_trunc to yield fewer points ({tight_pts} vs default {default_pts})"
-    )

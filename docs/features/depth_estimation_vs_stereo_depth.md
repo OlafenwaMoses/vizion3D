@@ -30,7 +30,7 @@ Provided the camera calibration is accurate, the output is **real metric depth i
 | **Depth type** | Metric (real metres) | Relative (inverse depth, arbitrary scale) |
 | **Coordinate system** | Camera space (X right, Y down, Z forward) | Camera space (X right, Y down, Z forward) |
 | **Z ordering** | Near objects have smaller Z | Near objects have larger Z — relative depth only, not physical ordering |
-| **Units** | Metres (real) | Metres (relative, mapped to `[0, depth_trunc]`) |
+| **Units** | Metres (real) | Metres (relative, internally scaled to full uint16 range) |
 | **Object at 2.4 m reads as 2.4 m** | Yes — if calibration is correct | No — depends on scene content |
 | **Scale factor to world** | 1.0 (real) | Unknown, scene-dependent |
 | **`point_cloud_scale` field** | 1.0 (real metres) | 1.0 (relative, not real metres) |
@@ -83,7 +83,7 @@ result = DepthEstimation().run(
 
 points = np.asarray(result.point_cloud.points)  # shape (N, 3)
 # point_cloud_scale == 1.0, but distances are NOT real metres —
-# the depth model output is relative and mapped to depth_trunc.
+# the depth model output is relative (inverse depth, arbitrary scale).
 print(f"point_cloud_scale: {result.point_cloud_scale}")  # 1.0 (relative, not real metres)
 ```
 
@@ -139,12 +139,10 @@ Controls how the relative depth map is converted into a point cloud:
 from vizion3d.lifting import DepthEstimationAdvanceConfig
 
 cfg = DepthEstimationAdvanceConfig(
-    fx=525.0,            # horizontal focal length (pixels)
-    fy=525.0,            # vertical focal length (pixels)
-    cx=319.5,            # principal point x
-    cy=239.5,            # principal point y
-    depth_scale=1000.0,  # uint16 → metres divisor
-    depth_trunc=10.0,    # max depth in metres
+    fx=525.0,   # horizontal focal length (pixels)
+    fy=525.0,   # vertical focal length (pixels)
+    cx=319.5,   # principal point x
+    cy=239.5,   # principal point y
 )
 ```
 

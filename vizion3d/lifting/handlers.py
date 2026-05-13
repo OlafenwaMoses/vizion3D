@@ -1,5 +1,6 @@
 import contextlib
 import io
+import math
 import threading
 
 import numpy as np
@@ -12,10 +13,15 @@ from .defaults import resolve_model_backend
 from .depth_anything import convert_depth_anything_v2_state_dict, depth_anything_v2_config
 from .models import DepthEstimationResult
 
-# Legacy module-level constants kept for reference — actual values come from
-# DepthEstimationAdvanceConfig on each command.
-_DEFAULT_DEPTH_SCALE = 1000.0
-_DEFAULT_DEPTH_TRUNC = 10.0
+# Internal depth parameters for point cloud generation — not user-configurable.
+# _DEPTH_TRUNC sets the coordinate scale (metres); _DEPTH_SCALE fills the full
+# uint16 range at that scale for maximum depth precision.
+# _MIN_DEPTH_M prevents close pixels from collapsing to Z≈0: monocular depth is
+# unreliable very close to the lens, and Z≈0 causes X,Y≈0 for all close pixels,
+# destroying foreground geometry in the point cloud.
+_DEPTH_TRUNC: float = 10.0
+_DEPTH_SCALE: int = math.floor(65535 / _DEPTH_TRUNC)  # 6553
+_MIN_DEPTH_M: float = 0.5
 
 
 class DepthEstimationHandler(CommandHandler[DepthEstimationCommand, DepthEstimationResult]):
@@ -65,22 +71,28 @@ class DepthEstimationHandler(CommandHandler[DepthEstimationCommand, DepthEstimat
                 )
 
             cfg = command.advanced_config
+            # Derive intrinsics from image dimensions when not explicitly provided.
+            # ~63° horizontal FOV (0.85×width) is a reasonable heuristic for photos.
+            fx = cfg.fx if cfg.fx is not None else image.width * 0.85
+            fy = cfg.fy if cfg.fy is not None else image.width * 0.85
+            cx = cfg.cx if cfg.cx is not None else image.width / 2.0
+            cy = cfg.cy if cfg.cy is not None else image.height / 2.0
             color_o3d = o3d.geometry.Image(np.asarray(image).copy())
             depth_o3d = o3d.geometry.Image(
-                self._depth_array_to_rgbd_depth(depth_array, cfg.depth_scale, cfg.depth_trunc)
+                self._depth_array_to_rgbd_depth(
+                    depth_array, _DEPTH_SCALE, _DEPTH_TRUNC, _MIN_DEPTH_M
+                )
             )
             rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(
                 color_o3d,
                 depth_o3d,
-                depth_scale=cfg.depth_scale,
-                depth_trunc=cfg.depth_trunc,
+                depth_scale=_DEPTH_SCALE,
+                depth_trunc=_DEPTH_TRUNC,
                 convert_rgb_to_intensity=False,
             )
             generated_point_cloud = o3d.geometry.PointCloud.create_from_rgbd_image(
                 rgbd_image,
-                o3d.camera.PinholeCameraIntrinsic(
-                    image.width, image.height, cfg.fx, cfg.fy, cfg.cx, cfg.cy
-                ),
+                o3d.camera.PinholeCameraIntrinsic(image.width, image.height, fx, fy, cx, cy),
             )
             point_cloud = generated_point_cloud
 
@@ -97,7 +109,10 @@ class DepthEstimationHandler(CommandHandler[DepthEstimationCommand, DepthEstimat
 
     @staticmethod
     def _depth_array_to_rgbd_depth(
-        depth_array: np.ndarray, depth_scale: float, depth_trunc: float
+        depth_array: np.ndarray,
+        depth_scale: float,
+        depth_trunc: float,
+        min_depth_m: float = 0.0,
     ) -> np.ndarray:
         min_depth = float(np.nanmin(depth_array))
         max_depth = float(np.nanmax(depth_array))
@@ -105,9 +120,15 @@ class DepthEstimationHandler(CommandHandler[DepthEstimationCommand, DepthEstimat
         if depth_range <= 0:
             return np.zeros_like(depth_array, dtype=np.uint16)
 
-        normalized = (depth_array - min_depth) / depth_range
-        scaled_depth = normalized * depth_trunc * depth_scale
-        return np.clip(scaled_depth, 0, np.iinfo(np.uint16).max).astype(np.uint16)
+        # Depth Anything V2 is inverse depth (high value = close, low value = far).
+        # Flip so far pixels → high uint16 (large metric depth), close pixels → low.
+        # Map onto [min_depth_m, depth_trunc] so close pixels never collapse to Z≈0
+        # (which would zero out their X,Y coordinates and destroy foreground geometry).
+        # Clip minimum to 1: Open3D silently discards pixels where depth == 0.
+        normalized = 1.0 - (depth_array - min_depth) / depth_range
+        depth_m = min_depth_m + normalized * (depth_trunc - min_depth_m)
+        scaled_depth = depth_m * depth_scale
+        return np.clip(scaled_depth, 1, np.iinfo(np.uint16).max).astype(np.uint16)
 
     @classmethod
     def preload(cls, model_path: str) -> None:

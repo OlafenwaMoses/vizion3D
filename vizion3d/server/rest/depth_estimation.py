@@ -50,8 +50,6 @@ async def depth_estimation(
     fy: float | None = Form(None),
     cx: float | None = Form(None),
     cy: float | None = Form(None),
-    depth_scale: float | None = Form(None),
-    depth_trunc: float | None = Form(None),
 ):
     """Run monocular depth estimation on a single uploaded image.
 
@@ -60,9 +58,7 @@ async def depth_estimation(
         model_backend: Checkpoint URL or local path (defaults to the vizion3D release).
         return_depth_image: Include a base64-encoded 16-bit PNG depth image.
         return_point_cloud: Include a base64-encoded binary PLY point cloud.
-        fx, fy, cx, cy: Camera intrinsics (uses PrimeSense defaults if omitted).
-        depth_scale: Raw uint16 → metres divisor (default 1000).
-        depth_trunc: Maximum depth in metres (default 10).
+        fx, fy, cx, cy: Camera intrinsics (auto-derived from image dimensions if omitted).
 
     Returns:
         JSON with ``depth_map``, ``min_depth``, ``max_depth``, ``backend_used``,
@@ -70,15 +66,7 @@ async def depth_estimation(
     """
     image_bytes = await image.read()
     effective_backend = model_backend or _model_override or DEFAULT_DEPTH_MODEL_URL
-    base_cfg = DepthEstimationAdvanceConfig()
-    advanced_config = DepthEstimationAdvanceConfig(
-        fx=fx if fx is not None else base_cfg.fx,
-        fy=fy if fy is not None else base_cfg.fy,
-        cx=cx if cx is not None else base_cfg.cx,
-        cy=cy if cy is not None else base_cfg.cy,
-        depth_scale=depth_scale if depth_scale is not None else base_cfg.depth_scale,
-        depth_trunc=depth_trunc if depth_trunc is not None else base_cfg.depth_trunc,
-    )
+    advanced_config = DepthEstimationAdvanceConfig(fx=fx, fy=fy, cx=cx, cy=cy)
     cmd = DepthEstimationCommand(
         image_input=image_bytes,
         model_backend=effective_backend,

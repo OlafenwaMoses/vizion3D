@@ -21,10 +21,10 @@ class ObjectMaskAnnotation3DConfig(BaseModel):
         iou_threshold: NMS IoU overlap threshold. Range ``[0, 1]``.
     """
 
-    fx: float = 525.0
-    fy: float = 525.0
-    cx: float = 319.5
-    cy: float = 239.5
+    fx: float | None = None
+    fy: float | None = None
+    cx: float | None = None
+    cy: float | None = None
     conf_threshold: float = 0.25
     iou_threshold: float = 0.45
 
