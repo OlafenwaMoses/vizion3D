@@ -1,7 +1,7 @@
 # Depth Estimation
 
 <figure>
-  <img src="../../assets/images/Drawing_Room.jpg" alt="Drawing_Room.jpg" style="width:100%;border-radius:6px;">
+  <img src="../../assets/images/roomhd.jpg" alt="roomhd.jpg" style="width:100%;border-radius:6px;">
   <figcaption style="color:#aaa;font-size:0.8em;margin-top:0.3rem;">input image</figcaption>
 </figure>
 
@@ -49,7 +49,7 @@ new ResizeObserver(() => {
   }
 }).observe(renderer.domElement);
 
-new PLYLoader().load('../../assets/pointclouds/Drawing_Room.ply', (geometry) => {
+new PLYLoader().load('../../assets/pointclouds/roomhd_result.ply', (geometry) => {
   const material = new THREE.PointsMaterial({ size: 0.003, vertexColors: true });
   const points = new THREE.Points(geometry, material);
   scene.add(points);
@@ -194,7 +194,7 @@ PILImage.fromarray(depth_array).save("depth.png")
 ```
 
 <figure>
-  <img src="../../assets/images/Drawing_Room_depth.png" alt="Drawing_Room_depth.png" style="width:100%;border-radius:6px;">
+  <img src="../../assets/images/roomhd_depth.png" alt="roomhd_depth.png" style="width:100%;border-radius:6px;">
   <figcaption style="color:#aaa;font-size:0.8em;margin-top:0.3rem;">depth map</figcaption>
 </figure>
 
@@ -371,7 +371,6 @@ result = DepthEstimation().run(
             fy=908.48,
             cx=640.0,
             cy=360.0,
-            depth_trunc=6.0,
         ),
     )
 )

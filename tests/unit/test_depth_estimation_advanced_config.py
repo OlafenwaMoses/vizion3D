@@ -27,39 +27,26 @@ def fake_depth():
 
 
 class TestDepthEstimationAdvanceConfig:
-    def test_defaults_match_primesense(self):
+    def test_intrinsic_defaults_are_none(self):
         cfg = DepthEstimationAdvanceConfig()
-        assert cfg.fx == 525.0
-        assert cfg.fy == 525.0
-        assert cfg.cx == 319.5
-        assert cfg.cy == 239.5
-        assert cfg.depth_scale == 1000.0
-        assert cfg.depth_trunc == 10.0
+        assert cfg.fx is None
+        assert cfg.fy is None
+        assert cfg.cx is None
+        assert cfg.cy is None
 
     def test_partial_override_keeps_other_defaults(self):
         cfg = DepthEstimationAdvanceConfig(fx=615.0, fy=615.0)
         assert cfg.fx == 615.0
         assert cfg.fy == 615.0
-        assert cfg.cx == 319.5
-        assert cfg.cy == 239.5
-        assert cfg.depth_scale == 1000.0
-        assert cfg.depth_trunc == 10.0
+        assert cfg.cx is None
+        assert cfg.cy is None
 
     def test_all_fields_overridable(self):
-        cfg = DepthEstimationAdvanceConfig(
-            fx=700.0,
-            fy=701.0,
-            cx=320.0,
-            cy=241.0,
-            depth_scale=500.0,
-            depth_trunc=5.0,
-        )
+        cfg = DepthEstimationAdvanceConfig(fx=700.0, fy=701.0, cx=320.0, cy=241.0)
         assert cfg.fx == 700.0
         assert cfg.fy == 701.0
         assert cfg.cx == 320.0
         assert cfg.cy == 241.0
-        assert cfg.depth_scale == 500.0
-        assert cfg.depth_trunc == 5.0
 
     def test_invalid_type_rejected(self):
         with pytest.raises(Exception):
@@ -74,10 +61,12 @@ class TestDepthEstimationCommandAdvancedConfig:
         cmd = DepthEstimationCommand(image_input=b"img")
         assert isinstance(cmd.advanced_config, DepthEstimationAdvanceConfig)
 
-    def test_default_advanced_config_has_primesense_values(self):
+    def test_default_advanced_config_has_none_intrinsics(self):
         cmd = DepthEstimationCommand(image_input=b"img")
-        assert cmd.advanced_config.fx == 525.0
-        assert cmd.advanced_config.depth_trunc == 10.0
+        assert cmd.advanced_config.fx is None
+        assert cmd.advanced_config.fy is None
+        assert cmd.advanced_config.cx is None
+        assert cmd.advanced_config.cy is None
 
     def test_each_command_gets_separate_config_instance(self):
         cmd1 = DepthEstimationCommand(image_input=b"img")
@@ -88,13 +77,13 @@ class TestDepthEstimationCommandAdvancedConfig:
         cmd1 = DepthEstimationCommand(image_input=b"img")
         cmd2 = DepthEstimationCommand(image_input=b"img")
         cmd1.advanced_config.fx = 999.0
-        assert cmd2.advanced_config.fx == 525.0
+        assert cmd2.advanced_config.fx is None
 
     def test_custom_config_stored_on_command(self):
-        cfg = DepthEstimationAdvanceConfig(fx=615.0, depth_trunc=5.0)
+        cfg = DepthEstimationAdvanceConfig(fx=615.0, cx=320.0)
         cmd = DepthEstimationCommand(image_input=b"img", advanced_config=cfg)
         assert cmd.advanced_config.fx == 615.0
-        assert cmd.advanced_config.depth_trunc == 5.0
+        assert cmd.advanced_config.cx == 320.0
 
 
 # ── _depth_array_to_rgbd_depth ────────────────────────────────────────────────
@@ -111,32 +100,54 @@ class TestDepthArrayToRgbdDepth:
         result = DepthEstimationHandler._depth_array_to_rgbd_depth(arr, 1000.0, 10.0)
         assert np.all(result == 0)
 
-    def test_max_value_equals_trunc_times_scale(self):
+    def test_far_pixel_maps_to_trunc_times_scale(self):
+        # arr[0,0]=0.0 is the farthest (lowest inverse-depth); should become
+        # depth_trunc * depth_scale
         arr = np.array([[0.0, 1.0]], dtype=float)
         result = DepthEstimationHandler._depth_array_to_rgbd_depth(arr, 1000.0, 10.0)
-        assert result[0, 1] == pytest.approx(10_000, abs=1)
+        assert result[0, 0] == pytest.approx(10_000, abs=1)
+
+    def test_close_pixel_clipped_to_min_depth(self):
+        # arr[0,1]=1.0 is the closest (highest inverse-depth); clips to 1 so Open3D keeps it
+        arr = np.array([[0.0, 1.0]], dtype=float)
+        result = DepthEstimationHandler._depth_array_to_rgbd_depth(arr, 1000.0, 10.0)
+        assert result[0, 1] == 1
 
     def test_custom_depth_scale_halves_output(self):
         arr = np.array([[0.0, 1.0]], dtype=float)
         full = DepthEstimationHandler._depth_array_to_rgbd_depth(arr, 1000.0, 10.0)
         half = DepthEstimationHandler._depth_array_to_rgbd_depth(arr, 500.0, 10.0)
-        assert half[0, 1] == pytest.approx(full[0, 1] / 2, abs=1)
+        assert half[0, 0] == pytest.approx(full[0, 0] / 2, abs=1)
 
     def test_custom_depth_trunc_halves_output(self):
         arr = np.array([[0.0, 1.0]], dtype=float)
         full = DepthEstimationHandler._depth_array_to_rgbd_depth(arr, 1000.0, 10.0)
         half = DepthEstimationHandler._depth_array_to_rgbd_depth(arr, 1000.0, 5.0)
-        assert half[0, 1] == pytest.approx(full[0, 1] / 2, abs=1)
+        assert half[0, 0] == pytest.approx(full[0, 0] / 2, abs=1)
 
     def test_output_clipped_to_uint16_max(self):
+        # Far pixel (arr[0,0]=0.0, lowest inverse-depth) hits the ceiling when scale is huge
         arr = np.array([[0.0, 1.0]], dtype=float)
         result = DepthEstimationHandler._depth_array_to_rgbd_depth(arr, 1e6, 1e6)
-        assert result[0, 1] == np.iinfo(np.uint16).max
+        assert result[0, 0] == np.iinfo(np.uint16).max
 
-    def test_min_value_is_always_zero(self):
+    def test_no_zero_values_in_output(self):
+        # All pixels must be >= 1 so Open3D never silently discards them
         arr = np.array([[2.0, 5.0, 10.0]], dtype=float)
         result = DepthEstimationHandler._depth_array_to_rgbd_depth(arr, 1000.0, 10.0)
-        assert result[0, 0] == 0
+        assert np.all(result >= 1)
+
+    def test_min_depth_m_raises_floor_for_close_pixel(self):
+        # Close pixel (arr[0,1]=1.0, highest inverse-depth) should map to min_depth_m,
+        # not near-zero, preventing foreground geometry collapse.
+        arr = np.array([[0.0, 1.0]], dtype=float)
+        result = DepthEstimationHandler._depth_array_to_rgbd_depth(
+            arr, 1000.0, 10.0, min_depth_m=0.5
+        )
+        # Far pixel: min_depth_m + 1*(depth_trunc - min_depth_m) = depth_trunc → 10*1000 = 10000
+        assert result[0, 0] == pytest.approx(10_000, abs=1)
+        # Close pixel: 0 + 0 * (10 - 0.5) = 0.5 * 1000 = 500
+        assert result[0, 1] == pytest.approx(500, abs=1)
 
 
 # ── Handler propagates config to Open3D ──────────────────────────────────────
@@ -179,11 +190,12 @@ class TestHandlerPropagatesAdvancedConfig:
         assert cx == 321.0
         assert cy == 241.0
 
-    def test_custom_depth_scale_trunc_forwarded_to_rgbd(self, dummy_image_bytes, fake_depth):
+    def test_internal_depth_constants_used_for_rgbd(self, dummy_image_bytes, fake_depth):
         open3d = pytest.importorskip(
             "open3d", reason="open3d required — run: uv python pin 3.12 && uv sync"
         )
-        cfg = DepthEstimationAdvanceConfig(depth_scale=500.0, depth_trunc=3.0)
+        from vizion3d.lifting.handlers import _DEPTH_SCALE, _DEPTH_TRUNC, _MIN_DEPTH_M  # noqa: F401
+
         captured_kwargs = {}
         original_fn = open3d.geometry.RGBDImage.create_from_color_and_depth
 
@@ -208,12 +220,11 @@ class TestHandlerPropagatesAdvancedConfig:
                     image_input=dummy_image_bytes,
                     model_backend="/fake/model.pth",
                     return_point_cloud=True,
-                    advanced_config=cfg,
                 )
             )
 
-        assert captured_kwargs["depth_scale"] == 500.0
-        assert captured_kwargs["depth_trunc"] == 3.0
+        assert captured_kwargs["depth_scale"] == _DEPTH_SCALE
+        assert captured_kwargs["depth_trunc"] == _DEPTH_TRUNC
 
 
 # ── REST API propagates config form fields ────────────────────────────────────
@@ -254,39 +265,27 @@ class TestRestAdvancedConfig:
 
     def test_default_config_used_when_no_form_fields_sent(self):
         cmd = self._post()
-        assert cmd.advanced_config.fx == 525.0
-        assert cmd.advanced_config.fy == 525.0
-        assert cmd.advanced_config.cx == 319.5
-        assert cmd.advanced_config.cy == 239.5
-        assert cmd.advanced_config.depth_scale == 1000.0
-        assert cmd.advanced_config.depth_trunc == 10.0
+        assert cmd.advanced_config.fx is None
+        assert cmd.advanced_config.fy is None
+        assert cmd.advanced_config.cx is None
+        assert cmd.advanced_config.cy is None
 
     def test_custom_fx_fy_forwarded(self):
         cmd = self._post({"fx": "615.0", "fy": "616.0"})
         assert cmd.advanced_config.fx == pytest.approx(615.0)
         assert cmd.advanced_config.fy == pytest.approx(616.0)
-        assert cmd.advanced_config.cx == 319.5  # unchanged
+        assert cmd.advanced_config.cx is None
 
     def test_custom_cx_cy_forwarded(self):
         cmd = self._post({"cx": "321.0", "cy": "241.0"})
         assert cmd.advanced_config.cx == pytest.approx(321.0)
         assert cmd.advanced_config.cy == pytest.approx(241.0)
 
-    def test_custom_depth_scale_forwarded(self):
-        cmd = self._post({"depth_scale": "500.0"})
-        assert cmd.advanced_config.depth_scale == pytest.approx(500.0)
-        assert cmd.advanced_config.depth_trunc == 10.0  # unchanged
-
-    def test_custom_depth_trunc_forwarded(self):
-        cmd = self._post({"depth_trunc": "5.0"})
-        assert cmd.advanced_config.depth_trunc == pytest.approx(5.0)
-        assert cmd.advanced_config.depth_scale == 1000.0  # unchanged
-
     def test_partial_override_does_not_affect_other_fields(self):
         cmd = self._post({"fx": "700.0"})
         assert cmd.advanced_config.fx == pytest.approx(700.0)
-        assert cmd.advanced_config.fy == 525.0
-        assert cmd.advanced_config.depth_trunc == 10.0
+        assert cmd.advanced_config.fy is None
+        assert cmd.advanced_config.cx is None
 
 
 # ── gRPC server propagates config proto fields ────────────────────────────────
@@ -329,8 +328,10 @@ class TestGrpcAdvancedConfig:
 
     def test_no_config_in_request_uses_defaults(self):
         cmd = self._run()
-        assert cmd.advanced_config.fx == 525.0
-        assert cmd.advanced_config.depth_trunc == 10.0
+        assert cmd.advanced_config.fx is None
+        assert cmd.advanced_config.fy is None
+        assert cmd.advanced_config.cx is None
+        assert cmd.advanced_config.cy is None
 
     def test_full_config_forwarded(self):
         proto_cfg = self.pb2.DepthEstimationAdvanceConfig(
@@ -338,29 +339,25 @@ class TestGrpcAdvancedConfig:
             fy=616.0,
             cx=320.0,
             cy=241.0,
-            depth_scale=500.0,
-            depth_trunc=3.0,
         )
         cmd = self._run(proto_cfg)
         assert cmd.advanced_config.fx == pytest.approx(615.0)
         assert cmd.advanced_config.fy == pytest.approx(616.0)
         assert cmd.advanced_config.cx == pytest.approx(320.0)
         assert cmd.advanced_config.cy == pytest.approx(241.0)
-        assert cmd.advanced_config.depth_scale == pytest.approx(500.0)
-        assert cmd.advanced_config.depth_trunc == pytest.approx(3.0)
 
     def test_partial_config_overrides_only_set_fields(self):
-        proto_cfg = self.pb2.DepthEstimationAdvanceConfig(fx=700.0, depth_trunc=2.0)
+        proto_cfg = self.pb2.DepthEstimationAdvanceConfig(fx=700.0)
         cmd = self._run(proto_cfg)
         assert cmd.advanced_config.fx == pytest.approx(700.0)
-        assert cmd.advanced_config.fy == 525.0  # default
-        assert cmd.advanced_config.cx == 319.5  # default
-        assert cmd.advanced_config.depth_scale == 1000.0  # default
-        assert cmd.advanced_config.depth_trunc == pytest.approx(2.0)
+        assert cmd.advanced_config.fy is None
+        assert cmd.advanced_config.cx is None
+        assert cmd.advanced_config.cy is None
 
     def test_empty_config_message_uses_all_defaults(self):
         proto_cfg = self.pb2.DepthEstimationAdvanceConfig()
         cmd = self._run(proto_cfg)
-        assert cmd.advanced_config.fx == 525.0
-        assert cmd.advanced_config.fy == 525.0
-        assert cmd.advanced_config.depth_trunc == 10.0
+        assert cmd.advanced_config.fx is None
+        assert cmd.advanced_config.fy is None
+        assert cmd.advanced_config.cx is None
+        assert cmd.advanced_config.cy is None

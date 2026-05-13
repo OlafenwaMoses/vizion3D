@@ -1,6 +1,6 @@
-# Advanced Config: Camera Intrinsics & Depth Range
+# Advanced Config: Camera Intrinsics
 
-`DepthEstimationAdvanceConfig` lets you override the camera intrinsics and depth range parameters that control how a raw depth map is lifted into a 3D point cloud. Without it, vizion3d uses built-in PrimeSense defaults; with it, you can match your actual camera and scene requirements precisely.
+`DepthEstimationAdvanceConfig` lets you supply the camera intrinsics that control how a raw depth map is lifted into a 3D point cloud. All four fields default to `None`, which causes the handler to auto-derive reasonable values from the input image dimensions. For accurate metric geometry, supply intrinsics from your actual camera calibration.
 
 ---
 
@@ -24,11 +24,11 @@ All four intrinsic parameters — `fx`, `fy`, `cx`, `cy` — appear in this form
 
 ### `fx` — horizontal focal length (pixels)
 
-**Default:** `525.0`
+**Default:** `None` (auto-derived as `image.width × 0.85`, ~63° horizontal FOV)
 
-The horizontal focal length of the camera in pixels. It is the product of the physical focal length (mm) and the horizontal pixel density (pixels/mm). A larger `fx` means the camera has a narrower horizontal field of view; the same scene width maps to fewer pixels.
+The horizontal focal length of the camera in pixels. A larger `fx` means the camera has a narrower horizontal field of view; the same scene width maps to fewer pixels.
 
-**Effect on the point cloud:** `fx` controls the horizontal spread of 3D points. If `fx` is too small, the point cloud is horizontally compressed. If too large, it is horizontally stretched.
+**Effect on the point cloud:** Controls the horizontal spread of 3D points. If `fx` is too small, the point cloud is horizontally compressed. If too large, it is horizontally stretched.
 
 **How to find it:** Use your camera's calibration matrix `K[0][0]`, or compute it from the horizontal field of view `FoV_h`:
 
@@ -40,7 +40,7 @@ fx = (image_width / 2) / tan(FoV_h / 2)
 
 ### `fy` — vertical focal length (pixels)
 
-**Default:** `525.0`
+**Default:** `None` (auto-derived as `image.width × 0.85`, same as `fx`)
 
 The vertical focal length in pixels. For cameras with square pixels, `fy ≈ fx`. Cameras with non-square sensors may have `fy ≠ fx`.
 
@@ -56,9 +56,9 @@ fy = (image_height / 2) / tan(FoV_v / 2)
 
 ### `cx` — horizontal principal point (pixels)
 
-**Default:** `319.5`
+**Default:** `None` (auto-derived as `image.width / 2`)
 
-The horizontal image coordinate of the optical axis — ideally the exact centre of the sensor. For a 640-wide image the ideal value is `319.5`; for a 1920-wide image it is typically near `959.5`.
+The horizontal image coordinate of the optical axis — ideally the exact centre of the sensor.
 
 **Effect on the point cloud:** Shifts the entire point cloud left or right. A `cx` that does not match your sensor makes the scene appear viewed from an off-centre vantage point, introducing a lateral tilt.
 
@@ -66,55 +66,22 @@ The horizontal image coordinate of the optical axis — ideally the exact centre
 
 ### `cy` — vertical principal point (pixels)
 
-**Default:** `239.5`
+**Default:** `None` (auto-derived as `image.height / 2`)
 
-The vertical image coordinate of the optical axis. For a 480-tall image the ideal value is `239.5`.
+The vertical image coordinate of the optical axis.
 
 **Effect on the point cloud:** Shifts the entire point cloud up or down. Like `cx`, a value that does not match your sensor introduces a tilt — vertical in this case.
 
 ---
 
-### `depth_scale` — depth value scale factor
+## Default values
 
-**Default:** `1000.0`
-
-The divisor applied to the raw uint16 depth buffer before passing depth values to Open3D's `RGBDImage.create_from_color_and_depth`. Open3D divides the stored integer depth by `depth_scale` to obtain a value in metres. The default of `1000.0` means the uint16 range `[0, 65535]` maps to `[0, 65.535]` metres.
-
-**Effect on the point cloud:** Changing `depth_scale` rescales all Z values (and therefore X/Y values, since `X = (u - cx) * Z / fx`). Doubling `depth_scale` halves all distances. This does **not** change the relative shape of the cloud — only the metric scale.
-
-**When to adjust:** Only change this if you are supplying a depth buffer in a different unit (e.g. centimetres instead of millimetres). In vizion3d the depth map is internally normalised before being encoded into uint16, so the default `1000.0` is correct for the standard workflow.
-
----
-
-### `depth_trunc` — maximum depth clip distance (metres)
-
-**Default:** `10.0`
-
-Points with a depth value greater than `depth_trunc` metres are discarded by Open3D before building the point cloud. This controls the far clipping plane.
-
-**Effect on the point cloud:** Lowering `depth_trunc` removes distant background points and produces a denser, cleaner cloud for near objects. Setting it to a very small value will discard almost all points. Setting it too large can include noisy, low-confidence depth estimates at the scene boundary.
-
-**Practical guidance:**
-- Indoor close-up scenes: `2.0–5.0` m
-- Room-scale scenes: `5.0–10.0` m (default)
-- Outdoor or large-scale: `10.0–30.0` m
-
----
-
-## Default values and PrimeSense
-
-The built-in defaults match the **PrimeSense / Microsoft Kinect v1** sensor at 640×480 VGA resolution:
-
-| Parameter | Default | PrimeSense VGA |
+| Parameter | Default | Auto-derive formula |
 |---|---|---|
-| `fx` | `525.0` | 525.0 px |
-| `fy` | `525.0` | 525.0 px |
-| `cx` | `319.5` | 319.5 px |
-| `cy` | `239.5` | 239.5 px |
-| `depth_scale` | `1000.0` | — |
-| `depth_trunc` | `10.0` | — |
-
-These are reasonable placeholders for any RGB camera with a ~60° horizontal FoV. For accurate metric reconstruction, always supply intrinsics from your actual camera calibration.
+| `fx` | `None` | `image.width × 0.85` (~63° FOV) |
+| `fy` | `None` | `image.width × 0.85` (same as fx) |
+| `cx` | `None` | `image.width / 2` |
+| `cy` | `None` | `image.height / 2` |
 
 ---
 
@@ -127,14 +94,12 @@ from vizion3d.lifting import (
     DepthEstimationCommand,
 )
 
-# Full custom intrinsics (e.g. Intel RealSense D435 at 1280×720)
+# Supply calibrated intrinsics (e.g. Intel RealSense D435 at 1280×720)
 config = DepthEstimationAdvanceConfig(
     fx=909.15,
     fy=908.48,
     cx=640.0,
     cy=360.0,
-    depth_scale=1000.0,
-    depth_trunc=6.0,
 )
 
 with open("scene.png", "rb") as f:
@@ -153,15 +118,13 @@ points = np.asarray(result.point_cloud.points)
 print(f"Points: {len(points)}")
 ```
 
-Partial overrides work too — unspecified fields keep their defaults:
+Omit the config entirely to use auto-derived intrinsics (suitable for arbitrary photos):
 
 ```python
-# Only change depth_trunc; everything else stays at PrimeSense defaults
 result = DepthEstimation().run(
     DepthEstimationCommand(
         image_input=img_bytes,
         return_point_cloud=True,
-        advanced_config=DepthEstimationAdvanceConfig(depth_trunc=3.0),
     )
 )
 ```
@@ -170,29 +133,17 @@ result = DepthEstimation().run(
 
 ## Usage: REST API
 
-All six config parameters are optional form fields on the `POST /lifting/depth-estimation` endpoint.
+All four intrinsic fields are optional form fields on the `POST /lifting/depth-estimation` endpoint. Omit any field to auto-derive it from the image dimensions.
 
 ```bash
-# Full custom intrinsics
+# Supply calibrated intrinsics
 curl -X POST "http://localhost:8000/lifting/depth-estimation" \
   -F "image=@scene.png" \
   -F "return_point_cloud=true" \
   -F "fx=909.15" \
   -F "fy=908.48" \
   -F "cx=640.0" \
-  -F "cy=360.0" \
-  -F "depth_scale=1000.0" \
-  -F "depth_trunc=6.0"
-```
-
-Partial overrides — omit any field to keep its default:
-
-```bash
-# Only override depth_trunc
-curl -X POST "http://localhost:8000/lifting/depth-estimation" \
-  -F "image=@scene.png" \
-  -F "return_point_cloud=true" \
-  -F "depth_trunc=3.0"
+  -F "cy=360.0"
 ```
 
 Python `requests` equivalent:
@@ -212,7 +163,6 @@ response = requests.post(
         "fy": "908.48",
         "cx": "640.0",
         "cy": "360.0",
-        "depth_trunc": "6.0",
     },
 )
 data = response.json()
@@ -223,7 +173,7 @@ print(f"Depth range: {data['min_depth']:.4f} → {data['max_depth']:.4f}")
 
 ## Usage: gRPC API
 
-The `DepthEstimationAdvanceConfig` proto message mirrors the Python model. All fields are `optional`, so any omitted field falls back to the server-side default.
+The `DepthEstimationAdvanceConfig` proto message mirrors the Python model. All fields are `optional`, so any omitted field auto-derives from the image on the server side.
 
 ```python
 import grpc
@@ -235,7 +185,6 @@ stub = lifting_pb2_grpc.LiftingServiceStub(channel)
 with open("scene.png", "rb") as f:
     img_bytes = f.read()
 
-# Full custom intrinsics
 request = lifting_pb2.DepthEstimationRequest(
     image_bytes=img_bytes,
     return_point_cloud=True,
@@ -244,23 +193,10 @@ request = lifting_pb2.DepthEstimationRequest(
         fy=908.48,
         cx=640.0,
         cy=360.0,
-        depth_scale=1000.0,
-        depth_trunc=6.0,
     ),
 )
 response = stub.RunDepthEstimation(request)
 print(f"Depth range: {response.min_depth:.4f} → {response.max_depth:.4f}")
-```
-
-Partial override — only `depth_trunc`:
-
-```python
-request = lifting_pb2.DepthEstimationRequest(
-    image_bytes=img_bytes,
-    return_point_cloud=True,
-    advanced_config=lifting_pb2.DepthEstimationAdvanceConfig(depth_trunc=3.0),
-)
-response = stub.RunDepthEstimation(request)
 ```
 
 ---

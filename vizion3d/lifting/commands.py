@@ -31,10 +31,10 @@ class DepthEstimationCommand(Command[DepthEstimationResult]):
             `open3d.geometry.PointCloud` unprojected from the RGB-D image using
             the camera intrinsics in `advanced_config`. Point coordinates are in metres.
             Requires Open3D (Python 3.12).
-        advanced_config: Camera intrinsics and depth range settings. Override any
-            field to customise — e.g.
+        advanced_config: Camera intrinsics for point cloud unprojection. All fields
+            auto-derive from image dimensions when left as ``None`` — only supply
+            values for a real calibrated camera, e.g.
             ``advanced_config=DepthEstimationAdvanceConfig(fx=615.0, fy=615.0)``.
-            Unspecified fields keep their defaults (PrimeSense values).
     """
 
     image_input: str | bytes

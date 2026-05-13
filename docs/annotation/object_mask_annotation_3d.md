@@ -9,6 +9,172 @@ A real photo is optional. When no image is provided the task synthesises a front
 
 ---
 
+<figure>
+  <img src="../../assets/images/bedroom2.jpg" alt="bedroom2.jpg" style="width:100%;border-radius:6px;">
+  <figcaption style="color:#aaa;font-size:0.8em;margin-top:0.3rem;">input image</figcaption>
+</figure>
+
+<figure>
+  <div id="ply-viewer-base" style="width:105%;margin-left:-3.5%;margin-right:-3.5%;height:480px;overflow:hidden;border-radius:6px;background:#d8d8d8;"></div>
+  <figcaption style="color:#aaa;font-size:0.8em;margin-top:0.3rem;">Input point cloud generated from depth estimation</figcaption>
+</figure>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { PLYLoader } from 'three/addons/loaders/PLYLoader.js';
+import { TrackballControls } from 'three/addons/controls/TrackballControls.js';
+
+const container = document.getElementById('ply-viewer-base');
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setSize(container.clientWidth || 800, container.clientHeight || 480, false);
+renderer.domElement.style.cssText = 'width:100%;height:100%;display:block;';
+container.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(60, (container.clientWidth || 800) / (container.clientHeight || 480), 0.001, 1000);
+const controls = new TrackballControls(camera, renderer.domElement);
+controls.rotateSpeed = 1.0;
+controls.dynamicDampingFactor = 0.2;
+
+new ResizeObserver(() => {
+  const w = renderer.domElement.clientWidth;
+  const h = renderer.domElement.clientHeight;
+  if (w > 0 && h > 0) {
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+}).observe(renderer.domElement);
+
+new PLYLoader().load('../../assets/pointclouds/bedroom2_result.ply', (geometry) => {
+  const material = new THREE.PointsMaterial({ size: 0.005, vertexColors: true });
+  const points = new THREE.Points(geometry, material);
+  scene.add(points);
+  geometry.computeBoundingBox();
+  const center = new THREE.Vector3();
+  geometry.boundingBox.getCenter(center);
+  points.position.sub(center);
+  const size = geometry.boundingBox.getSize(new THREE.Vector3()).length();
+  camera.position.set(0, size * 0.3, size * 0.6);
+  camera.far = size * 10;
+  camera.updateProjectionMatrix();
+  controls.target.set(0, 0, 0);
+  controls.maxDistance = size * 5;
+  controls.update();
+});
+
+(function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+})();
+</script>
+
+<figure>
+  <div id="ply-viewer-annotated" style="width:105%;margin-left:-3.5%;margin-right:-3.5%;height:480px;overflow:hidden;border-radius:6px;background:#d8d8d8;"></div>
+  <figcaption style="color:#aaa;font-size:0.8em;margin-top:0.3rem;">Annotated point cloud — each detected object recoloured with a unique colour</figcaption>
+</figure>
+
+<script type="module">
+import * as THREE from 'three';
+import { PLYLoader } from 'three/addons/loaders/PLYLoader.js';
+import { TrackballControls } from 'three/addons/controls/TrackballControls.js';
+
+const container = document.getElementById('ply-viewer-annotated');
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setSize(container.clientWidth || 800, container.clientHeight || 480, false);
+renderer.domElement.style.cssText = 'width:100%;height:100%;display:block;';
+container.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(60, (container.clientWidth || 800) / (container.clientHeight || 480), 0.001, 1000);
+const controls = new TrackballControls(camera, renderer.domElement);
+controls.rotateSpeed = 1.0;
+controls.dynamicDampingFactor = 0.2;
+
+new ResizeObserver(() => {
+  const w = renderer.domElement.clientWidth;
+  const h = renderer.domElement.clientHeight;
+  if (w > 0 && h > 0) {
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+}).observe(renderer.domElement);
+
+new PLYLoader().load('../../assets/pointclouds/annotated_bedroom2_result.ply', (geometry) => {
+  const material = new THREE.PointsMaterial({ size: 0.008, vertexColors: true });
+  const points = new THREE.Points(geometry, material);
+  scene.add(points);
+  geometry.computeBoundingBox();
+  const center = new THREE.Vector3();
+  geometry.boundingBox.getCenter(center);
+  points.position.sub(center);
+  const size = geometry.boundingBox.getSize(new THREE.Vector3()).length();
+  camera.position.set(0, size * 0.3, size * 0.6);
+  camera.far = size * 10;
+  camera.updateProjectionMatrix();
+  controls.target.set(0, 0, 0);
+  controls.maxDistance = size * 5;
+  controls.update();
+});
+
+(function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+})();
+</script>
+
+Detection results from the annotated scene above:
+
+```
+chair                 conf=0.91  3D points=20806
+bed                   conf=0.90  3D points=180092
+tv                    conf=0.90  3D points=18410
+potted plant          conf=0.53  3D points=3447
+keyboard              conf=0.45  3D points=1318
+vase                  conf=0.38  3D points=2321
+vase                  conf=0.33  3D points=2963
+potted plant          conf=0.27  3D points=15435
+```
+
+---
+
+## Supported categories
+
+The default checkpoint (`yolo26l-seg.pt`) is trained on the [COCO](https://cocodataset.org) dataset and can detect and segment **80 object categories**. Each detected object is identified by its `label` (string) and `class_id` (0-based integer) in the result.
+
+| Group | Categories |
+|---|---|
+| **People** | person |
+| **Vehicles** | bicycle, car, motorcycle, airplane, bus, train, truck, boat |
+| **Outdoor** | traffic light, fire hydrant, stop sign, parking meter, bench |
+| **Animals** | bird, cat, dog, horse, sheep, cow, elephant, bear, zebra, giraffe |
+| **Accessories** | backpack, umbrella, handbag, tie, suitcase |
+| **Sports** | frisbee, skis, snowboard, sports ball, kite, baseball bat, baseball glove, skateboard, surfboard, tennis racket |
+| **Kitchen** | bottle, wine glass, cup, fork, knife, spoon, bowl |
+| **Food** | banana, apple, sandwich, orange, broccoli, carrot, hot dog, pizza, donut, cake |
+| **Furniture** | chair, couch, potted plant, bed, dining table, toilet |
+| **Electronics** | tv, laptop, mouse, remote, keyboard, cell phone |
+| **Appliances** | microwave, oven, toaster, sink, refrigerator |
+| **Indoor** | book, clock, vase, scissors, teddy bear, hair drier, toothbrush |
+
+Objects not in this list will not be detected. To annotate other categories, supply a custom YOLO segmentation checkpoint via `model_backend`.
+
+---
+
 ## Model backend
 
 Default checkpoint download:
@@ -37,10 +203,10 @@ Models are kept in memory after the first inference in the current process. Subs
 |---|---|---|---|---|
 | `point_cloud` | `open3d.geometry.PointCloud` | **Yes** | — | Input point cloud in camera space (X right, Y down, Z forward), coordinates in metres. |
 | `image_input` | `str \| bytes \| None` | No | `None` | RGB image to segment. Pass a file path string or raw image bytes. When `None`, a front-view image is synthesised from the point cloud automatically. |
-| `model_backend` | `str` | No | vizion3D release checkpoint URL | YOLO11n-seg checkpoint URL or local path. |
+| `model_backend` | `str` | No | vizion3D release checkpoint URL | YOLO segmentation checkpoint URL or local path. |
 | `return_object_clouds` | `bool` | No | `False` | When `True`, each `MaskAnnotation3D` includes an `object_cloud` — an extracted point cloud for that object with original colours preserved. |
 | `return_annotated_cloud` | `bool` | No | `False` | When `True`, the result includes a copy of the full point cloud with detected object points recoloured per object. |
-| `advanced_config` | `ObjectMaskAnnotation3DConfig` | No | PrimeSense defaults | Camera intrinsics and detection thresholds. See [Advanced config](#advanced-config) below. |
+| `advanced_config` | `ObjectMaskAnnotation3DConfig` | No | auto-derived from image | Camera intrinsics and detection thresholds. See [Advanced config](#advanced-config) below. |
 
 ---
 
@@ -106,7 +272,7 @@ When `image_input` is omitted, the task synthesises a front-view RGB image direc
 
 The synthesised image is a point-splatting projection: each point's XYZ is projected into pixel coordinates using the camera intrinsics, and its RGB colour is painted onto a canvas. For depth-estimation clouds (one point per pixel) the result is nearly identical to the original photo. For stereo clouds or scans with variable density, sparse or occluded regions produce a patchy image that may reduce detection quality compared to a real photo.
 
-> **Camera intrinsics required for non-PrimeSense clouds.** The default intrinsics (`fx=525, cx=319.5, cy=239.5`) match a 640×480 PrimeSense sensor. If your point cloud was generated by a different camera (stereo rig, RealSense, etc.), pass `advanced_config` with the correct values — otherwise back-projection will not align masks with the 3D points. See [Advanced config](#advanced-config).
+> **Stereo clouds require explicit intrinsics.** When annotating a stereo point cloud without an image, the auto-derive heuristic cannot infer the correct focal length from the cloud geometry alone. Pass `advanced_config` with the stereo rig's actual `fx`, `fy`, `cx`, `cy` to ensure back-projection aligns masks with the 3D points. See [section 5](#5-stereo-point-cloud-integration) and [Advanced config](#advanced-config).
 
 ```python
 import open3d as o3d
@@ -365,14 +531,14 @@ for item in response.annotations:
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `fx` | `float` | `525.0` | Horizontal focal length in pixels. |
-| `fy` | `float` | `525.0` | Vertical focal length in pixels. |
-| `cx` | `float` | `319.5` | Principal point x (optical axis column). |
-| `cy` | `float` | `239.5` | Principal point y (optical axis row). |
+| `fx` | `float \| None` | `None` | Horizontal focal length in pixels. Auto-derived as `image_width × 0.85` when `None`. |
+| `fy` | `float \| None` | `None` | Vertical focal length in pixels. Auto-derived as `image_width × 0.85` when `None`. |
+| `cx` | `float \| None` | `None` | Principal point x (optical axis column). Auto-derived as `image_width / 2` when `None`. |
+| `cy` | `float \| None` | `None` | Principal point y (optical axis row). Auto-derived as `image_height / 2` when `None`. |
 | `conf_threshold` | `float` | `0.25` | Minimum detection confidence to keep. Range `[0, 1]`. |
 | `iou_threshold` | `float` | `0.45` | Non-maximum suppression IoU overlap threshold. Range `[0, 1]`. |
 
-The defaults match a 640×480 PrimeSense sensor. For a different camera, supply your actual intrinsics. Not sure what these values are? See [Camera Intrinsics Matrix](../concepts/camera_intrinsics.md).
+When intrinsics are `None` (the default), the handler derives them from the actual image dimensions using the same `0.85 × width` field-of-view heuristic as the depth estimation pipeline. This means a point cloud generated by `DepthEstimation` can be annotated without any config — the back-projection automatically matches the intrinsics used to generate the cloud. Supply explicit values only when using a calibrated camera or a custom point cloud source. Not sure what these values are? See [Camera Intrinsics Matrix](../concepts/camera_intrinsics.md).
 
 ```python
 from vizion3d.annotation import (

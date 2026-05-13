@@ -57,8 +57,6 @@ _DEPTH_CFG = DepthEstimationAdvanceConfig(
     fy=FY,
     cx=CX,
     cy=CY,
-    depth_scale=1000.0,
-    depth_trunc=10.0,
 )
 
 
@@ -308,27 +306,29 @@ class TestDepthOrdering:
             "larger disparity must give smaller (closer) Z"
         )
 
-    def test_depth_estimation_higher_input_value_means_larger_z(self):
-        """Monocular depth: higher raw depth value → higher normalised depth → larger Z.
+    def test_depth_estimation_inverse_depth_far_pixels_have_larger_z(self):
+        """Depth Anything V2 is inverse depth: higher raw value = closer to camera.
 
-        Use a row-wise gradient so every row has a distinct depth.  The min (row 0)
-        and max (row H-1) pixels are filtered by Open3D (depth=0 and depth=depth_trunc
-        respectively), but all intermediate rows survive and form the test set.
+        After the normalization flip, closer pixels (high raw value) → small metric Z,
+        farther pixels (low raw value) → large metric Z.
+
+        Row-wise gradient: row 0 has low inverse depth (far), row H-1 has high
+        inverse depth (close). All rows survive — no pixels are filtered after Fix 1.
         """
-        # Depth increases row by row: top = shallow, bottom = deep
+        # Inverse-depth increases row by row: top rows = far, bottom rows = close
         depth_inc = np.ascontiguousarray(
             np.tile(np.linspace(1.0, 5.0, H), (W, 1)).T.astype(np.float32)
         )
         pts = np.asarray(_run_depth(depth_inc).point_cloud.points)
         assert len(pts) > 0, "point cloud must not be empty"
 
-        # With Y+ down: points at positive Y come from bottom rows (high depth → high Z).
-        # Mean Z of Y>0 points must exceed mean Z of Y<0 points.
+        # Y<0 points come from top rows (low inverse depth = far = large Z).
+        # Y>0 points come from bottom rows (high inverse depth = close = small Z).
         z_top = pts[pts[:, 1] < 0, 2]
         z_bot = pts[pts[:, 1] > 0, 2]
         assert len(z_top) > 0 and len(z_bot) > 0
-        assert z_bot.mean() > z_top.mean(), (
-            "bottom rows (higher depth values) must produce larger Z than top rows"
+        assert z_top.mean() > z_bot.mean(), (
+            "top rows (lower inverse depth = farther) must produce larger Z than bottom rows"
         )
 
 
