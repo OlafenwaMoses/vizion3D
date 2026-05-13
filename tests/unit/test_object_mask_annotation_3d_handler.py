@@ -104,7 +104,8 @@ class TestBackprojection:
         pcd.points = o3d.utility.Vector3dVector(pts)
         pcd.colors = o3d.utility.Vector3dVector(np.ones((2, 3)))
         pts_arr, _ = _extract_cloud_arrays(pcd)
-        idx, _, _ = _backproject(pts_arr, 640, 480, ObjectMaskAnnotation3DConfig())
+        cfg = ObjectMaskAnnotation3DConfig(fx=525.0, fy=525.0, cx=319.5, cy=239.5)
+        idx, _, _ = _backproject(pts_arr, 640, 480, cfg)
         assert 0 not in idx
 
     def test_out_of_image_filtered_out(self):
@@ -113,8 +114,12 @@ class TestBackprojection:
         pcd.points = o3d.utility.Vector3dVector(pts)
         pcd.colors = o3d.utility.Vector3dVector(np.ones((1, 3)))
         pts_arr, _ = _extract_cloud_arrays(pcd)
-        idx, _, _ = _backproject(pts_arr, 64, 48,
-                                  ObjectMaskAnnotation3DConfig(fx=525.0, cx=32.0, cy=24.0))
+        idx, _, _ = _backproject(
+            pts_arr,
+            64,
+            48,
+            ObjectMaskAnnotation3DConfig(fx=525.0, fy=525.0, cx=32.0, cy=24.0),
+        )
         assert len(idx) == 0
 
 
@@ -135,9 +140,9 @@ class TestFrontViewSynthesis:
 
     def test_returns_pil_image(self, small_point_cloud):
         pts, cols = _extract_cloud_arrays(small_point_cloud)
-        img = _render_front_view(pts, cols, ObjectMaskAnnotation3DConfig(
-            fx=100.0, fy=100.0, cx=32.0, cy=24.0
-        ))
+        img = _render_front_view(
+            pts, cols, ObjectMaskAnnotation3DConfig(fx=100.0, fy=100.0, cx=32.0, cy=24.0)
+        )
         assert isinstance(img, Image.Image)
         assert img.mode == "RGB"
 
@@ -155,9 +160,7 @@ class TestFrontViewSynthesis:
 class TestNoImageInput:
     def test_handle_without_image_runs_successfully(self, small_point_cloud, full_mask_48x64):
         cfg = ObjectMaskAnnotation3DConfig(fx=100.0, fy=100.0, cx=32.0, cy=24.0)
-        det = _make_detection(
-            np.ones((int(cfg.cy * 2) + 1, int(cfg.cx * 2) + 1), dtype=bool)
-        )
+        det = _make_detection(np.ones((int(cfg.cy * 2) + 1, int(cfg.cx * 2) + 1), dtype=bool))
         with patch.object(ObjectMaskAnnotation3DHandler, "_run_yolo", return_value=[det]):
             result = ObjectMaskAnnotation3DHandler().handle(
                 ObjectMaskAnnotation3DCommand(
@@ -337,9 +340,7 @@ class TestOptionalOutputs:
         n_out = len(np.asarray(result.annotated_cloud.points))
         assert n_out == n_in
 
-    def test_object_cloud_preserves_original_colours(
-        self, dummy_image_bytes, small_point_cloud
-    ):
+    def test_object_cloud_preserves_original_colours(self, dummy_image_bytes, small_point_cloud):
         """Extracted object cloud uses original colours, not annotated palette."""
         cfg = ObjectMaskAnnotation3DConfig(fx=100.0, fy=100.0, cx=32.0, cy=24.0)
         det = _make_detection(np.ones((49, 65), dtype=bool))

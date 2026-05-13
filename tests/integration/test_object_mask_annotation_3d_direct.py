@@ -51,8 +51,12 @@ def _save_outputs(result, run_dir: Path, run: int) -> None:
         "num_annotations": len(result.annotations),
         "backend_used": result.backend_used,
         "annotations": [
-            {"label": a.label, "confidence": a.confidence,
-             "bbox_2d": a.bbox_2d, "num_points": len(a.point_indices)}
+            {
+                "label": a.label,
+                "confidence": a.confidence,
+                "bbox_2d": a.bbox_2d,
+                "num_points": len(a.point_indices),
+            }
             for a in result.annotations
         ],
     }
@@ -63,8 +67,15 @@ def _save_outputs(result, run_dir: Path, run: int) -> None:
         prefix.with_suffix(".ply").write_bytes(create_ply_binary(pts, cols))
 
 
-def _run_group(model_backend, indoor_image_bytes, indoor_point_cloud,
-               run_dir, entry_point, scenario, timing_collector):
+def _run_group(
+    model_backend,
+    indoor_image_bytes,
+    indoor_point_cloud,
+    run_dir,
+    entry_point,
+    scenario,
+    timing_collector,
+):
     ObjectMaskAnnotation3DHandler._annotation_models.clear()
     timings = []
     for run in range(1, N_RUNS + 1):
@@ -166,6 +177,7 @@ def test_direct_no_image_uses_front_view(indoor_point_cloud, local_annotation_mo
 
 def test_direct_image_file_path(indoor_point_cloud, local_annotation_model_path, tmp_path):
     from PIL import Image as PILImage
+
     img_path = tmp_path / "scene.png"
     PILImage.new("RGB", (64, 48), "white").save(img_path)
 

@@ -101,20 +101,10 @@ class LiftingServiceServicer(lifting_pb2_grpc.LiftingServiceServicer):
         if request.HasField("advanced_config"):
             proto_cfg = request.advanced_config
             base_cfg = DepthEstimationAdvanceConfig(
-                fx=proto_cfg.fx if proto_cfg.HasField("fx") else base_cfg.fx,
-                fy=proto_cfg.fy if proto_cfg.HasField("fy") else base_cfg.fy,
-                cx=proto_cfg.cx if proto_cfg.HasField("cx") else base_cfg.cx,
-                cy=proto_cfg.cy if proto_cfg.HasField("cy") else base_cfg.cy,
-                depth_scale=(
-                    proto_cfg.depth_scale
-                    if proto_cfg.HasField("depth_scale")
-                    else base_cfg.depth_scale
-                ),
-                depth_trunc=(
-                    proto_cfg.depth_trunc
-                    if proto_cfg.HasField("depth_trunc")
-                    else base_cfg.depth_trunc
-                ),
+                fx=proto_cfg.fx if proto_cfg.HasField("fx") else None,
+                fy=proto_cfg.fy if proto_cfg.HasField("fy") else None,
+                cx=proto_cfg.cx if proto_cfg.HasField("cx") else None,
+                cy=proto_cfg.cy if proto_cfg.HasField("cy") else None,
             )
         cmd = DepthEstimationCommand(
             image_input=request.image_bytes,
@@ -264,9 +254,7 @@ class LiftingServiceServicer(lifting_pb2_grpc.LiftingServiceServicer):
             response.annotations.append(item)
 
         if result.annotated_cloud is not None:
-            response.annotated_cloud_ply = _o3d_point_cloud_to_ply_bytes(
-                result.annotated_cloud
-            )
+            response.annotated_cloud_ply = _o3d_point_cloud_to_ply_bytes(result.annotated_cloud)
 
         return response
 

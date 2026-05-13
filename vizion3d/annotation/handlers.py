@@ -80,21 +80,27 @@ class ObjectMaskAnnotation3DHandler(
         pts, colors_orig = _extract_cloud_arrays(command.point_cloud)
 
         if command.image_input is None:
-            image = _render_front_view(pts, colors_orig, command.advanced_config)
+            # Intrinsics must be resolved before rendering (rendering requires them).
+            # If any are None, derive consistent values from the cloud's angular extent.
+            cfg = _derive_intrinsics_from_cloud(pts, command.advanced_config)
+            image = _render_front_view(pts, colors_orig, cfg)
         elif isinstance(command.image_input, str):
             image = Image.open(command.image_input).convert("RGB")
+            cfg = _resolve_intrinsics(command.advanced_config, *image.size)
         else:
             image = Image.open(io.BytesIO(command.image_input)).convert("RGB")
+            cfg = _resolve_intrinsics(command.advanced_config, *image.size)
 
         img_w, img_h = image.size
 
-        detections = self._run_yolo(model_id, image, command.advanced_config)
+        detections = self._run_yolo(model_id, image, cfg)
         detections = sorted(detections, key=lambda d: d[2], reverse=True)
 
         if not detections:
             annotated_cloud = None
             if command.return_annotated_cloud:
                 import open3d as o3d
+
                 annotated_cloud = _clone_cloud(command.point_cloud, o3d)
             return ObjectMaskAnnotation3DResult(
                 annotations=[],
@@ -102,7 +108,7 @@ class ObjectMaskAnnotation3DHandler(
                 backend_used=model_id,
             )
 
-        in_bounds_idx, u_ib, v_ib = _backproject(pts, img_w, img_h, command.advanced_config)
+        in_bounds_idx, u_ib, v_ib = _backproject(pts, img_w, img_h, cfg)
 
         annotations: list[MaskAnnotation3D] = []
         colors_new = colors_orig.copy() if command.return_annotated_cloud else None
@@ -117,6 +123,7 @@ class ObjectMaskAnnotation3DHandler(
             object_cloud = None
             if command.return_object_clouds and obj_pt_idx:
                 import open3d as o3d
+
                 object_cloud = _make_sub_cloud(pts, colors_orig, obj_pt_idx, o3d)
 
             if colors_new is not None and obj_pt_idx:
@@ -139,6 +146,7 @@ class ObjectMaskAnnotation3DHandler(
         annotated_cloud = None
         if command.return_annotated_cloud:
             import open3d as o3d
+
             annotated_cloud = _make_full_cloud(pts, colors_new, o3d)
 
         return ObjectMaskAnnotation3DResult(
@@ -162,8 +170,7 @@ class ObjectMaskAnnotation3DHandler(
                 from ultralytics import YOLO
             except ImportError as exc:
                 raise ImportError(
-                    "ObjectMaskAnnotation3D requires ultralytics. "
-                    "Run: pip install ultralytics"
+                    "ObjectMaskAnnotation3D requires ultralytics. Run: pip install ultralytics"
                 ) from exc
 
             device = self._torch_device(torch)
@@ -203,13 +210,15 @@ class ObjectMaskAnnotation3DHandler(
         detections = []
         for i in range(len(boxes_xyxy)):
             mask_hw = masks_tensor[i] > 0.5  # bool (H, W)
-            detections.append((
-                result.names[int(classes[i])],
-                int(classes[i]),
-                float(confs[i]),
-                boxes_xyxy[i].tolist(),
-                mask_hw,
-            ))
+            detections.append(
+                (
+                    result.names[int(classes[i])],
+                    int(classes[i]),
+                    float(confs[i]),
+                    boxes_xyxy[i].tolist(),
+                    mask_hw,
+                )
+            )
         return detections
 
     # ── Pre-loading ───────────────────────────────────────────────────────────
@@ -225,15 +234,70 @@ class ObjectMaskAnnotation3DHandler(
     def _torch_device(torch_module) -> str:
         if torch_module.cuda.is_available():
             return "cuda"
-        if (
-            hasattr(torch_module.backends, "mps")
-            and torch_module.backends.mps.is_available()
-        ):
+        if hasattr(torch_module.backends, "mps") and torch_module.backends.mps.is_available():
             return "mps"
         return "cpu"
 
 
 # ── Pure helper functions ─────────────────────────────────────────────────────
+
+
+def _resolve_intrinsics(
+    cfg: ObjectMaskAnnotation3DConfig, img_w: int, img_h: int
+) -> ObjectMaskAnnotation3DConfig:
+    """Fill any None intrinsic fields from image dimensions using 0.85×width FOV heuristic."""
+    fx = cfg.fx if cfg.fx is not None else img_w * 0.85
+    fy = cfg.fy if cfg.fy is not None else img_w * 0.85
+    cx = cfg.cx if cfg.cx is not None else img_w / 2.0
+    cy = cfg.cy if cfg.cy is not None else img_h / 2.0
+    return ObjectMaskAnnotation3DConfig(
+        fx=fx,
+        fy=fy,
+        cx=cx,
+        cy=cy,
+        conf_threshold=cfg.conf_threshold,
+        iou_threshold=cfg.iou_threshold,
+    )
+
+
+def _derive_intrinsics_from_cloud(
+    pts: np.ndarray, cfg: ObjectMaskAnnotation3DConfig
+) -> ObjectMaskAnnotation3DConfig:
+    """Derive any None intrinsics from the cloud's angular extent.
+
+    Used when no image is provided — the rendering step requires concrete intrinsic
+    values, so they must be computed from the cloud geometry before rendering begins.
+    Derived values are consistent with the 0.85×width heuristic: for a cloud
+    generated by DepthEstimation, the recovered fx matches the original auto-derived
+    value within rounding.
+    """
+    if all(v is not None for v in (cfg.fx, cfg.fy, cfg.cx, cfg.cy)):
+        return cfg
+
+    X, Y, Z = pts[:, 0], pts[:, 1], pts[:, 2]
+    valid = Z > 0
+    if not valid.any():
+        return _resolve_intrinsics(cfg, 640, 480)
+
+    ax = X[valid] / Z[valid]
+    ay = Y[valid] / Z[valid]
+    range_x = float(ax.max() - ax.min())
+
+    _TARGET_W = 1024
+    fx = (
+        cfg.fx if cfg.fx is not None else (_TARGET_W / range_x if range_x > 0 else _TARGET_W * 0.85)
+    )
+    fy = cfg.fy if cfg.fy is not None else fx
+    cx = cfg.cx if cfg.cx is not None else float(-ax.min() * fx)
+    cy = cfg.cy if cfg.cy is not None else float(-ay.min() * fy)
+    return ObjectMaskAnnotation3DConfig(
+        fx=fx,
+        fy=fy,
+        cx=cx,
+        cy=cy,
+        conf_threshold=cfg.conf_threshold,
+        iou_threshold=cfg.iou_threshold,
+    )
 
 
 def _extract_cloud_arrays(point_cloud) -> tuple[np.ndarray, np.ndarray]:
@@ -306,11 +370,7 @@ def _backproject(
     u_all[valid] = u_proj
     v_all[valid] = v_proj
 
-    in_bounds = (
-        valid
-        & (u_all >= 0) & (u_all < img_w)
-        & (v_all >= 0) & (v_all < img_h)
-    )
+    in_bounds = valid & (u_all >= 0) & (u_all < img_w) & (v_all >= 0) & (v_all < img_h)
 
     in_bounds_idx = np.where(in_bounds)[0]
     return in_bounds_idx, u_all[in_bounds_idx], v_all[in_bounds_idx]

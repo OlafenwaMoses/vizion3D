@@ -26,7 +26,7 @@ class DepthEstimation:
             image_input=b"...",
             return_point_cloud=True,
             advanced_config=DepthEstimationAdvanceConfig(
-                fx=615.0, fy=615.0, cx=320.0, cy=240.0, depth_trunc=5.0
+                fx=615.0, fy=615.0, cx=320.0, cy=240.0
             ),
         )
         result = DepthEstimation().run(cmd)

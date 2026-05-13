@@ -39,8 +39,12 @@ def indoor_point_cloud_ply_bytes(indoor_image_bytes, local_model_path) -> bytes:
 
 
 def test_grpc_basic_annotation(
-    indoor_image_bytes, indoor_point_cloud_ply_bytes, local_annotation_model_path,
-    grpc_client_stub, tmp_path, timing_collector,
+    indoor_image_bytes,
+    indoor_point_cloud_ply_bytes,
+    local_annotation_model_path,
+    grpc_client_stub,
+    tmp_path,
+    timing_collector,
 ):
     ObjectMaskAnnotation3DHandler._annotation_models.clear()
     timings = []
@@ -73,7 +77,9 @@ def test_grpc_basic_annotation(
 
 
 def test_grpc_object_clouds_returned(
-    indoor_image_bytes, indoor_point_cloud_ply_bytes, local_annotation_model_path,
+    indoor_image_bytes,
+    indoor_point_cloud_ply_bytes,
+    local_annotation_model_path,
     grpc_client_stub,
 ):
     ObjectMaskAnnotation3DHandler._annotation_models.clear()
@@ -90,7 +96,9 @@ def test_grpc_object_clouds_returned(
 
 
 def test_grpc_custom_config(
-    indoor_image_bytes, indoor_point_cloud_ply_bytes, local_annotation_model_path,
+    indoor_image_bytes,
+    indoor_point_cloud_ply_bytes,
+    local_annotation_model_path,
     grpc_client_stub,
 ):
     ObjectMaskAnnotation3DHandler._annotation_models.clear()
