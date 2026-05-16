@@ -8,12 +8,12 @@
 
 > Not sure what `fx`, `fy`, `cx`, `cy` are? See the [Camera Intrinsics Matrix](../concepts/camera_intrinsics.md) reference for a full explanation of the K matrix and how to read it for your camera.
 
-Every point in a point cloud is computed by inverting the pinhole camera projection. Given a pixel at image coordinates `(u, v)` with a depth value `d` (in metres), its 3D position `(X, Y, Z)` is:
+Every point in a point cloud is computed by inverting the pinhole camera projection. vizion3d emits OpenGL/viewer camera coordinates: `X+` right, `Y+` up, and `Z-` forward into the scene. Given a pixel at image coordinates `(u, v)` with a positive depth value `d` (in metres), its 3D position `(X, Y, Z)` is:
 
 ```
-Z = d
 X = (u - cx) * d / fx
-Y = (v - cy) * d / fy
+Y = (cy - v) * d / fy
+Z = -d
 ```
 
 All four intrinsic parameters — `fx`, `fy`, `cx`, `cy` — appear in this formula. Values that do not match your camera produce a point cloud that is geometrically distorted: correct topology but skewed angles, compressed shapes, or stretched geometry.

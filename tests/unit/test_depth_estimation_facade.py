@@ -106,9 +106,9 @@ def test_point_cloud_scale_is_metres_per_unit(dummy_image_bytes):
     assert dist_metres == pytest.approx(dist_units)
 
 
-def test_point_cloud_is_in_camera_space(dummy_image_bytes):
-    """Point cloud must be in standard camera-space coordinates:
-    X+ right, Y+ down, Z+ forward (all valid Z positive).
+def test_point_cloud_is_in_opengl_camera_space(dummy_image_bytes):
+    """Point cloud must be in OpenGL/viewer camera-space coordinates:
+    X+ right, Y+ up, Z- forward (all valid scene Z negative).
     """
     import numpy as np
 
@@ -118,7 +118,7 @@ def test_point_cloud_is_in_camera_space(dummy_image_bytes):
     points = np.asarray(res.point_cloud.points)
 
     assert points.shape[1] == 3
-    assert np.all(points[:, 2] > 0), "Z must be positive (forward from camera)"
+    assert np.all(points[:, 2] < 0), "Z must be negative (forward from camera in OpenGL space)"
 
 
 def test_depth_estimation_accepts_file_path(tmp_path):

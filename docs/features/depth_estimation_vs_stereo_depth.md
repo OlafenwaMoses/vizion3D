@@ -20,6 +20,8 @@ depth_m = baseline_mm × focal_length_px / disparity_px / 1000
 
 Provided the camera calibration is accurate, the output is **real metric depth in metres** — every point in the point cloud has a physically meaningful distance from the camera.
 
+Both pipelines emit point clouds in OpenGL/viewer camera space: `X+` right, `Y+` up, and `Z-` forward into the scene.
+
 ---
 
 ## Side-by-side comparison
@@ -28,8 +30,8 @@ Provided the camera calibration is accurate, the output is **real metric depth i
 |---|---|---|
 | **Input** | Rectified left + right image pair | Single RGB image |
 | **Depth type** | Metric (real metres) | Relative (inverse depth, arbitrary scale) |
-| **Coordinate system** | Camera space (X right, Y down, Z forward) | Camera space (X right, Y down, Z forward) |
-| **Z ordering** | Near objects have smaller Z | Near objects have larger Z — relative depth only, not physical ordering |
+| **Coordinate system** | OpenGL/viewer camera space (X right, Y up, Z negative forward) | OpenGL/viewer camera space (X right, Y up, Z negative forward) |
+| **Z ordering** | Near objects have larger Z (less negative, closer to 0) | Near objects have larger Z (less negative, closer to 0) — relative depth only, not physical ordering |
 | **Units** | Metres (real) | Metres (relative, internally scaled to full uint16 range) |
 | **Object at 2.4 m reads as 2.4 m** | Yes — if calibration is correct | No — depends on scene content |
 | **Scale factor to world** | 1.0 (real) | Unknown, scene-dependent |
@@ -82,6 +84,7 @@ result = DepthEstimation().run(
 )
 
 points = np.asarray(result.point_cloud.points)  # shape (N, 3)
+# OpenGL/viewer camera space: X+ right, Y+ up, Z- forward.
 # point_cloud_scale == 1.0, but distances are NOT real metres —
 # the depth model output is relative (inverse depth, arbitrary scale).
 print(f"point_cloud_scale: {result.point_cloud_scale}")  # 1.0 (relative, not real metres)
@@ -108,6 +111,7 @@ result = StereoDepth().run(
 )
 
 points = np.asarray(result.point_cloud.points)  # shape (N, 3), real metres
+# OpenGL/viewer camera space: X+ right, Y+ up, Z- forward.
 dist = np.linalg.norm(points[0] - points[1]) * result.point_cloud_scale
 print(f"Real distance between p0 and p1: {dist:.4f} m")  # actual metres
 print(f"point_cloud_scale: {result.point_cloud_scale}")   # 1.0 (accurate)

@@ -1,14 +1,13 @@
 """
 Coordinate space invariant tests for vizion3d point cloud outputs.
 
-Both DepthEstimation and StereoDepth must emit standard camera-space coordinates:
+DepthEstimation and StereoDepth use the OpenGL / viewer convention:
   X+ right   (increasing pixel column → increasing X)
-  Y+ down    (increasing pixel row    → increasing Y)
-  Z+ forward (all metric depth values are positive)
+  Y+ up      (increasing pixel row    → decreasing Y, i.e. top rows → positive Y)
+  Z- forward (depth into the scene → negative Z, toward the viewer → positive Z)
 
-This is the OpenCV / Open3D / COLMAP / ROS camera convention and allows point
-clouds from either pipeline to be consumed by downstream 3D tools without any
-axis-flip post-processing.
+The OpenGL convention means point clouds load facing the viewer in MeshLab and
+similar tools without requiring manual orbit correction.
 
 All tests use fully synthetic inputs; no model checkpoint is required.
 """
@@ -117,51 +116,55 @@ def uniform_disp():
 @pytest.fixture
 def gradient_depth():
     """Linearly increasing depth array, ensuring range > 0 so every normalised
-    value is in (0, 1] and all unprojected Z values are positive."""
+    value is in (0, 1] and all unprojected Z values are negative."""
     return np.linspace(1.0, 5.0, H * W).reshape(H, W).astype(np.float32)
 
 
-# ── Z+ forward ────────────────────────────────────────────────────────────────
+# ── Z- forward ────────────────────────────────────────────────────────────────
 
 
 class TestZForward:
-    def test_stereo_all_z_positive(self, uniform_disp):
+    def test_stereo_all_z_negative(self, uniform_disp):
         pts = np.asarray(_run_stereo(uniform_disp).point_cloud.points)
         assert len(pts) > 0, "point cloud must not be empty"
-        assert np.all(pts[:, 2] > 0), "all stereo Z values must be positive (forward)"
+        assert np.all(pts[:, 2] < 0), (
+            "all stereo Z values must be negative (OpenGL: scene is in -Z direction)"
+        )
 
-    def test_depth_estimation_all_z_positive(self, gradient_depth):
+    def test_depth_estimation_all_z_negative(self, gradient_depth):
         pts = np.asarray(_run_depth(gradient_depth).point_cloud.points)
         assert len(pts) > 0, "point cloud must not be empty"
-        assert np.all(pts[:, 2] > 0), "all depth estimation Z values must be positive (forward)"
+        assert np.all(pts[:, 2] < 0), (
+            "all depth estimation Z values must be negative (OpenGL: scene is in -Z direction)"
+        )
 
 
-# ── Y+ down ───────────────────────────────────────────────────────────────────
+# ── Y+ up ─────────────────────────────────────────────────────────────────────
 
 
-class TestYDown:
-    """Top-of-image pixels (small v) → negative Y; bottom pixels (large v) → positive Y."""
+class TestYUp:
+    """OpenGL convention: top pixels produce positive Y; bottom pixels produce negative Y."""
 
-    def test_stereo_top_rows_have_negative_y(self, uniform_disp):
+    def test_stereo_top_rows_have_positive_y(self, uniform_disp):
         pts = np.asarray(_run_stereo(uniform_disp).point_cloud.points)
-        assert pts[:, 1].min() < 0, "top pixel rows must produce Y < 0"
+        assert pts[:, 1].max() > 0, "top pixel rows must produce Y > 0"
 
-    def test_stereo_bottom_rows_have_positive_y(self, uniform_disp):
+    def test_stereo_bottom_rows_have_negative_y(self, uniform_disp):
         pts = np.asarray(_run_stereo(uniform_disp).point_cloud.points)
-        assert pts[:, 1].max() > 0, "bottom pixel rows must produce Y > 0"
+        assert pts[:, 1].min() < 0, "bottom pixel rows must produce Y < 0"
 
-    def test_stereo_mean_y_increases_with_row(self, uniform_disp):
-        """Average Y of the upper half must be strictly less than the lower half."""
+    def test_stereo_mean_y_decreases_with_row(self, uniform_disp):
+        """Average Y of the upper half must be strictly greater than the lower half."""
         pts = np.asarray(_run_stereo(uniform_disp).point_cloud.points)
-        top_mean = pts[pts[:, 1] < 0, 1].mean()
-        bot_mean = pts[pts[:, 1] > 0, 1].mean()
-        assert top_mean < bot_mean
+        top_mean = pts[pts[:, 1] > 0, 1].mean()
+        bot_mean = pts[pts[:, 1] < 0, 1].mean()
+        assert top_mean > bot_mean
 
     def test_depth_estimation_y_sign_convention(self, gradient_depth):
-        """DepthEstimation (Open3D RGBD pipeline) must also be Y+ down."""
+        """DepthEstimation uses OpenGL convention: Y+ up (top rows → positive Y)."""
         pts = np.asarray(_run_depth(gradient_depth).point_cloud.points)
-        assert pts[:, 1].min() < 0, "top rows must produce Y < 0"
-        assert pts[:, 1].max() > 0, "bottom rows must produce Y > 0"
+        assert pts[:, 1].max() > 0, "top rows must produce Y > 0 (Y+ up in OpenGL convention)"
+        assert pts[:, 1].min() < 0, "bottom rows must produce Y < 0 (Y+ up in OpenGL convention)"
 
 
 # ── X+ right ──────────────────────────────────────────────────────────────────
@@ -194,7 +197,7 @@ class TestXRight:
 
 
 class TestRightHanded:
-    """X+ right, Y+ down, Z+ forward is a right-handed system: X × Y = +Z.
+    """X+ right, Y+ up, Z+ toward viewer is a right-handed system: X × Y = +Z.
 
     Verified empirically from the point cloud by measuring the empirical
     X and Y direction vectors and checking their cross product.
@@ -203,24 +206,25 @@ class TestRightHanded:
     def _empirical_axes(self, pts: np.ndarray):
         """Return unit vectors for the empirical X and Y axes from the cloud."""
         # X axis: direction of increasing column at mid-row
-        # With pinhole: X = (u-cx)*Z/f, so a step of Δu gives ΔX = Δu*Z/f > 0
+        # With pinhole: X = (u-cx)*depth/f, so a step of Δu gives ΔX = Δu*depth/f > 0
         # We can infer this from the range of X vs Y relative to Z.
         x_range = pts[:, 0].max() - pts[:, 0].min()
         y_range = pts[:, 1].max() - pts[:, 1].min()
         assert x_range > 0 and y_range > 0
         return np.array([1.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0])
 
-    def test_stereo_cross_product_points_forward(self, uniform_disp):
+    def test_stereo_cross_product_points_toward_viewer(self, uniform_disp):
         pts = np.asarray(_run_stereo(uniform_disp).point_cloud.points)
         x_hat, y_hat = self._empirical_axes(pts)
         z_hat = np.cross(x_hat, y_hat)
-        assert z_hat[2] > 0, "X × Y must point in +Z (right-handed, Z forward)"
+        assert z_hat[2] > 0, "X × Y must point in +Z (right-handed, toward viewer)"
 
-    def test_depth_estimation_cross_product_points_forward(self, gradient_depth):
+    def test_depth_estimation_cross_product_points_toward_viewer(self, gradient_depth):
+        # OpenGL convention: X right, Y up → X × Y = +Z (toward viewer). Still right-handed.
         pts = np.asarray(_run_depth(gradient_depth).point_cloud.points)
         x_hat, y_hat = self._empirical_axes(pts)
         z_hat = np.cross(x_hat, y_hat)
-        assert z_hat[2] > 0, "X × Y must point in +Z (right-handed, Z forward)"
+        assert z_hat[2] > 0, "X × Y must point in +Z (right-handed system)"
 
     def test_stereo_x_y_span_is_symmetric_about_principal_point(self, uniform_disp):
         """With a centred principal point, X and Y should each be symmetric about 0."""
@@ -240,8 +244,9 @@ class TestPinholeRoundTrip:
         on integer pixel locations within the image bounds."""
         pts = np.asarray(_run_stereo(uniform_disp).point_cloud.points)
         X, Y, Z = pts[:, 0], pts[:, 1], pts[:, 2]
-        u = X * FX / Z + CX
-        v = Y * FY / Z + CY
+        depth = -Z
+        u = X * FX / depth + CX
+        v = CY - Y * FY / depth
         assert np.all(u >= -0.5) and np.all(u <= W - 0.5), "re-projected u must be in image"
         assert np.all(v >= -0.5) and np.all(v <= H - 0.5), "re-projected v must be in image"
 
@@ -250,8 +255,9 @@ class TestPinholeRoundTrip:
         re-project back to within 0.5 px of the original pixel."""
         pts = np.asarray(_run_stereo(uniform_disp).point_cloud.points)
         X, Y, Z = pts[:, 0], pts[:, 1], pts[:, 2]
-        u_reproj = X * FX / Z + CX
-        v_reproj = Y * FY / Z + CY
+        depth = -Z
+        u_reproj = X * FX / depth + CX
+        v_reproj = CY - Y * FY / depth
         # Choose a target pixel and find the nearest reprojected point
         u_target, v_target = 15.0, 12.0
         dist = np.hypot(u_reproj - u_target, v_reproj - v_target)
@@ -268,7 +274,7 @@ class TestMetricDepth:
         """baseline=100 mm, focal=200 px, disp=20 px → depth = 1.0 m."""
         disp = np.full((H, W), 20.0, dtype=np.float32)
         pts = np.asarray(_run_stereo(disp).point_cloud.points)
-        expected_z = (100.0 * 200.0) / (20.0 * 1000.0)  # = 1.0 m
+        expected_z = -((100.0 * 200.0) / (20.0 * 1000.0))  # = -1.0 m
         np.testing.assert_allclose(pts[:, 2], expected_z, rtol=1e-4)
 
     def test_halving_disparity_doubles_depth(self):
@@ -281,39 +287,42 @@ class TestMetricDepth:
         np.testing.assert_allclose(ratio, 2.0, rtol=1e-4)
 
     def test_metric_z_matches_depth_map(self):
-        """Point cloud Z values must equal the depth_map values at the same pixels."""
+        """Point cloud Z values must be the negative depth_map values at the same pixels."""
         disp = np.full((H, W), 20.0, dtype=np.float32)
         res = _run_stereo(disp)
         pts = np.asarray(res.point_cloud.points)
         expected_z = (100.0 * 200.0) / (20.0 * 1000.0)
         depth_map_mean = np.mean(res.depth_map)
-        np.testing.assert_allclose(pts[:, 2].mean(), depth_map_mean, rtol=1e-4)
-        np.testing.assert_allclose(pts[:, 2].mean(), expected_z, rtol=1e-4)
+        np.testing.assert_allclose(pts[:, 2].mean(), -depth_map_mean, rtol=1e-4)
+        np.testing.assert_allclose(pts[:, 2].mean(), -expected_z, rtol=1e-4)
 
 
 # ── Depth ordering ────────────────────────────────────────────────────────────
 
 
 class TestDepthOrdering:
-    """Closer objects (larger disparity) must appear at smaller Z."""
+    """Closer objects (larger disparity) must appear closer to Z=0."""
 
-    def test_stereo_larger_disparity_means_smaller_z(self):
+    def test_stereo_larger_disparity_means_z_closer_to_zero(self):
         disp_near = np.full((H, W), 50.0, dtype=np.float32)  # closer
         disp_far = np.full((H, W), 10.0, dtype=np.float32)  # further
         pts_near = np.asarray(_run_stereo(disp_near).point_cloud.points)
         pts_far = np.asarray(_run_stereo(disp_far).point_cloud.points)
-        assert pts_near[:, 2].mean() < pts_far[:, 2].mean(), (
-            "larger disparity must give smaller (closer) Z"
+        assert pts_near[:, 2].mean() > pts_far[:, 2].mean(), (
+            "larger disparity must give larger Z (less negative, closer to camera)"
         )
 
-    def test_depth_estimation_inverse_depth_far_pixels_have_larger_z(self):
+    def test_depth_estimation_close_pixels_have_larger_z(self):
         """Depth Anything V2 is inverse depth: higher raw value = closer to camera.
 
-        After the normalization flip, closer pixels (high raw value) → small metric Z,
-        farther pixels (low raw value) → large metric Z.
+        After the normalization flip and OpenGL Y/Z conversion:
+          - close pixels (high raw value) → small |Z|, i.e. Z closer to 0 (less negative)
+          - far pixels (low raw value) → large |Z|, i.e. Z further from 0 (more negative)
 
         Row-wise gradient: row 0 has low inverse depth (far), row H-1 has high
-        inverse depth (close). All rows survive — no pixels are filtered after Fix 1.
+        inverse depth (close). In OpenGL convention Y is flipped, so:
+          - top rows (row 0, far)   → Y > 0  (positive Y = up)
+          - bottom rows (row H-1, close) → Y < 0 (negative Y = down)
         """
         # Inverse-depth increases row by row: top rows = far, bottom rows = close
         depth_inc = np.ascontiguousarray(
@@ -322,13 +331,12 @@ class TestDepthOrdering:
         pts = np.asarray(_run_depth(depth_inc).point_cloud.points)
         assert len(pts) > 0, "point cloud must not be empty"
 
-        # Y<0 points come from top rows (low inverse depth = far = large Z).
-        # Y>0 points come from bottom rows (high inverse depth = close = small Z).
-        z_top = pts[pts[:, 1] < 0, 2]
-        z_bot = pts[pts[:, 1] > 0, 2]
-        assert len(z_top) > 0 and len(z_bot) > 0
-        assert z_top.mean() > z_bot.mean(), (
-            "top rows (lower inverse depth = farther) must produce larger Z than bottom rows"
+        # In OpenGL convention: Y > 0 = top rows (far), Y < 0 = bottom rows (close).
+        z_far_rows = pts[pts[:, 1] > 0, 2]  # top rows: low raw value = far = large |Z|
+        z_close_rows = pts[pts[:, 1] < 0, 2]  # bottom rows: high raw value = close = small |Z|
+        assert len(z_far_rows) > 0 and len(z_close_rows) > 0
+        assert z_close_rows.mean() > z_far_rows.mean(), (
+            "close rows (high inverse depth) must produce larger Z (less negative) than far rows"
         )
 
 

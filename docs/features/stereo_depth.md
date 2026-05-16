@@ -103,6 +103,8 @@ depth_m = baseline_mm × focal_length_px / disparity_px / 1000
 
 vizion3d uses [S2M2](https://github.com/Dongyeop-Yoo/S2M2) (Stereo Matching Model with Multi-scale transformer) as its stereo backend.  Unlike [Depth Estimation](depth_estimation.md), stereo depth produces **real-world metric distances** — provided the camera calibration parameters are correct.
 
+Point-cloud output uses OpenGL/viewer camera space: `X+` right, `Y+` up, and `Z-` forward into the scene. `depth_map` remains positive metric depth in metres.
+
 ---
 
 ## Model backends
@@ -135,7 +137,7 @@ Models are kept in memory after the first inference.  Set `VIZION3D_MODEL_CACHE`
 | `model_backend` | `str` | No | vizion3D release checkpoint URL | S2M2 checkpoint. See [Model backends](#model-backends) above. |
 | `return_depth_image` | `bool` | No | `True` | If `True`, the result includes a 16-bit grayscale Open3D Image where closer = brighter (65535 = `min_depth`, 0 = `max_depth`). |
 | `return_raw_depth` | `bool` | No | `True` | If `True`, the result includes the metric depth as a float32 numpy array `(H, W)` in metres — unmodified, before any normalisation. |
-| `return_point_cloud` | `bool` | No | `False` | If `True`, the result includes an Open3D PointCloud in metres. |
+| `return_point_cloud` | `bool` | No | `False` | If `True`, the result includes an Open3D PointCloud in metres using OpenGL/viewer camera space (`X+` right, `Y+` up, `Z-` forward). |
 | `advanced_config` | `StereoDepthAdvancedConfig` | No | 1280×720 @ 100 mm baseline defaults | Camera intrinsics and inference settings. See [Advanced config](#advanced-config) below. Not sure what intrinsics are? See [Camera Intrinsics Matrix](../concepts/camera_intrinsics.md). |
 
 ---
@@ -153,7 +155,7 @@ Models are kept in memory after the first inference.  Set `VIZION3D_MODEL_CACHE`
 | `backend_used` | `str` | Yes | Resolved local file path of the checkpoint used. |
 | `depth_image` | `open3d.geometry.Image \| None` | Yes (set `return_depth_image=False` to suppress) | 16-bit grayscale image, dtype `uint16`. 65535 = `min_depth` (closest, brightest); 0 = `max_depth` (farthest, darkest). |
 | `raw_depth` | `np.ndarray \| None` | Yes (set `return_raw_depth=False` to suppress) | Float32 array, shape `(H, W)`, metric depth in **metres**. Unmodified values before any normalisation or encoding. |
-| `point_cloud` | `open3d.geometry.PointCloud \| None` | When `return_point_cloud=True` | Coloured 3D point cloud, coordinates in **metres**. |
+| `point_cloud` | `open3d.geometry.PointCloud \| None` | When `return_point_cloud=True` | Coloured 3D point cloud, coordinates in **metres** using OpenGL/viewer convention: X+ right, Y+ up, Z- forward. |
 | `point_cloud_scale` | `float` | Yes | Always `1.0` — stereo depth produces real metric coordinates. |
 
 ---
@@ -237,7 +239,7 @@ PILImage.fromarray(depth_array).save("depth.png")
 
 ## 5. Point cloud
 
-Point coordinates are in **real metres** — `point_cloud_scale` is always `1.0`.
+Point coordinates are in **real metres** using OpenGL/viewer convention: X+ right, Y+ up, Z- forward. `point_cloud_scale` is always `1.0`.
 
 ```python
 import numpy as np
@@ -470,7 +472,7 @@ cfg = StereoDepthAdvancedConfig(
 
 ## 3D annotation from a stereo cloud
 
-A stereo point cloud is in camera space (Z = metric depth, origin at the left camera), making it directly compatible with [Object Mask Annotation 3D](../annotation/object_mask_annotation_3d.md). Pass the same intrinsics you used for stereo depth. Do not pass `image_input` — the annotation task synthesises the segmentation image from the point cloud's stored colours, which avoids having to pick between the left and right frames.
+A stereo point cloud is in OpenGL/viewer camera space (`Z = -metric_depth`, origin at the left camera), making it directly compatible with [Object Mask Annotation 3D](../annotation/object_mask_annotation_3d.md). Pass the same intrinsics you used for stereo depth. Do not pass `image_input` — the annotation task synthesises the segmentation image from the point cloud's stored colours, which avoids having to pick between the left and right frames.
 
 ```python
 import open3d as o3d
@@ -509,6 +511,22 @@ for ann in annotation_result.annotations:
     print(f"{ann.label:20s}  conf={ann.confidence:.2f}  3D points={len(ann.point_indices)}")
 
 o3d.io.write_point_cloud("annotated.ply", annotation_result.annotated_cloud)
+```
+
+Detection results from the stereo point cloud annotation:
+
+```
+chair                 conf=0.87  3D points=106616
+chair                 conf=0.85  3D points=54834
+chair                 conf=0.53  3D points=4517
+chair                 conf=0.51  3D points=20499
+chair                 conf=0.48  3D points=22956
+chair                 conf=0.39  3D points=30634
+chair                 conf=0.36  3D points=11034
+chair                 conf=0.31  3D points=11890
+chair                 conf=0.29  3D points=118946
+chair                 conf=0.28  3D points=11229
+chair                 conf=0.25  3D points=18532
 ```
 
 See [Object Mask Annotation 3D — Stereo integration](../annotation/object_mask_annotation_3d.md#5-stereo-point-cloud-integration) for the full walkthrough.

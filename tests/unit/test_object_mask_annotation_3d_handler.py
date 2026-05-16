@@ -38,11 +38,11 @@ def dummy_image_bytes():
 
 @pytest.fixture
 def small_point_cloud():
-    """4×4 grid of points in front of the default camera."""
+    """4×4 OpenGL camera-space grid of points in front of the default camera."""
     pts, cols = [], []
     for v in range(4):
         for u in range(4):
-            pts.append([(u - 1.5) * 0.1, (v - 1.5) * 0.1, 2.0])
+            pts.append([(u - 1.5) * 0.1, (1.5 - v) * 0.1, -2.0])
             cols.append([0.5, 0.5, 0.5])
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(np.array(pts, dtype=np.float64))
@@ -98,8 +98,8 @@ class TestBackprojection:
         assert np.all(u >= 0) and np.all(u < 640)
         assert np.all(v >= 0) and np.all(v < 480)
 
-    def test_negative_z_filtered_out(self):
-        pts = np.array([[0.0, 0.0, -1.0], [0.0, 0.0, 2.0]], dtype=np.float64)
+    def test_positive_z_filtered_out(self):
+        pts = np.array([[0.0, 0.0, 1.0], [0.0, 0.0, -2.0]], dtype=np.float64)
         pcd = o3d.geometry.PointCloud()
         pcd.points = o3d.utility.Vector3dVector(pts)
         pcd.colors = o3d.utility.Vector3dVector(np.ones((2, 3)))
@@ -109,7 +109,7 @@ class TestBackprojection:
         assert 0 not in idx
 
     def test_out_of_image_filtered_out(self):
-        pts = np.array([[100.0, 0.0, 0.1]], dtype=np.float64)
+        pts = np.array([[100.0, 0.0, -0.1]], dtype=np.float64)
         pcd = o3d.geometry.PointCloud()
         pcd.points = o3d.utility.Vector3dVector(pts)
         pcd.colors = o3d.utility.Vector3dVector(np.ones((1, 3)))
@@ -132,9 +132,10 @@ class TestFrontViewSynthesis:
         cfg = ObjectMaskAnnotation3DConfig(fx=100.0, fy=100.0, cx=32.0, cy=24.0)
         img = _render_front_view(pts, cols, cfg)
         X, Y, Z = pts[:, 0], pts[:, 1], pts[:, 2]
-        valid = Z > 0
-        u = np.round(cfg.fx * X[valid] / Z[valid] + cfg.cx).astype(np.int32)
-        v = np.round(cfg.fy * Y[valid] / Z[valid] + cfg.cy).astype(np.int32)
+        valid = Z < 0
+        depth = -Z[valid]
+        u = np.round(cfg.fx * X[valid] / depth + cfg.cx).astype(np.int32)
+        v = np.round(cfg.cy - cfg.fy * Y[valid] / depth).astype(np.int32)
         assert img.width == max(int(u.max()) + 1, 1)
         assert img.height == max(int(v.max()) + 1, 1)
 

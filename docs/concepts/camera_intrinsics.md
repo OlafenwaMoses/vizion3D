@@ -12,27 +12,28 @@ K  =    |  0   fy   cy |
         |  0    0    1 |
 ```
 
-In full projection form — taking a 3D point `(X, Y, Z)` in camera coordinates and projecting it to image pixel `(u, v)`:
+vizion3d point clouds use an OpenGL/viewer camera convention:
 
 ```
-| u |       | fx    0   cx |   | X/Z |
-| v |  =    |  0   fy   cy | × | Y/Z |
-| 1 |       |  0    0    1 |   |  1  |
+X+ = right
+Y+ = up
+Z- = forward into the scene
 ```
 
-Expanded:
+In full projection form — taking a 3D point `(X, Y, Z)` in vizion3d camera coordinates and projecting it to image pixel `(u, v)`:
 
 ```
-u  =  fx × (X / Z)  +  cx
-v  =  fy × (Y / Z)  +  cy
+depth = -Z
+u     = fx × (X / depth) + cx
+v     = cy - fy × (Y / depth)
 ```
 
-Inverted (what vizion3d does when building a point cloud from a depth map):
+Inverted (what vizion3d does when building a point cloud from a positive depth value):
 
 ```
-Z  =  d
 X  =  (u - cx) × d / fx
-Y  =  (v - cy) × d / fy
+Y  =  (cy - v) × d / fy
+Z  =  -d
 ```
 
 where `d` is the depth value at pixel `(u, v)`.

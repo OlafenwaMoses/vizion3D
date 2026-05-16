@@ -2,6 +2,8 @@
 
 The `lifting` module exposes tasks that convert 2D image data into 3D representations — depth maps, point clouds, and meshes.
 
+All point clouds emitted by lifting tasks use OpenGL/viewer camera space: `X+` right, `Y+` up, and `Z-` forward into the scene.
+
 ---
 
 ## DepthEstimation
@@ -30,6 +32,6 @@ Camera intrinsics and depth range settings. Pass an instance of this model as `a
 
 ## DepthEstimationResult
 
-Output contract returned by `DepthEstimation.run()`. All fields are always present; optional geometry fields are `None` when the corresponding `return_*` flag was not set.
+Output contract returned by `DepthEstimation.run()`. All fields are always present; optional geometry fields are `None` when the corresponding `return_*` flag was not set. Returned point clouds use OpenGL/viewer camera space: `X+` right, `Y+` up, `Z-` forward.
 
 ::: vizion3d.lifting.models.DepthEstimationResult

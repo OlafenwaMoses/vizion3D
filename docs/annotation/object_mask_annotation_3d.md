@@ -7,10 +7,12 @@
 
 A real photo is optional. When no image is provided the task synthesises a front-view RGB image by projecting the point cloud's own XYZ+RGB data into a 2D canvas; the segmentation then runs on that synthetic view.
 
+Point-cloud inputs and outputs use OpenGL/viewer camera space: `X+` right, `Y+` up, and `Z-` forward into the scene.
+
 ---
 
 <figure>
-  <img src="../../assets/images/bedroom2.jpg" alt="bedroom2.jpg" style="width:100%;border-radius:6px;">
+  <img src="../../assets/images/roomhd.jpg" alt="roomhd.jpg" style="width:100%;border-radius:6px;">
   <figcaption style="color:#aaa;font-size:0.8em;margin-top:0.3rem;">input image</figcaption>
 </figure>
 
@@ -56,7 +58,7 @@ new ResizeObserver(() => {
   }
 }).observe(renderer.domElement);
 
-new PLYLoader().load('../../assets/pointclouds/bedroom2_result.ply', (geometry) => {
+new PLYLoader().load('../../assets/pointclouds/roomhd_result.ply', (geometry) => {
   const material = new THREE.PointsMaterial({ size: 0.005, vertexColors: true });
   const points = new THREE.Points(geometry, material);
   scene.add(points);
@@ -113,7 +115,7 @@ new ResizeObserver(() => {
   }
 }).observe(renderer.domElement);
 
-new PLYLoader().load('../../assets/pointclouds/annotated_bedroom2_result.ply', (geometry) => {
+new PLYLoader().load('../../assets/pointclouds/annotated_roomhd_result.ply', (geometry) => {
   const material = new THREE.PointsMaterial({ size: 0.008, vertexColors: true });
   const points = new THREE.Points(geometry, material);
   scene.add(points);
@@ -140,14 +142,14 @@ new PLYLoader().load('../../assets/pointclouds/annotated_bedroom2_result.ply', (
 Detection results from the annotated scene above:
 
 ```
-chair                 conf=0.91  3D points=20806
+chair                 conf=0.91  3D points=20805
 bed                   conf=0.90  3D points=180092
 tv                    conf=0.90  3D points=18410
 potted plant          conf=0.53  3D points=3447
 keyboard              conf=0.45  3D points=1318
 vase                  conf=0.38  3D points=2321
 vase                  conf=0.33  3D points=2963
-potted plant          conf=0.27  3D points=15435
+potted plant          conf=0.27  3D points=15436
 ```
 
 ---
@@ -201,7 +203,7 @@ Models are kept in memory after the first inference in the current process. Subs
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `point_cloud` | `open3d.geometry.PointCloud` | **Yes** | — | Input point cloud in camera space (X right, Y down, Z forward), coordinates in metres. |
+| `point_cloud` | `open3d.geometry.PointCloud` | **Yes** | — | Input point cloud in OpenGL/viewer camera space (X right, Y up, Z negative forward), coordinates in metres. |
 | `image_input` | `str \| bytes \| None` | No | `None` | RGB image to segment. Pass a file path string or raw image bytes. When `None`, a front-view image is synthesised from the point cloud automatically. |
 | `model_backend` | `str` | No | vizion3D release checkpoint URL | YOLO segmentation checkpoint URL or local path. |
 | `return_object_clouds` | `bool` | No | `False` | When `True`, each `MaskAnnotation3D` includes an `object_cloud` — an extracted point cloud for that object with original colours preserved. |
@@ -217,7 +219,7 @@ Models are kept in memory after the first inference in the current process. Subs
 | Field | Type | Always present | Description |
 |---|---|---|---|
 | `annotations` | `list[MaskAnnotation3D]` | Yes | Per-object annotations, sorted in descending confidence order. |
-| `annotated_cloud` | `open3d.geometry.PointCloud \| None` | When `return_annotated_cloud=True` | Full point cloud copy with each detected object's points repainted in a unique colour. Non-object points keep their original colour. |
+| `annotated_cloud` | `open3d.geometry.PointCloud \| None` | When `return_annotated_cloud=True` | Full point cloud copy with each detected object's points repainted in a unique colour. Non-object points keep their original colour. Coordinates remain OpenGL/viewer camera space (`X+` right, `Y+` up, `Z-` forward). |
 | `backend_used` | `str` | Yes | Resolved local file path of the YOLO checkpoint used. |
 
 Each `MaskAnnotation3D` item contains:
@@ -230,8 +232,8 @@ Each `MaskAnnotation3D` item contains:
 | `bbox_2d` | `list[float]` | Bounding box in image pixels: `[x1, y1, x2, y2]`. |
 | `mask_2d` | `np.ndarray` | Boolean segmentation mask, shape `(H, W)`. |
 | `point_indices` | `list[int]` | Indices into the original input point cloud for all matched 3D points. |
-| `point_coords` | `list[list[float]]` | `[[x, y, z], ...]` in metres for each matched point. |
-| `object_cloud` | `open3d.geometry.PointCloud \| None` | Extracted sub-cloud for this object with original colours. Present when `return_object_clouds=True`. |
+| `point_coords` | `list[list[float]]` | `[[x, y, z], ...]` in metres for each matched point, using OpenGL/viewer camera space. |
+| `object_cloud` | `open3d.geometry.PointCloud \| None` | Extracted sub-cloud for this object with original colours and the same OpenGL/viewer coordinate space. Present when `return_object_clouds=True`. |
 
 ---
 
@@ -343,11 +345,11 @@ for i, ann in enumerate(result.annotations):
 
 ## 5. Stereo point cloud integration
 
-Point clouds produced by [Stereo Depth](../features/stereo_depth.md) are in camera space (X right, Y down, Z forward, origin at the left camera), which is exactly what this task expects. To annotate a stereo cloud correctly:
+Point clouds produced by [Stereo Depth](../features/stereo_depth.md) are in OpenGL/viewer camera space (X right, Y up, Z negative forward, origin at the left camera), which is exactly what this task expects. To annotate a stereo cloud correctly:
 
 - **Always pass the stereo camera intrinsics** via `advanced_config`. The default values are for a PrimeSense sensor and will not produce back-projection that matches any other stereo rig.
 - **Do not pass `image_input`** — a stereo cloud comes from two images taken at slightly different viewpoints and there is no single image that represents the combined view. Leave `image_input` unset and the system will synthesise the segmentation image directly from the point cloud's stored colours.
-- **Do not centroid-shift the point cloud** before passing it in. The PLY viewer handles visual centering in JavaScript; shifting the cloud in Python breaks the Z > 0 requirement that back-projection depends on.
+- **Do not centroid-shift the point cloud** before passing it in. The PLY viewer handles visual centering in JavaScript; shifting the cloud in Python breaks the `Z < 0` forward-space requirement that back-projection depends on.
 
 ```python
 import open3d as o3d
@@ -377,6 +379,22 @@ for ann in result.annotations:
     print(f"{ann.label:20s}  conf={ann.confidence:.2f}  3D points={len(ann.point_indices)}")
 
 o3d.io.write_point_cloud("annotated_stereo.ply", result.annotated_cloud)
+```
+
+Detection results from the stereo point cloud annotation:
+
+```
+chair                 conf=0.87  3D points=106616
+chair                 conf=0.85  3D points=54834
+chair                 conf=0.53  3D points=4517
+chair                 conf=0.51  3D points=20499
+chair                 conf=0.48  3D points=22956
+chair                 conf=0.39  3D points=30634
+chair                 conf=0.36  3D points=11034
+chair                 conf=0.31  3D points=11890
+chair                 conf=0.29  3D points=118946
+chair                 conf=0.28  3D points=11229
+chair                 conf=0.25  3D points=18532
 ```
 
 The stereo pipeline can also generate the point cloud and annotate it in a single script:

@@ -39,7 +39,8 @@ class StereoDepthCommand(Command[StereoDepthResult]):
             is the unmodified depth before any normalisation or uint16 encoding.
         return_point_cloud: When ``True``, the result includes an
             ``open3d.geometry.PointCloud`` unprojected using the stereo camera
-            intrinsics in ``advanced_config``. Point coordinates are in metres.
+            intrinsics in ``advanced_config``. Point coordinates are in metres
+            using the OpenGL/viewer convention: X+ right, Y+ up, Z- forward.
         advanced_config: Camera intrinsics and inference settings. Override any
             field to match your stereo rig — e.g.
             ``advanced_config=StereoDepthAdvancedConfig(focal_length=1733.74,

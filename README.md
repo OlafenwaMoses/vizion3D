@@ -2,6 +2,8 @@
 
 **vizion3d** is an open-source Python library for 3D computer vision — a single unified interface for depth estimation, point cloud generation, 3D object annotation, and more.
 
+Point-cloud inputs and outputs use OpenGL/viewer camera space: `X+` right, `Y+` up, and `Z-` forward into the scene.
+
 📖 **[Full documentation →](https://olafenwamoses.github.io/vizion3D/)**
 
 ---
@@ -44,6 +46,8 @@ print(f"Scale       : {result.point_cloud_scale} metre per unit")
 
 o3d.io.write_point_cloud("roomhd_result.ply", result.point_cloud)
 ```
+
+The saved PLY uses OpenGL/viewer camera space: `X+` right, `Y+` up, `Z-` forward.
 
 ---
 
