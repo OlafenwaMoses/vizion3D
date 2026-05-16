@@ -78,6 +78,8 @@ new PLYLoader().load('../../assets/pointclouds/roomhd_result.ply', (geometry) =>
 
 Depth estimation predicts the per-pixel distance from the camera for every pixel in a 2D RGB image, producing a depth map and optionally unprojecting it into a 3D point cloud. vizion3d uses [Depth Anything V2](https://github.com/DepthAnything/Depth-Anything-V2) as its default backend.
 
+Point-cloud output uses OpenGL/viewer camera space: `X+` right, `Y+` up, and `Z-` forward into the scene.
+
 ---
 
 ## Model backends
@@ -113,7 +115,7 @@ Set `VIZION3D_MODEL_CACHE` in your environment to change the default cache direc
 | `model_backend` | `str` | No | vizion3D release checkpoint URL | Model backend identifier. See [Model backends](#model-backends) above. |
 | `return_depth_image` | `bool` | No | `True` | If `True`, the result includes a 16-bit grayscale Open3D Image. Depth Anything V2 outputs inverse relative depth (higher = closer), so higher uint16 values = closer pixels. |
 | `return_raw_depth` | `bool` | No | `True` | If `True`, the result includes the raw depth as a float32 numpy array `(H, W)` — unmodified model output, relative values (not metric). |
-| `return_point_cloud` | `bool` | No | `False` | If `True`, the result includes an Open3D PointCloud unprojected from the RGB-D image. |
+| `return_point_cloud` | `bool` | No | `False` | If `True`, the result includes an Open3D PointCloud unprojected from the RGB-D image in OpenGL/viewer camera space (`X+` right, `Y+` up, `Z-` forward). |
 | `advanced_config` | `DepthEstimationAdvanceConfig` | No | PrimeSense defaults | Camera intrinsics and depth range settings. See [Advanced config](#8-advanced-config-camera-intrinsics-depth-range) below. Not sure what intrinsics are? See [Camera Intrinsics Matrix](../concepts/camera_intrinsics.md). |
 
 ---
@@ -130,7 +132,7 @@ Set `VIZION3D_MODEL_CACHE` in your environment to change the default cache direc
 | `backend_used` | `str` | Yes | Resolved model identifier that processed the request (local file path). |
 | `depth_image` | `open3d.geometry.Image \| None` | Yes (set `return_depth_image=False` to suppress) | 16-bit grayscale image, dtype `uint16`, shape `(H, W)`. Inverse relative depth: higher values = closer pixels. |
 | `raw_depth` | `np.ndarray \| None` | Yes (set `return_raw_depth=False` to suppress) | Float32 array, shape `(H, W)`. Raw model output — relative values, not metric. |
-| `point_cloud` | `open3d.geometry.PointCloud \| None` | When `return_point_cloud=True` | Coloured 3D point cloud unprojected from the RGB-D image using the intrinsics in `advanced_config`. Coordinates are in metres. |
+| `point_cloud` | `open3d.geometry.PointCloud \| None` | When `return_point_cloud=True` | Coloured 3D point cloud unprojected from the RGB-D image using the intrinsics in `advanced_config`. Coordinates are in metres using OpenGL/viewer convention: X+ right, Y+ up, Z- forward. |
 | `point_cloud_scale` | `float` | Yes | Scale factor: multiply any distance measured between two points in the point cloud by this value to get the equivalent distance in metres. Always `1.0` — Open3D produces point cloud coordinates directly in metres. |
 
 ---
@@ -202,7 +204,7 @@ PILImage.fromarray(depth_array).save("depth.png")
 
 ## 4. Point cloud
 
-Request a coloured 3D point cloud unprojected from the RGB-D image. Distances between points are in metres (`point_cloud_scale == 1.0`).
+Request a coloured 3D point cloud unprojected from the RGB-D image. Distances between points are in metres (`point_cloud_scale == 1.0`), and coordinates use OpenGL/viewer convention: X+ right, Y+ up, Z- forward.
 
 ```python
 import numpy as np

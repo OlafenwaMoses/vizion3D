@@ -75,7 +75,8 @@ class StereoDepthResult(BaseModel):
             Present when ``return_raw_depth=True`` was set on the command.
         point_cloud: Coloured ``open3d.geometry.PointCloud`` unprojected from the
             RGB-D image using the camera intrinsics in ``advanced_config``.
-            Coordinates are in metres.  Present when ``return_point_cloud=True``.
+            Coordinates are in metres using the OpenGL/viewer convention:
+            X+ right, Y+ up, Z- forward.  Present when ``return_point_cloud=True``.
         point_cloud_scale: Scale factor: multiply any distance measured between
             two points in the returned point cloud by this value to get the
             equivalent distance in metres.  Always ``1.0`` for stereo depth —

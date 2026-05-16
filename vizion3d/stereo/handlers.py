@@ -319,17 +319,18 @@ class StereoDepthHandler(CommandHandler[StereoDepthCommand, StereoDepthResult]):
             conf_np: Optional per-pixel confidence score, shape ``(H, W)``.
 
         Returns:
-            ``open3d.geometry.PointCloud`` with metric coordinates.
+            ``open3d.geometry.PointCloud`` with metric OpenGL/viewer coordinates:
+            X+ right, Y+ up, Z- forward into the scene.
         """
         H, W = depth_m.shape
         left_np = np.asarray(left_pil)
 
         uu, vv = np.meshgrid(np.arange(W, dtype=np.float32), np.arange(H, dtype=np.float32))
         x = (uu - cfg.cx) * depth_m / cfg.focal_length
-        y = (vv - cfg.cy) * depth_m / cfg.focal_length
-        z = depth_m
+        y = -(vv - cfg.cy) * depth_m / cfg.focal_length
+        z = -depth_m
 
-        valid = (z > 0) & (z < cfg.z_far)
+        valid = (depth_m > 0) & (depth_m < cfg.z_far)
         if conf_np is not None:
             valid &= conf_np >= cfg.conf_threshold
         if occ_np is not None:

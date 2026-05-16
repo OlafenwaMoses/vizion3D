@@ -49,9 +49,10 @@ class DepthEstimationResult(BaseModel):
             (suppress with `return_raw_depth=False`).  Values are relative —
             not metric — for monocular depth estimation.
         point_cloud: Coloured `open3d.geometry.PointCloud` unprojected from the
-            RGB-D image, present when `return_point_cloud=True`. Coordinates are
-            in metres — multiply distances by `point_cloud_scale` (always `1.0`)
-            to confirm the unit.
+            RGB-D image, present when `return_point_cloud=True`. Coordinates use
+            the OpenGL/viewer convention (X+ right, Y+ up, Z- forward) and are in
+            metres — multiply distances by `point_cloud_scale` (always `1.0`) to
+            confirm the unit.
         point_cloud_scale: Scale factor for the point cloud coordinate space.
             Multiply any distance measured between two points in the returned
             point cloud by this value to get the equivalent distance in metres.

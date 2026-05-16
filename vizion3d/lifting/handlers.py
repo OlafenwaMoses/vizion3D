@@ -94,6 +94,13 @@ class DepthEstimationHandler(CommandHandler[DepthEstimationCommand, DepthEstimat
                 rgbd_image,
                 o3d.camera.PinholeCameraIntrinsic(image.width, image.height, fx, fy, cx, cy),
             )
+            # Convert from OpenCV camera convention (X right, Y down, Z forward) to
+            # OpenGL/viewer convention (X right, Y up, Z toward viewer) so the point
+            # cloud loads facing the viewer without requiring manual orbit correction.
+            pts = np.asarray(generated_point_cloud.points).copy()
+            pts[:, 1] = -pts[:, 1]
+            pts[:, 2] = -pts[:, 2]
+            generated_point_cloud.points = o3d.utility.Vector3dVector(pts)
             point_cloud = generated_point_cloud
 
         return DepthEstimationResult(

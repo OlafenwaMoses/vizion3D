@@ -10,6 +10,14 @@ Every task is accessible through three consumption modes driven by one shared CQ
 | **REST API** | Web integrations, any-language clients |
 | **gRPC API** | High-throughput, low-latency microservice pipelines |
 
+Point-cloud inputs and outputs use OpenGL/viewer camera space throughout vizion3d:
+
+```text
+X+ = right
+Y+ = up
+Z- = forward into the scene
+```
+
 ---
 
 <a id="sample-output"></a>
@@ -136,7 +144,7 @@ from vizion3d.lifting import DepthEstimation, DepthEstimationCommand
 
 result = DepthEstimation().run(
     DepthEstimationCommand(
-        image_input="Drawing_Room.jpg",
+        image_input="roomhd.jpg",
         return_point_cloud=True,
     )
 )
@@ -145,10 +153,12 @@ print(f"Depth range : {result.min_depth:.4f} → {result.max_depth:.4f}")
 print(f"Points      : {len(result.point_cloud.points)}")
 print(f"Scale       : {result.point_cloud_scale} metre per unit")
 
-o3d.io.write_point_cloud("Drawing_Room.ply", result.point_cloud)
+o3d.io.write_point_cloud("roomhd_result.ply", result.point_cloud)
 ```
 
-<span style="color:#aaa;font-size:0.85em;">Output: [Drawing_Room.jpg and Drawing_Room.ply](#sample-output)</span>
+The generated point cloud uses OpenGL/viewer camera space: `X+` right, `Y+` up, `Z-` forward.
+
+<span style="color:#aaa;font-size:0.85em;">Output: [roomhd.jpg and roomhd_result.ply](#sample-output)</span>
 
 ---
 
@@ -228,4 +238,3 @@ o3d.io.write_point_cloud("annotated.ply", result.annotated_cloud)
 ```
 
 See [Object Mask Annotation 3D](annotation/object_mask_annotation_3d.md) for the full reference.
-
