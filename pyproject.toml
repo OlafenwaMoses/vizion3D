@@ -94,7 +94,7 @@ amd  = []
 
 [project.urls]
 Homepage = "https://github.com/OlafenwaMoses/vizion3D"
-Documentation = "https://olafenwamoses.github.io/vizion3D"
+Documentation = "https://docs.vizion3d.org"
 Repository = "https://github.com/OlafenwaMoses/vizion3D"
 Issues = "https://github.com/OlafenwaMoses/vizion3D/issues"
 
