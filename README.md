@@ -4,13 +4,13 @@
 
 Point-cloud inputs and outputs use OpenGL/viewer camera space: `X+` right, `Y+` up, and `Z-` forward into the scene.
 
-📖 **[Full documentation →](https://olafenwamoses.github.io/vizion3D/)**
+📖 **[Full documentation →](https://docs.vizion3d.org/)**
 
 ---
 
-![input image](https://olafenwamoses.github.io/vizion3D/assets/images/roomhd.jpg)
+![input image](https://docs.vizion3d.org/assets/images/roomhd.jpg)
 
-![depth map](https://olafenwamoses.github.io/vizion3D/assets/images/roomhd_depth.png)
+![depth map](https://docs.vizion3d.org/assets/images/roomhd_depth.png)
 
 ---
 
@@ -22,7 +22,7 @@ Requires **Python 3.12** (Open3D constraint).
 pip install "vizion3d[cpu]"
 ```
 
-For NVIDIA CUDA, AMD ROCm, or Apple Silicon MPS, see the [Hardware Acceleration](https://olafenwamoses.github.io/vizion3D/hardware_acceleration/) page.
+For NVIDIA CUDA, AMD ROCm, or Apple Silicon MPS, see the [Hardware Acceleration](https://docs.vizion3d.org/hardware_acceleration/) page.
 
 ---
 
@@ -79,4 +79,4 @@ o3d.io.write_point_cloud("annotated.ply", result.annotated_cloud)
 
 Full reference, REST/gRPC guides, hardware setup, and task catalogue:
 
-**[https://olafenwamoses.github.io/vizion3D/](https://olafenwamoses.github.io/vizion3D/)**
+**[https://docs.vizion3d.org/](https://docs.vizion3d.org/)**
