@@ -21,8 +21,9 @@ class ObjectMaskAnnotation3DCommand(Command[ObjectMaskAnnotation3DResult]):
     via camera back-projection.
 
     Attributes:
-        point_cloud: An ``open3d.geometry.PointCloud`` in camera space
-            (X right, Y down, Z forward), coordinates in metres.
+        point_cloud: An ``open3d.geometry.PointCloud`` in OpenGL/viewer
+            camera space (X right, Y up, Z negative forward), coordinates in
+            metres.
         image_input: RGB image used for segmentation.  Pass a file-path string
             or raw image bytes.  If ``None``, the handler synthesises a
             front-view RGB image by projecting the point cloud XYZ+RGB into

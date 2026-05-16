@@ -275,12 +275,13 @@ def _derive_intrinsics_from_cloud(
         return cfg
 
     X, Y, Z = pts[:, 0], pts[:, 1], pts[:, 2]
-    valid = Z > 0
+    valid = Z < 0
     if not valid.any():
         return _resolve_intrinsics(cfg, 640, 480)
 
-    ax = X[valid] / Z[valid]
-    ay = Y[valid] / Z[valid]
+    depth = -Z[valid]
+    ax = X[valid] / depth
+    ay = -Y[valid] / depth
     range_x = float(ax.max() - ax.min())
 
     _TARGET_W = 1024
@@ -323,14 +324,15 @@ def _render_front_view(
     clouds (one point per pixel) the result is identical to the original photo.
     """
     X, Y, Z = pts[:, 0], pts[:, 1], pts[:, 2]
-    valid = Z > 0
+    valid = Z < 0
     if not valid.any():
         fallback_w = max(int(cfg.cx * 2) + 1, 1)
         fallback_h = max(int(cfg.cy * 2) + 1, 1)
         return Image.fromarray(np.zeros((fallback_h, fallback_w, 3), dtype=np.uint8), mode="RGB")
 
-    u = np.round(cfg.fx * X[valid] / Z[valid] + cfg.cx).astype(np.int32)
-    v = np.round(cfg.fy * Y[valid] / Z[valid] + cfg.cy).astype(np.int32)
+    depth = -Z[valid]
+    u = np.round(cfg.fx * X[valid] / depth + cfg.cx).astype(np.int32)
+    v = np.round(cfg.cy - cfg.fy * Y[valid] / depth).astype(np.int32)
 
     # Canvas spans from 0 to the maximum projected coordinate so the image
     # covers the full scene regardless of where cx/cy sits.  Points with
@@ -342,7 +344,7 @@ def _render_front_view(
 
     in_bounds = (u >= 0) & (u < img_w) & (v >= 0) & (v < img_h)
     u, v = u[in_bounds], v[in_bounds]
-    z_vals = Z[valid][in_bounds]
+    z_vals = depth[in_bounds]
     rgb = (colors[valid][in_bounds] * 255).astype(np.uint8)
 
     # Far-to-near: paint furthest first so nearest point wins
@@ -359,13 +361,14 @@ def _backproject(
     cfg: ObjectMaskAnnotation3DConfig,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     X, Y, Z = pts[:, 0], pts[:, 1], pts[:, 2]
-    valid = Z > 0
+    valid = Z < 0
 
     u_all = np.full(len(pts), -1, dtype=np.int32)
     v_all = np.full(len(pts), -1, dtype=np.int32)
 
-    u_proj = np.round(cfg.fx * X[valid] / Z[valid] + cfg.cx).astype(np.int32)
-    v_proj = np.round(cfg.fy * Y[valid] / Z[valid] + cfg.cy).astype(np.int32)
+    depth = -Z[valid]
+    u_proj = np.round(cfg.fx * X[valid] / depth + cfg.cx).astype(np.int32)
+    v_proj = np.round(cfg.cy - cfg.fy * Y[valid] / depth).astype(np.int32)
 
     u_all[valid] = u_proj
     v_all[valid] = v_proj

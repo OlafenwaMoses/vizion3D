@@ -33,7 +33,7 @@ def dummy_image_bytes():
 
 @pytest.fixture
 def small_point_cloud():
-    pts = np.array([[0.0, 0.0, 2.0], [0.1, 0.1, 2.0]], dtype=np.float64)
+    pts = np.array([[0.0, 0.0, -2.0], [0.1, 0.1, -2.0]], dtype=np.float64)
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(pts)
     pcd.colors = o3d.utility.Vector3dVector(np.ones((2, 3)))
@@ -148,7 +148,7 @@ class TestGRPCConfigUnmarshalling:
         from vizion3d.proto import lifting_pb2
         from vizion3d.server.grpc.server import LiftingServiceServicer
 
-        pts = np.array([[0.0, 0.0, 1.0]], dtype=np.float32)
+        pts = np.array([[0.0, 0.0, -1.0]], dtype=np.float32)
         cols = np.array([[128, 128, 128]], dtype=np.uint8)
         ply_bytes = create_ply_binary(pts, cols)
 
@@ -174,7 +174,7 @@ class TestGRPCConfigUnmarshalling:
         from vizion3d.proto import lifting_pb2
         from vizion3d.server.grpc.server import LiftingServiceServicer
 
-        pts = np.array([[0.0, 0.0, 1.0]], dtype=np.float32)
+        pts = np.array([[0.0, 0.0, -1.0]], dtype=np.float32)
         ply_bytes = create_ply_binary(pts, np.array([[128, 128, 128]], dtype=np.uint8))
 
         proto_cfg = lifting_pb2.ObjectMaskAnnotation3DConfig(fx=615.0, conf_threshold=0.5)
