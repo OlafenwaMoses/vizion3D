@@ -1,7 +1,7 @@
 # Scale Observation
 
 **Category:** Observation  
-**Experimental:** No
+**Experimental:** Yes
 
 `ScaleObservation` estimates a single metric scale factor for a generated point
 cloud. It is intended for monocular-depth point clouds whose shape is plausible
@@ -11,6 +11,10 @@ The task consumes a point cloud plus object annotations from
 `ObjectMaskAnnotation3DResult.annotations`, evaluates object-level metric-size
 evidence, and can return the estimated scale, candidate diagnostics, a scaled
 point cloud, and a reprojected scaled depth image.
+
+> **Experimental status:** Scale Observation is still being improved. Accuracy,
+> candidate selection, and reporting are expected to get better as evaluation
+> expands, with the goal of reaching a stable non-experimental state soon.
 
 ---
 
