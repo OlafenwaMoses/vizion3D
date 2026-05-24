@@ -29,6 +29,11 @@ from vizion3d.lifting import DepthEstimation, DepthEstimationCommand
 from vizion3d.lifting.defaults import DEFAULT_DEPTH_MODEL_URL
 from vizion3d.lifting.models import DepthEstimationAdvanceConfig
 from vizion3d.lifting.utils import create_ply_binary
+from vizion3d.observation import (
+    ScaleObservation,
+    ScaleObservationAdvancedConfig,
+    ScaleObservationCommand,
+)
 from vizion3d.proto import lifting_pb2, lifting_pb2_grpc
 from vizion3d.stereo import StereoDepth, StereoDepthCommand
 from vizion3d.stereo.defaults import DEFAULT_STEREO_MODEL_URL
@@ -40,6 +45,9 @@ from vizion3d.stereo.models import StereoDepthAdvancedConfig
 def _o3d_depth_image_to_png_bytes(o3d_image) -> bytes:
     """Encode an Open3D uint16 depth image as a PNG byte string."""
     arr = np.asarray(o3d_image)
+    if np.issubdtype(arr.dtype, np.floating):
+        arr = np.nan_to_num(arr, nan=0.0, posinf=0.0, neginf=0.0)
+        arr = np.clip(arr * 1000.0, 0, np.iinfo(np.uint16).max).astype(np.uint16)
     buf = io.BytesIO()
     Image.fromarray(arr).save(buf, format="PNG")
     return buf.getvalue()
@@ -57,6 +65,13 @@ def _mask_to_png_bytes(mask: np.ndarray) -> bytes:
     buf = io.BytesIO()
     Image.fromarray((mask.astype(np.uint8) * 255)).save(buf, format="PNG")
     return buf.getvalue()
+
+
+def _mask_from_png_bytes(mask_bytes: bytes) -> np.ndarray:
+    """Decode a PNG mask into a boolean 2-D array."""
+    if not mask_bytes:
+        return np.zeros((1, 1), dtype=bool)
+    return np.asarray(Image.open(io.BytesIO(mask_bytes)).convert("L")) > 0
 
 
 def _ply_bytes_to_o3d_point_cloud(ply_bytes: bytes):
@@ -256,6 +271,75 @@ class LiftingServiceServicer(lifting_pb2_grpc.LiftingServiceServicer):
         if result.annotated_cloud is not None:
             response.annotated_cloud_ply = _o3d_point_cloud_to_ply_bytes(result.annotated_cloud)
 
+        return response
+
+    # ── RunScaleObservation ─────────────────────────────────────────────────
+
+    def RunScaleObservation(self, request, context):
+        """Handle a ScaleObservation request."""
+        from vizion3d.annotation.models import MaskAnnotation3D
+
+        point_cloud = _ply_bytes_to_o3d_point_cloud(request.point_cloud_ply)
+        annotations = []
+        for item in request.annotations:
+            annotations.append(
+                MaskAnnotation3D(
+                    label=item.label,
+                    class_id=item.class_id,
+                    confidence=item.confidence,
+                    bbox_2d=list(item.bbox_2d),
+                    mask_2d=_mask_from_png_bytes(item.mask_image),
+                    point_indices=[],
+                    point_coords=[list(row.values) for row in item.point_coords],
+                )
+            )
+
+        def _field(name: str):
+            return getattr(request, name) if request.HasField(name) else None
+
+        cmd = ScaleObservationCommand(
+            point_cloud=point_cloud,
+            annotations=annotations,
+            return_scaled_point_cloud=request.return_scaled_point_cloud,
+            return_scaled_depth=request.return_scaled_depth,
+            return_report=request.return_report,
+            advanced_config=ScaleObservationAdvancedConfig(
+                image_width=_field("image_width"),
+                image_height=_field("image_height"),
+                fx=_field("fx"),
+                fy=_field("fy"),
+                cx=_field("cx"),
+                cy=_field("cy"),
+            ),
+        )
+        result = ScaleObservation().run(cmd)
+        response = lifting_pb2.ScaleObservationResponse(
+            scale_factor=result.scale_factor,
+            scale_confidence=result.scale_confidence,
+            scale_confidence_reason=result.scale_confidence_reason,
+            algorithm_version=result.algorithm_version,
+            accepted_candidates=result.accepted_candidates,
+            rejected_candidates=result.rejected_candidates,
+        )
+        for candidate in result.candidates:
+            response.candidates.append(
+                lifting_pb2.ScaleCandidateItem(
+                    label=candidate.label,
+                    dimension=candidate.dimension,
+                    observed_relative=candidate.observed_relative,
+                    prior_m=candidate.prior_m,
+                    scale=candidate.scale,
+                    weight=candidate.weight,
+                    accepted=candidate.accepted,
+                    rejection_reason=candidate.rejection_reason or "",
+                )
+            )
+        if result.scaled_point_cloud is not None:
+            response.scaled_point_cloud_ply = _o3d_point_cloud_to_ply_bytes(
+                result.scaled_point_cloud
+            )
+        if result.scaled_depth_image is not None:
+            response.scaled_depth_png = _o3d_depth_image_to_png_bytes(result.scaled_depth_image)
         return response
 
 

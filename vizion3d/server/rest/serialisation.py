@@ -19,6 +19,9 @@ from vizion3d.lifting.utils import create_ply_binary
 def o3d_depth_image_to_png_bytes(o3d_image) -> bytes:
     """Encode an Open3D uint16 depth image as a PNG byte string."""
     arr = np.asarray(o3d_image)
+    if np.issubdtype(arr.dtype, np.floating):
+        arr = np.nan_to_num(arr, nan=0.0, posinf=0.0, neginf=0.0)
+        arr = np.clip(arr * 1000.0, 0, np.iinfo(np.uint16).max).astype(np.uint16)
     buf = io.BytesIO()
     Image.fromarray(arr).save(buf, format="PNG", compress_level=1)
     return buf.getvalue()

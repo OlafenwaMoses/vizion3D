@@ -6,6 +6,7 @@ service LiftingService {
   rpc RunDepthEstimation (DepthEstimationRequest) returns (DepthEstimationResponse);
   rpc RunStereoDepth (StereoDepthRequest) returns (StereoDepthResponse);
   rpc RunObjectMaskAnnotation3D (ObjectMaskAnnotation3DRequest) returns (ObjectMaskAnnotation3DResponse);
+  rpc RunScaleObservation (ScaleObservationRequest) returns (ScaleObservationResponse);
 }
 
 // ── Depth Estimation ──────────────────────────────────────────────────────────
@@ -110,4 +111,52 @@ message ObjectMaskAnnotation3DResponse {
   repeated MaskAnnotation3DItem annotations = 1;
   bytes annotated_cloud_ply = 2;  // optional full cloud with object colours
   string backend_used = 3;
+}
+
+// ── ScaleObservation ─────────────────────────────────────────────────────────
+
+message ScaleObservationAnnotation {
+  string label = 1;
+  int32 class_id = 2;
+  float confidence = 3;
+  repeated float bbox_2d = 4;
+  repeated FloatRow point_coords = 5;
+  bytes mask_image = 6;               // PNG-encoded uint8 grayscale mask (255=object)
+}
+
+message ScaleObservationRequest {
+  bytes point_cloud_ply = 1;
+  repeated ScaleObservationAnnotation annotations = 2;
+  bool return_scaled_point_cloud = 3;
+  bool return_scaled_depth = 4;
+  bool return_report = 5;
+  optional int32 image_width = 6;
+  optional int32 image_height = 7;
+  optional float fx = 8;
+  optional float fy = 9;
+  optional float cx = 10;
+  optional float cy = 11;
+}
+
+message ScaleCandidateItem {
+  string label = 1;
+  string dimension = 2;
+  float observed_relative = 3;
+  float prior_m = 4;
+  float scale = 5;
+  float weight = 6;
+  bool accepted = 7;
+  string rejection_reason = 8;
+}
+
+message ScaleObservationResponse {
+  float scale_factor = 1;
+  float scale_confidence = 2;
+  string scale_confidence_reason = 3;
+  string algorithm_version = 4;
+  int32 accepted_candidates = 5;
+  int32 rejected_candidates = 6;
+  repeated ScaleCandidateItem candidates = 7;
+  bytes scaled_point_cloud_ply = 8;
+  bytes scaled_depth_png = 9;
 }

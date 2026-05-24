@@ -26,6 +26,7 @@ nav:
   - Home: index.md
   - Hardware Acceleration: hardware_acceleration.md
   - Tasks:
+      - Overview: tasks/index.md
       - Lifting:
           - Depth Estimation:
               - Overview: features/depth_estimation.md
@@ -36,7 +37,10 @@ nav:
       - Annotation:
           - Object Mask Annotation 3D: annotation/object_mask_annotation_3d.md
           - YOLOE-26L Prompt-Free Classes: annotation/yoloe_26l_prompt_free_classes.md
+      - Observation:
+          - Scale Observation: observation/scale_observation.md
   - Concepts:
       - Camera Intrinsics Matrix: concepts/camera_intrinsics.md
   - API Reference:
       - Lifting (2D → 3D): api/lifting.md
+      - Observation: api/observation.md

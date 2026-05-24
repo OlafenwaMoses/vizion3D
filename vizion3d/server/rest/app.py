@@ -29,7 +29,12 @@ import uvicorn
 from fastapi import APIRouter, FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from vizion3d.server.rest import depth_estimation, object_mask_annotation_3d, stereo_depth
+from vizion3d.server.rest import (
+    depth_estimation,
+    object_mask_annotation_3d,
+    scale_observation,
+    stereo_depth,
+)
 
 _MAX_BODY = 500 * 1024 * 1024  # 500 MB
 
@@ -39,6 +44,7 @@ def create_app(
     enable_depth_estimation: bool = True,
     enable_stereo_depth: bool = True,
     enable_object_mask_annotation_3d: bool = True,
+    enable_scale_observation: bool = True,
 ) -> FastAPI:
     """Build and return a FastAPI application with the selected feature routers.
 
@@ -75,6 +81,11 @@ def create_app(
         annotation_router.include_router(object_mask_annotation_3d.router)
     _app.include_router(annotation_router)
 
+    observation_router = APIRouter(prefix="/observation", tags=["Observation"])
+    if enable_scale_observation:
+        observation_router.include_router(scale_observation.router)
+    _app.include_router(observation_router)
+
     return _app
 
 
@@ -92,6 +103,7 @@ feature/model flags (omit all to enable all features):
   --depth_estimation              enable POST /lifting/depth-estimation
   --stereo_depth                  enable POST /lifting/stereo-depth
   --object_mask_annotation_3d     enable POST /annotation/object-mask-annotation-3d
+  --scale_observation             enable POST /observation/scale-observation
 
 model pre-loading (also enables that feature):
   --depth_model PATH        use PATH as the default depth-estimation model
@@ -107,6 +119,7 @@ model pre-loading (also enables that feature):
     parser.add_argument("--depth_estimation", action="store_true")
     parser.add_argument("--stereo_depth", action="store_true")
     parser.add_argument("--object_mask_annotation_3d", action="store_true")
+    parser.add_argument("--scale_observation", action="store_true")
     return parser.parse_args(argv)
 
 
@@ -117,6 +130,7 @@ def run(argv=None) -> None:
         args.depth_estimation
         or args.stereo_depth
         or args.object_mask_annotation_3d
+        or args.scale_observation
         or args.depth_model
         or args.stereo_model
         or args.annotation_model
@@ -126,6 +140,7 @@ def run(argv=None) -> None:
     enable_annotation = (
         args.object_mask_annotation_3d or bool(args.annotation_model) or not any_selector
     )
+    enable_scale_observation = args.scale_observation or not any_selector
 
     if args.depth_model and enable_depth:
         depth_estimation.configure_model(args.depth_model)
@@ -138,6 +153,7 @@ def run(argv=None) -> None:
         enable_depth_estimation=enable_depth,
         enable_stereo_depth=enable_stereo,
         enable_object_mask_annotation_3d=enable_annotation,
+        enable_scale_observation=enable_scale_observation,
     )
     uvicorn.run(_app, host=args.host, port=args.port)
 
