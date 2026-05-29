@@ -62,8 +62,15 @@ class TestUtilities:
 
     def test_coco_aligned_names_applied(self):
         # the 7 unambiguous renames use the COCO name, not the ADE name
-        for coco_name in ["couch", "dining table", "potted plant", "laptop", "tv",
-                          "motorcycle", "wine glass"]:
+        for coco_name in [
+            "couch",
+            "dining table",
+            "potted plant",
+            "laptop",
+            "tv",
+            "motorcycle",
+            "wine glass",
+        ]:
             assert coco_name in S.ADE20K_CLASSES
         for ade_name in ["sofa", "television receiver", "minibike", "computer"]:
             assert ade_name not in S.ADE20K_CLASSES

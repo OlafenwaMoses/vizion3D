@@ -14,8 +14,8 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from vizion3d.annotation.commands import SceneMaskAnnotation3DCommand
 from vizion3d.annotation._geometry import _extract_cloud_arrays, _render_front_view
+from vizion3d.annotation.commands import SceneMaskAnnotation3DCommand
 from vizion3d.annotation.models import SceneMaskAnnotation3DConfig
 from vizion3d.annotation.scene_handlers import SceneMaskAnnotation3DHandler
 from vizion3d.annotation.segformer import ADE20K_CLASSES, ADE20K_PALETTE

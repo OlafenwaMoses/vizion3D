@@ -46,28 +46,156 @@ IMAGE_STD = [0.229, 0.224, 0.225]
 # exists so masks flow straight into COCO-keyed pipelines (e.g. ScaleObservation
 # size priors).  Ambiguous many-to-one cases (animal, pot) keep the ADE name.
 ADE20K_CLASSES = [
-    "wall", "building", "sky", "floor", "tree", "ceiling", "road", "bed",
-    "windowpane", "grass", "cabinet", "sidewalk", "person", "earth", "door",
-    "dining table", "mountain", "potted plant", "curtain", "chair", "car",
-    "water", "painting", "couch", "shelf", "house", "sea", "mirror", "rug",
-    "field", "armchair", "seat", "fence", "desk", "rock", "wardrobe", "lamp",
-    "bathtub", "railing", "cushion", "base", "box", "column", "signboard",
-    "chest of drawers", "counter", "sand", "sink", "skyscraper", "fireplace",
-    "refrigerator", "grandstand", "path", "stairs", "runway", "case",
-    "pool table", "pillow", "screen door", "stairway", "river", "bridge",
-    "bookcase", "blind", "coffee table", "toilet", "flower", "book", "hill",
-    "bench", "countertop", "stove", "palm", "kitchen island", "laptop",
-    "swivel chair", "boat", "bar", "arcade machine", "hovel", "bus", "towel",
-    "light", "truck", "tower", "chandelier", "awning", "streetlight", "booth",
-    "tv", "airplane", "dirt track", "apparel", "pole", "land", "bannister",
-    "escalator", "ottoman", "bottle", "buffet", "poster", "stage", "van",
-    "ship", "fountain", "conveyer belt", "canopy", "washer", "plaything",
-    "swimming pool", "stool", "barrel", "basket", "waterfall", "tent", "bag",
-    "motorcycle", "cradle", "oven", "ball", "food", "step", "tank",
-    "trade name", "microwave", "pot", "animal", "bicycle", "lake", "dishwasher",
-    "screen", "blanket", "sculpture", "hood", "sconce", "vase", "traffic light",
-    "tray", "ashcan", "fan", "pier", "crt screen", "plate", "monitor",
-    "bulletin board", "shower", "radiator", "wine glass", "clock", "flag",
+    "wall",
+    "building",
+    "sky",
+    "floor",
+    "tree",
+    "ceiling",
+    "road",
+    "bed",
+    "windowpane",
+    "grass",
+    "cabinet",
+    "sidewalk",
+    "person",
+    "earth",
+    "door",
+    "dining table",
+    "mountain",
+    "potted plant",
+    "curtain",
+    "chair",
+    "car",
+    "water",
+    "painting",
+    "couch",
+    "shelf",
+    "house",
+    "sea",
+    "mirror",
+    "rug",
+    "field",
+    "armchair",
+    "seat",
+    "fence",
+    "desk",
+    "rock",
+    "wardrobe",
+    "lamp",
+    "bathtub",
+    "railing",
+    "cushion",
+    "base",
+    "box",
+    "column",
+    "signboard",
+    "chest of drawers",
+    "counter",
+    "sand",
+    "sink",
+    "skyscraper",
+    "fireplace",
+    "refrigerator",
+    "grandstand",
+    "path",
+    "stairs",
+    "runway",
+    "case",
+    "pool table",
+    "pillow",
+    "screen door",
+    "stairway",
+    "river",
+    "bridge",
+    "bookcase",
+    "blind",
+    "coffee table",
+    "toilet",
+    "flower",
+    "book",
+    "hill",
+    "bench",
+    "countertop",
+    "stove",
+    "palm",
+    "kitchen island",
+    "laptop",
+    "swivel chair",
+    "boat",
+    "bar",
+    "arcade machine",
+    "hovel",
+    "bus",
+    "towel",
+    "light",
+    "truck",
+    "tower",
+    "chandelier",
+    "awning",
+    "streetlight",
+    "booth",
+    "tv",
+    "airplane",
+    "dirt track",
+    "apparel",
+    "pole",
+    "land",
+    "bannister",
+    "escalator",
+    "ottoman",
+    "bottle",
+    "buffet",
+    "poster",
+    "stage",
+    "van",
+    "ship",
+    "fountain",
+    "conveyer belt",
+    "canopy",
+    "washer",
+    "plaything",
+    "swimming pool",
+    "stool",
+    "barrel",
+    "basket",
+    "waterfall",
+    "tent",
+    "bag",
+    "motorcycle",
+    "cradle",
+    "oven",
+    "ball",
+    "food",
+    "step",
+    "tank",
+    "trade name",
+    "microwave",
+    "pot",
+    "animal",
+    "bicycle",
+    "lake",
+    "dishwasher",
+    "screen",
+    "blanket",
+    "sculpture",
+    "hood",
+    "sconce",
+    "vase",
+    "traffic light",
+    "tray",
+    "ashcan",
+    "fan",
+    "pier",
+    "crt screen",
+    "plate",
+    "monitor",
+    "bulletin board",
+    "shower",
+    "radiator",
+    "wine glass",
+    "clock",
+    "flag",
 ]
 
 
@@ -99,8 +227,9 @@ ADE20K_PALETTE = _build_palette(NUM_CLASSES)
 class OverlapPatchEmbeddings(nn.Module):
     def __init__(self, patch_size, stride, in_ch, out_ch):
         super().__init__()
-        self.proj = nn.Conv2d(in_ch, out_ch, kernel_size=patch_size, stride=stride,
-                              padding=patch_size // 2)
+        self.proj = nn.Conv2d(
+            in_ch, out_ch, kernel_size=patch_size, stride=stride, padding=patch_size // 2
+        )
         self.layer_norm = nn.LayerNorm(out_ch, eps=LN_EPS)
 
     def forward(self, x):
@@ -212,11 +341,16 @@ class SegformerEncoder(nn.Module):
         in_ch = 3
         for i in range(4):
             self.patch_embeddings.append(
-                OverlapPatchEmbeddings(PATCH_SIZES[i], STRIDES[i], in_ch, HIDDEN_SIZES[i]))
-            self.block.append(nn.ModuleList([
-                SegformerLayer(HIDDEN_SIZES[i], NUM_HEADS[i], SR_RATIOS[i], MLP_RATIOS[i])
-                for _ in range(DEPTHS[i])
-            ]))
+                OverlapPatchEmbeddings(PATCH_SIZES[i], STRIDES[i], in_ch, HIDDEN_SIZES[i])
+            )
+            self.block.append(
+                nn.ModuleList(
+                    [
+                        SegformerLayer(HIDDEN_SIZES[i], NUM_HEADS[i], SR_RATIOS[i], MLP_RATIOS[i])
+                        for _ in range(DEPTHS[i])
+                    ]
+                )
+            )
             self.layer_norm.append(nn.LayerNorm(HIDDEN_SIZES[i], eps=LN_EPS))
             in_ch = HIDDEN_SIZES[i]
 
@@ -300,7 +434,8 @@ def _preprocess(image: Image.Image, inference_size: int):
     if inference_size and inference_size > 0:
         scale = inference_size / min(orig_w, orig_h)
         resized = image.resize(
-            (max(1, round(orig_w * scale)), max(1, round(orig_h * scale))), Image.BILINEAR)
+            (max(1, round(orig_w * scale)), max(1, round(orig_h * scale))), Image.BILINEAR
+        )
     else:
         resized = image
     arr = np.asarray(resized, dtype=np.float32) / 255.0
