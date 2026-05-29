@@ -24,7 +24,7 @@ class ScaleObservationCommand(Command[ScaleObservationResult]):
         return_scaled_point_cloud: Include a uniformly scaled Open3D point cloud.
         return_scaled_depth: Include a projected camera-space Z depth image when
             intrinsics and image dimensions are provided.
-        config: ScaleObservation estimator configuration. Defaults to promoted V4-402.
+        config: ScaleObservation estimator configuration. Defaults to promoted V4.1.
         advanced_config: Image size and camera intrinsics for bbox edge checks
             and optional scaled-depth reprojection.
     """

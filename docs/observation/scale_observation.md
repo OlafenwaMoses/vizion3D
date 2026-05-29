@@ -1,7 +1,7 @@
 # Scale Observation
 
 **Category:** Observation  
-**Experimental:** Yes
+**Experimental:** No
 
 `ScaleObservation` estimates a single metric scale factor for a generated point
 cloud. It is intended for monocular-depth point clouds whose shape is plausible
@@ -12,9 +12,10 @@ The task consumes a point cloud plus object annotations from
 evidence, and can return the estimated scale, candidate diagnostics, a scaled
 point cloud, and a reprojected scaled depth image.
 
-> **Experimental status:** Scale Observation is still being improved. Accuracy,
-> candidate selection, and reporting are expected to get better as evaluation
-> expands, with the goal of reaching a stable non-experimental state soon.
+> **Accuracy note:** Scale Observation is a rough metric-scale estimator, not a
+> measurement system. It can put a relative monocular-depth cloud into a more
+> plausible physical size range, but confidence and candidate diagnostics should
+> stay visible in downstream applications.
 
 ---
 
@@ -160,8 +161,11 @@ object is reliable enough to produce metric scale candidates.
 
 ## Inference Features
 
-The runtime estimator evaluates the same evidence used by the promoted V4
-research path:
+The runtime estimator follows the promoted V4.1 research path:
+`v4_1_yoloe_strong_dimension_class_trimmed_huber`. V4.1 preserves the promoted
+V4 results while removing the dormant scene-extent cap, so the final scale flows
+from object evidence, trimmed Huber aggregation, and prior blending without an
+upper scene-size guard.
 
 | Feature | Purpose |
 |---|---|
@@ -175,25 +179,33 @@ research path:
 | Dimension reliability | Gives each class/dimension a learned trust weight. |
 | Learned calibration | Applies per-class/per-dimension scale correction factors. |
 | Scene plausibility | Downweights candidates that imply implausible scene dimensions. |
-| Scene extent guard | Optionally limits the final scale if configured. |
+| Final prior blend | Blends object evidence with a weak global prior when confidence is low. |
 
 ---
 
 ## Supported Scale Priors
 
-The default annotation checkpoint can detect 80 COCO classes, but only a subset
-has useful metric-size priors for scale estimation. Objects outside this table
-can still appear in annotation results, but they are marked as missing a scale
-prior and do not produce scale candidates.
+Scale candidates are created only for labels with metric-size priors. The table
+contains the COCO-aligned labels used by the default object annotation model and
+the expanded prompt-free YOLOE labels that V4.1 can consume when
+`ObjectMaskAnnotation3D` is run with the YOLOE prompt-free checkpoint. Objects
+outside these priors can still appear in annotation results, but they are marked
+as missing a scale prior and do not produce scale candidates.
 
 | Group | Classes with scale priors |
 |---|---|
 | People | `person` |
-| Furniture | `chair`, `couch`, `bed`, `dining table`, `toilet` |
-| Electronics | `tv`, `laptop`, `keyboard`, `mouse` |
-| Indoor objects | `book`, `vase`, `potted plant` |
-| Appliances and fixtures | `refrigerator`, `microwave`, `oven`, `sink` |
+| Core COCO furniture | `chair`, `couch`, `bed`, `dining table`, `toilet` |
+| Expanded furniture and fixtures | `armchair`, `office chair`, `stool`, `bench`, `desk`, `office desk`, `computer desk`, `side table`, `coffee table`, `cabinet`, `file cabinet`, `kitchen cabinet`, `bookshelf`, `bookcase`, `shelf`, `dresser`, `nightstand`, `door`, `window`, `mirror` |
+| Electronics | `tv`, `laptop`, `keyboard`, `mouse`, `monitor`, `computer monitor`, `computer`, `desktop computer`, `printer`, `phone`, `smartphone`, `tablet`, `remote` |
+| Appliances and fixtures | `refrigerator`, `microwave`, `oven`, `sink`, `toaster`, `blender`, `coffee machine`, `dish washer`, `washing machine`, `faucet`, `shower`, `bathtub` |
+| Indoor objects | `book`, `vase`, `potted plant`, `lamp`, `table lamp`, `trash bin`, `waste container`, `backpack`, `suitcase`, `luggage`, `pillow`, `mattress`, `basket`, `bucket`, `box`, `plant`, `houseplant` |
 | Tableware | `bottle`, `cup`, `bowl` |
+
+Common aliases are normalised before lookup. Examples include `sofa` → `couch`,
+`fridge` → `refrigerator`, `table` → `dining table`, `screen` → `monitor`,
+`swivel chair` → `office chair`, `washer` → `washing machine`, and `mug` →
+`cup`.
 
 ---
 
@@ -209,7 +221,7 @@ prior and do not produce scale candidates.
 | `return_scaled_point_cloud` | `bool` | No | `False` | If `True`, returns a point cloud whose coordinates are multiplied by `scale_factor`. |
 | `return_scaled_depth` | `bool` | No | `False` | If `True`, projects the scaled cloud back into a camera-space depth image. Requires advanced camera fields. |
 | `return_report` | `bool` | No | `True` | If `True`, includes bounds, accepted candidates, and rejected candidates in `scale_report`. |
-| `config` | `ScaleObservationConfig` | No | promoted V4 defaults | Algorithm-level scale-estimation settings. |
+| `config` | `ScaleObservationConfig` | No | promoted V4.1 defaults | Algorithm-level scale-estimation settings. |
 | `advanced_config` | `ScaleObservationAdvancedConfig` | No | empty | Camera/image settings. See [Advanced config](#advanced-config). |
 
 ---
@@ -467,7 +479,7 @@ Common rejection reasons:
 | `weak_multi_axis_agreement` | Candidate dimensions disagree too much. |
 | `object_dimensions_disagree` | Candidate dimensions are incompatible. |
 | `below_variant_weight_threshold` | Candidate weight was too low. |
-| `not_selected_by_variant` | Candidate did not pass final V4 selection. |
+| `not_selected_by_variant` | Candidate did not pass final V4.1 selection. |
 
 ---
 

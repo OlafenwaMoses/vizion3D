@@ -15,8 +15,12 @@ from vizion3d.observation import (
 )
 from vizion3d.observation.defaults import (
     CALIBRATED_SCALE_CORRECTION_BY_LABEL_DIM,
+    COCO_PRIOR_LABELS,
     COCO_SIZE_PRIORS_M,
     DIMENSION_RELIABILITY_BY_LABEL,
+    SCALE_SIZE_PRIORS_M,
+    SIZE_PRIOR_ALIASES,
+    YOLOE_SIZE_PRIORS_M,
 )
 from vizion3d.observation.scale import (
     build_candidates_from_annotations,
@@ -58,11 +62,11 @@ def _annotation(points: np.ndarray, *, bbox=None, label="chair") -> MaskAnnotati
     )
 
 
-def test_default_config_is_promoted_v4_402():
+def test_default_config_is_promoted_v4_1_yoloe_strong():
     cfg = ScaleObservationConfig()
-    assert cfg.name == "v4_iter_402_lower_quantile_mean_blend"
-    assert cfg.candidate_source == "strong"
-    assert cfg.aggregate == "lower_quantile_mean_blend"
+    assert cfg.name == "v4_1_yoloe_strong_dimension_class_trimmed_huber"
+    assert cfg.candidate_source == "yoloe_strong"
+    assert cfg.aggregate == "dimension_class_trimmed_huber"
     assert cfg.prior == pytest.approx(0.30)
 
 
@@ -74,8 +78,13 @@ def test_build_candidates_accepts_annotation_task_annotations():
     assert {c.dimension for c in candidates} == {"width", "height", "depth"}
 
 
-def test_v4_tables_cover_all_research_priors():
-    assert set(DIMENSION_RELIABILITY_BY_LABEL) == set(COCO_SIZE_PRIORS_M)
+def test_v4_1_tables_keep_coco_priors_and_add_yoloe_priors():
+    assert set(COCO_SIZE_PRIORS_M) == COCO_PRIOR_LABELS
+    assert COCO_PRIOR_LABELS < set(SCALE_SIZE_PRIORS_M)
+    assert set(YOLOE_SIZE_PRIORS_M) <= set(SCALE_SIZE_PRIORS_M)
+    assert "office chair" in YOLOE_SIZE_PRIORS_M
+    assert SIZE_PRIOR_ALIASES["fridge"] == "refrigerator"
+    assert set(DIMENSION_RELIABILITY_BY_LABEL) >= set(SCALE_SIZE_PRIORS_M)
     assert set(CALIBRATED_SCALE_CORRECTION_BY_LABEL_DIM) == set(COCO_SIZE_PRIORS_M) - {"mouse"}
 
 
@@ -94,6 +103,24 @@ def test_build_candidates_rejects_weak_mask_fill_like_v4():
     assert "weak_mask_bbox_fill" in observations[0].rejection_reasons
 
 
+def test_build_candidates_uses_yoloe_alias_priors():
+    ann = _annotation(_chair_points(), label="office chair")
+    candidates, observations = build_candidates_from_annotations([ann], image_size=(100, 100))
+    assert observations[0].label == "office chair"
+    assert observations[0].canonical_label == "office chair"
+    assert observations[0].prior_source == "yoloe_pf"
+    assert observations[0].accepted is True
+    assert {c.prior_source for c in candidates} == {"yoloe_pf"}
+
+
+def test_build_candidates_uses_yoloe_synonym_alias():
+    ann = _annotation(_chair_points(), label="fridge")
+    candidates, observations = build_candidates_from_annotations([ann], image_size=(100, 100))
+    assert observations[0].canonical_label == "refrigerator"
+    assert observations[0].prior_source == "coco"
+    assert candidates
+
+
 def test_estimate_scale_filters_edge_touching_candidates():
     ann = _annotation(_chair_points(), bbox=[0.0, 20.0, 80.0, 80.0])
     candidates, _ = build_candidates_from_annotations([ann], image_size=(100, 100))
@@ -104,20 +131,20 @@ def test_estimate_scale_filters_edge_touching_candidates():
     assert all(not c.accepted for c in candidates)
 
 
-def test_estimate_scale_applies_scene_extent_guard_when_enabled():
+def test_estimate_scale_does_not_cap_large_scene_extent():
     ann = _annotation(_chair_points())
     candidates, _ = build_candidates_from_annotations(
         [ann],
         image_size=(100, 100),
         scene_bounds={"width_m": 100.0, "height_m": 2.0, "length_m": 2.0},
     )
-    cfg = ScaleObservationConfig(scene_extent_guard_strength=1.0, max_scene_extent_m=5.8)
     scale, _, _, _ = estimate_scale(
         candidates,
-        cfg,
+        ScaleObservationConfig(),
         {"width_m": 100.0, "height_m": 2.0, "length_m": 2.0},
     )
-    assert scale == pytest.approx(0.058)
+    assert scale > 0.058
+    assert scale == pytest.approx(0.5, rel=0.15)
 
 
 def test_direct_scale_observation_returns_scaled_point_cloud():
@@ -130,7 +157,7 @@ def test_direct_scale_observation_returns_scaled_point_cloud():
             advanced_config=ScaleObservationAdvancedConfig(image_width=100, image_height=100),
         )
     )
-    assert result.algorithm_version == "v4_iter_402_lower_quantile_mean_blend"
+    assert result.algorithm_version == "v4_1_yoloe_strong_dimension_class_trimmed_huber"
     assert result.accepted_candidates > 0
     assert result.scale_factor == pytest.approx(0.5, rel=0.15)
     assert result.scaled_point_cloud is not None
@@ -176,7 +203,7 @@ def test_rest_scale_observation_endpoint():
     )
     assert response.status_code == 200
     payload = response.json()
-    assert payload["algorithm_version"] == "v4_iter_402_lower_quantile_mean_blend"
+    assert payload["algorithm_version"] == "v4_1_yoloe_strong_dimension_class_trimmed_huber"
     assert payload["accepted_candidates"] > 0
     assert payload["scaled_point_cloud_ply"] is not None
 
@@ -207,6 +234,6 @@ def test_grpc_scale_observation_request():
         item.point_coords.append(lifting_pb2.FloatRow(values=coord))
 
     response = LiftingServiceServicer().RunScaleObservation(request, None)
-    assert response.algorithm_version == "v4_iter_402_lower_quantile_mean_blend"
+    assert response.algorithm_version == "v4_1_yoloe_strong_dimension_class_trimmed_huber"
     assert response.accepted_candidates > 0
     assert response.scaled_point_cloud_ply

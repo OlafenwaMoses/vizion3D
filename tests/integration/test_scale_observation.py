@@ -159,7 +159,7 @@ def _save_direct_outputs(result, run_dir: Path, run: int) -> None:
 
 
 def _assert_scale_output(result) -> None:
-    assert result.algorithm_version == "v4_iter_402_lower_quantile_mean_blend"
+    assert result.algorithm_version == "v4_1_yoloe_strong_dimension_class_trimmed_huber"
     assert result.scale_factor > 0
     assert 0.0 <= result.scale_confidence <= 1.0
     assert result.accepted_candidates + result.rejected_candidates == len(result.candidates)
@@ -250,7 +250,7 @@ def test_scale_observation_rest_outputs_params_advanced_config_and_timing(
         data = response.json()
         Path(run_dir / f"run_{run:02d}.json").write_text(json.dumps(data, indent=2))
 
-        assert data["algorithm_version"] == "v4_iter_402_lower_quantile_mean_blend"
+        assert data["algorithm_version"] == "v4_1_yoloe_strong_dimension_class_trimmed_huber"
         assert data["scale_factor"] > 0
         assert 0.0 <= data["scale_confidence"] <= 1.0
         assert data["accepted_candidates"] + data["rejected_candidates"] == len(data["candidates"])
@@ -318,7 +318,7 @@ def test_scale_observation_grpc_outputs_params_advanced_config_and_timing(
             )
         )
 
-        assert response.algorithm_version == "v4_iter_402_lower_quantile_mean_blend"
+        assert response.algorithm_version == "v4_1_yoloe_strong_dimension_class_trimmed_huber"
         assert response.scale_factor > 0
         assert 0.0 <= response.scale_confidence <= 1.0
         assert response.accepted_candidates + response.rejected_candidates == len(

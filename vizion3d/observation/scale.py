@@ -9,9 +9,11 @@ import numpy as np
 
 from .defaults import (
     CALIBRATED_SCALE_CORRECTION_BY_LABEL_DIM,
-    COCO_SIZE_PRIORS_M,
     DEFAULT_DIMENSION_RELIABILITY,
     DIMENSION_RELIABILITY_BY_LABEL,
+    PRIOR_SOURCE_BY_LABEL,
+    SCALE_SIZE_PRIORS_M,
+    SIZE_PRIOR_ALIASES,
 )
 from .models import ObjectScaleObservation, ScaleCandidate, ScaleObservationConfig
 
@@ -57,14 +59,27 @@ def object_relative_dimensions(points: np.ndarray) -> dict[str, float]:
     return {"width": float(dims[0]), "height": float(dims[1]), "depth": float(dims[2])}
 
 
+def canonical_scale_label(label: str) -> str:
+    normalized = " ".join(str(label).strip().lower().split())
+    return SIZE_PRIOR_ALIASES.get(normalized, normalized)
+
+
+def size_prior_for_label(label: str) -> tuple[str, dict[str, Any] | None, str]:
+    canonical = canonical_scale_label(label)
+    prior = SCALE_SIZE_PRIORS_M.get(canonical)
+    return canonical, prior, PRIOR_SOURCE_BY_LABEL.get(canonical, "unknown")
+
+
 def dimension_reliability(label: str, dimension: str) -> float:
-    return DIMENSION_RELIABILITY_BY_LABEL.get(label, DEFAULT_DIMENSION_RELIABILITY).get(
+    canonical = canonical_scale_label(label)
+    return DIMENSION_RELIABILITY_BY_LABEL.get(canonical, DEFAULT_DIMENSION_RELIABILITY).get(
         dimension, DEFAULT_DIMENSION_RELIABILITY[dimension]
     )
 
 
 def calibration_factor(label: str, dimension: str) -> float:
-    return CALIBRATED_SCALE_CORRECTION_BY_LABEL_DIM.get(label, {}).get(dimension, 1.0)
+    canonical = canonical_scale_label(label)
+    return CALIBRATED_SCALE_CORRECTION_BY_LABEL_DIM.get(canonical, {}).get(dimension, 1.0)
 
 
 def prior_uncertainty_score(mean: float, sigma: float) -> float:
@@ -280,6 +295,115 @@ def weighted_quantile(values: np.ndarray, weights: np.ndarray, q: float) -> floa
     return float(ordered_values[max(0, min(index, len(ordered_values) - 1))])
 
 
+def weighted_median(values: np.ndarray, weights: np.ndarray) -> float:
+    return weighted_quantile(values, weights, 0.5)
+
+
+def huber_location(values: np.ndarray, weights: np.ndarray, delta: float) -> float:
+    center = weighted_median(values, weights)
+    for _ in range(8):
+        residual = values - center
+        factors = np.where(
+            np.abs(residual) <= delta,
+            1.0,
+            delta / np.maximum(np.abs(residual), 1e-12),
+        )
+        adjusted = np.maximum(weights, 0.0) * factors
+        total = float(adjusted.sum())
+        if total <= 0:
+            return float(center)
+        next_center = float(np.average(values, weights=adjusted))
+        if abs(next_center - center) < 1e-6:
+            break
+        center = next_center
+    return float(center)
+
+
+def family_balanced_location(
+    candidates: list[ScaleCandidate],
+    logs: np.ndarray,
+    weights: np.ndarray,
+    *,
+    family: str,
+    huber_delta: float,
+) -> float:
+    grouped: dict[str, tuple[list[float], list[float]]] = {}
+    for candidate, log_value, weight in zip(candidates, logs, weights):
+        if family == "dimension":
+            key = candidate.dimension
+        elif family == "label":
+            key = candidate.canonical_label or canonical_scale_label(candidate.label)
+        elif family == "source":
+            key = candidate.prior_source
+        else:
+            key = "all"
+        group_values, group_weights = grouped.setdefault(key, ([], []))
+        group_values.append(float(log_value))
+        group_weights.append(float(weight))
+
+    centers: list[float] = []
+    center_weights: list[float] = []
+    for group_values, group_weights in grouped.values():
+        value_array = np.asarray(group_values, dtype=np.float64)
+        weight_array = np.asarray(group_weights, dtype=np.float64)
+        centers.append(huber_location(value_array, weight_array, huber_delta))
+        center_weights.append(math.sqrt(max(float(weight_array.sum()), 1e-12)))
+    if not centers:
+        return float(np.average(logs, weights=weights))
+    return float(
+        np.average(
+            np.asarray(centers, dtype=np.float64),
+            weights=np.asarray(center_weights, dtype=np.float64),
+        )
+    )
+
+
+def aggregate_log_scale(
+    candidates: list[ScaleCandidate],
+    logs: np.ndarray,
+    weights: np.ndarray,
+    config: ScaleObservationConfig,
+) -> float:
+    if config.aggregate == "lower_quantile_mean_blend":
+        lower_log = weighted_quantile(logs, weights, 0.35)
+        mean_log = float(np.average(logs, weights=weights))
+        return 0.60 * mean_log + 0.40 * lower_log
+    if config.aggregate == "median_mean_blend":
+        return float(
+            0.65 * weighted_median(logs, weights) + 0.35 * np.average(logs, weights=weights)
+        )
+    if config.aggregate == "dimension_class_balanced_huber":
+        dim_log = family_balanced_location(
+            candidates, logs, weights, family="dimension", huber_delta=config.huber_delta
+        )
+        label_log = family_balanced_location(
+            candidates, logs, weights, family="label", huber_delta=config.huber_delta
+        )
+        return 0.5 * dim_log + 0.5 * label_log
+    if config.aggregate == "dimension_class_trimmed_huber":
+        if len(logs) > 3:
+            lo = weighted_quantile(logs, weights, config.winsor_quantile)
+            hi = weighted_quantile(logs, weights, 1.0 - config.winsor_quantile)
+            keep = (logs >= lo) & (logs <= hi)
+            if int(np.count_nonzero(keep)) >= 2:
+                kept_candidates = [c for c, keep_item in zip(candidates, keep) if bool(keep_item)]
+                return aggregate_log_scale(
+                    kept_candidates,
+                    logs[keep],
+                    weights[keep],
+                    config.model_copy(update={"aggregate": "dimension_class_balanced_huber"}),
+                )
+        return aggregate_log_scale(
+            candidates,
+            logs,
+            weights,
+            config.model_copy(update={"aggregate": "dimension_class_balanced_huber"}),
+        )
+    if config.aggregate == "mean":
+        return float(np.average(logs, weights=weights))
+    return weighted_median(logs, weights)
+
+
 def candidate_weight(candidate: ScaleCandidate, config: ScaleObservationConfig) -> float:
     base = max(float(candidate.weight), 0.0)
     point_factor = min(1.0, math.log1p(max(candidate.clean_point_count, 0)) / math.log1p(5000.0))
@@ -307,11 +431,11 @@ def build_candidates_from_annotations(
 
     for instance_id, ann in enumerate(annotations):
         label = str(getattr(ann, "label", ""))
-        prior = COCO_SIZE_PRIORS_M.get(label)
+        canonical_label, prior, prior_source = size_prior_for_label(label)
         points = np.asarray(getattr(ann, "point_coords", []), dtype=np.float64)
         clean_points = clean_object_points(points)
         dims = object_relative_dimensions(clean_points)
-        axis_score, axis_rejection = object_axis_agreement(label, dims, prior)
+        axis_score, axis_rejection = object_axis_agreement(canonical_label, dims, prior)
         bbox = [float(v) for v in getattr(ann, "bbox_2d", [])]
         mask = getattr(ann, "mask_2d", None)
         ann_image_size = _resolve_image_size(image_size, bbox, mask)
@@ -373,6 +497,8 @@ def build_candidates_from_annotations(
             ObjectScaleObservation(
                 instance_id=instance_id,
                 label=label,
+                canonical_label=canonical_label,
+                prior_source=prior_source if prior is not None else "missing",
                 class_id=getattr(ann, "class_id", None),
                 confidence=confidence,
                 bbox_2d=bbox,
@@ -404,13 +530,13 @@ def build_candidates_from_annotations(
             if not np.isfinite(observed) or observed <= 1e-6:
                 continue
             prior_mean, prior_sigma = prior[dimension]
-            dim_weight = dimension_reliability(label, dimension)
+            dim_weight = dimension_reliability(canonical_label, dimension)
             if dim_weight < 0.10:
                 continue
             uncertainty = prior_uncertainty_score(float(prior_mean), float(prior_sigma))
             if uncertainty < 0.25 and dim_weight < 0.40:
                 continue
-            correction = calibration_factor(label, dimension)
+            correction = calibration_factor(canonical_label, dimension)
             scale = float(prior_mean) / observed * correction
             if not np.isfinite(scale) or scale <= 0:
                 continue
@@ -420,6 +546,8 @@ def build_candidates_from_annotations(
             candidates.append(
                 ScaleCandidate(
                     label=label,
+                    canonical_label=canonical_label,
+                    prior_source=prior_source,
                     dimension=dimension,
                     observed_relative=float(observed),
                     prior_m=float(prior_mean) * correction,
@@ -452,15 +580,38 @@ def estimate_scale(
     config: ScaleObservationConfig,
     scene_bounds: dict[str, Any] | None = None,
 ) -> tuple[float, float, str, list[ScaleCandidate]]:
-    selected = [
-        c
-        for c in candidates
-        if not c.touches_edge
-        and c.clean_point_count >= 500
-        and c.axis_agreement_score >= 0.2
-        and np.isfinite(c.scale)
-        and c.scale > 0
-    ]
+    if config.candidate_source == "all":
+        selected = [c for c in candidates if np.isfinite(c.scale) and c.scale > 0]
+    elif config.candidate_source == "usable":
+        selected = [
+            c
+            for c in candidates
+            if not c.touches_edge
+            and c.clean_point_count >= 120
+            and np.isfinite(c.scale)
+            and c.scale > 0
+        ]
+    elif config.candidate_source == "yoloe_strong":
+        selected = [
+            c
+            for c in candidates
+            if not c.touches_edge
+            and c.clean_point_count >= 400
+            and c.axis_agreement_score >= 0.25
+            and c.prior_source in {"coco", "yoloe_pf"}
+            and np.isfinite(c.scale)
+            and c.scale > 0
+        ]
+    else:
+        selected = [
+            c
+            for c in candidates
+            if not c.touches_edge
+            and c.clean_point_count >= 500
+            and c.axis_agreement_score >= 0.2
+            and np.isfinite(c.scale)
+            and c.scale > 0
+        ]
 
     logs: list[float] = []
     weights: list[float] = []
@@ -481,16 +632,14 @@ def estimate_scale(
 
     if not logs:
         reason = (
-            f"v4_variant={config.name}; no usable candidates; "
+            f"scale_variant={config.name}; no usable candidates; "
             f"fallback={config.no_candidate}; scale={config.prior:.4f}."
         )
         return float(config.prior), 0.05, reason, candidates
 
     log_array = np.asarray(logs, dtype=np.float64)
     weight_array = np.asarray(weights, dtype=np.float64)
-    lower_log = weighted_quantile(log_array, weight_array, 0.35)
-    mean_log = float(np.average(log_array, weights=weight_array))
-    raw_log = 0.60 * mean_log + 0.40 * lower_log
+    raw_log = aggregate_log_scale(accepted, log_array, weight_array, config)
     raw_scale = math.exp(raw_log)
 
     spread = float(np.std(log_array)) if len(log_array) > 1 else 0.0
@@ -498,7 +647,7 @@ def estimate_scale(
         1.0,
         (len(logs) / 8.0)
         * (1.0 / (1.0 + 4.0 * spread))
-        * (1.0 + 0.10 * max(len({c.label for c in accepted}) - 1, 0))
+        * (1.0 + 0.10 * max(len({c.canonical_label or c.label for c in accepted}) - 1, 0))
         * (1.0 + 0.05 * max(len({c.dimension for c in accepted}) - 1, 0)),
     )
     confidence = min(1.0, max(0.0, confidence**config.confidence_power))
@@ -509,42 +658,10 @@ def estimate_scale(
         (raw_log * object_weight + math.log(config.prior) * prior_weight)
         / (object_weight + prior_weight)
     )
-    scale_factor = apply_scene_extent_guard(scale_factor, scene_bounds, config)
     reason = (
-        f"v4_variant={config.name}; selected={len(accepted)}; raw_scale={raw_scale:.4f}; "
+        f"scale_variant={config.name}; selected={len(accepted)}; raw_scale={raw_scale:.4f}; "
         f"object_weight={object_weight:.6f}; prior={config.prior:.4f}; "
         f"prior_weight={prior_weight:.6f}; aggregate={config.aggregate}; "
         f"source={config.candidate_source}."
     )
     return float(scale_factor), float(confidence), reason, candidates
-
-
-def apply_scene_extent_guard(
-    scale_factor: float,
-    scene_bounds: dict[str, Any] | None,
-    config: ScaleObservationConfig,
-) -> float:
-    if (
-        scene_bounds is None
-        or config.max_scene_extent_m is None
-        or config.scene_extent_guard_strength <= 0
-        or not np.isfinite(scale_factor)
-        or scale_factor <= 0
-    ):
-        return float(scale_factor)
-    dims = [
-        float(scene_bounds.get("width_m", math.nan)),
-        float(scene_bounds.get("height_m", math.nan)),
-        float(scene_bounds.get("length_m", math.nan)),
-    ]
-    finite_dims = [value for value in dims if np.isfinite(value) and value > 0]
-    if not finite_dims:
-        return float(scale_factor)
-    max_generated = max(finite_dims)
-    if max_generated * scale_factor <= config.max_scene_extent_m:
-        return float(scale_factor)
-    guarded_scale = config.max_scene_extent_m / max_generated
-    strength = min(1.0, max(0.0, config.scene_extent_guard_strength))
-    return float(
-        math.exp((1.0 - strength) * math.log(scale_factor) + strength * math.log(guarded_scale))
-    )

@@ -53,6 +53,17 @@ PROMOTED_TASKS: tuple[TaskDescriptor, ...] = (
         docs_path="annotation/object_mask_annotation_3d.md",
     ),
     TaskDescriptor(
+        name="Scene Mask Annotation 3D",
+        slug="scene-mask-annotation-3d",
+        category="Annotation",
+        status="promoted",
+        experimental=False,
+        python_import="vizion3d.annotation.SceneMaskAnnotation3D",
+        rest_endpoint="/annotation/scene-mask-annotation-3d",
+        grpc_method="RunSceneMaskAnnotation3D",
+        docs_path="annotation/scene_mask_annotation_3d.md",
+    ),
+    TaskDescriptor(
         name="Scale Observation",
         slug="scale-observation",
         category="Observation",

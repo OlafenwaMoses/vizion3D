@@ -1,11 +1,14 @@
 """
 gRPC server for the vizion3d Lifting service.
 
-Exposes three RPC methods:
+Exposes the LiftingService RPC methods:
 - ``RunDepthEstimation``   — monocular depth from a single image.
 - ``RunStereoDepth``       — metric depth from a rectified stereo image pair.
 - ``RunObjectMaskAnnotation3D``— detect, instance-segment, and mask-annotate
                                objects in a point cloud (image optional).
+- ``RunSceneMaskAnnotation3D`` — semantic-segment a scene and group point-cloud
+                               points by class (image optional).
+- ``RunScaleObservation``  — estimate metric scale from annotations.
 
 Start with::
 
@@ -22,9 +25,15 @@ import grpc
 import numpy as np
 from PIL import Image
 
-from vizion3d.annotation import ObjectMaskAnnotation3D, ObjectMaskAnnotation3DCommand
+from vizion3d.annotation import (
+    ObjectMaskAnnotation3D,
+    ObjectMaskAnnotation3DCommand,
+    SceneMaskAnnotation3D,
+    SceneMaskAnnotation3DCommand,
+)
 from vizion3d.annotation.defaults import DEFAULT_ANNOTATION_MODEL_URL
-from vizion3d.annotation.models import ObjectMaskAnnotation3DConfig
+from vizion3d.annotation.models import ObjectMaskAnnotation3DConfig, SceneMaskAnnotation3DConfig
+from vizion3d.annotation.scene_defaults import DEFAULT_SCENE_MODEL_URL
 from vizion3d.lifting import DepthEstimation, DepthEstimationCommand
 from vizion3d.lifting.defaults import DEFAULT_DEPTH_MODEL_URL
 from vizion3d.lifting.models import DepthEstimationAdvanceConfig
@@ -266,6 +275,75 @@ class LiftingServiceServicer(lifting_pb2_grpc.LiftingServiceServicer):
                 item.point_coords.append(lifting_pb2.FloatRow(values=coord))
             if ann.object_cloud is not None:
                 item.object_cloud_ply = _o3d_point_cloud_to_ply_bytes(ann.object_cloud)
+            response.annotations.append(item)
+
+        if result.annotated_cloud is not None:
+            response.annotated_cloud_ply = _o3d_point_cloud_to_ply_bytes(result.annotated_cloud)
+
+        return response
+
+    # ── RunSceneMaskAnnotation3D ──────────────────────────────────────────────
+
+    def RunSceneMaskAnnotation3D(self, request, context):
+        """Handle a 3D semantic scene annotation request.
+
+        Deserialises the input point cloud from PLY bytes, unmarshals the proto
+        config, dispatches through the CQRS command bus, and packs the per-class
+        semantic annotation results back into a proto response.
+
+        Args:
+            request: ``SceneMaskAnnotation3DRequest`` proto message.
+            context: gRPC server context.
+
+        Returns:
+            ``SceneMaskAnnotation3DResponse`` proto message.
+        """
+        point_cloud = _ply_bytes_to_o3d_point_cloud(request.point_cloud_ply)
+
+        base_cfg = SceneMaskAnnotation3DConfig()
+        if request.HasField("advanced_config"):
+            proto_cfg = request.advanced_config
+
+            def _f(field: str, default):
+                return getattr(proto_cfg, field) if proto_cfg.HasField(field) else default
+
+            base_cfg = SceneMaskAnnotation3DConfig(
+                fx=_f("fx", base_cfg.fx),
+                fy=_f("fy", base_cfg.fy),
+                cx=_f("cx", base_cfg.cx),
+                cy=_f("cy", base_cfg.cy),
+                inference_size=_f("inference_size", base_cfg.inference_size),
+            )
+
+        image_input = request.image_bytes if request.image_bytes else None
+
+        cmd = SceneMaskAnnotation3DCommand(
+            point_cloud=point_cloud,
+            image_input=image_input,
+            model_backend=request.model_backend or DEFAULT_SCENE_MODEL_URL,
+            return_region_clouds=request.return_region_clouds,
+            return_annotated_cloud=request.return_annotated_cloud,
+            advanced_config=base_cfg,
+        )
+        result = SceneMaskAnnotation3D().run(cmd)
+
+        response = lifting_pb2.SceneMaskAnnotation3DResponse(
+            backend_used=result.backend_used,
+        )
+
+        for ann in result.annotations:
+            item = lifting_pb2.SemanticMaskAnnotation3DItem(
+                label=ann.label,
+                class_id=ann.class_id,
+                bbox_2d=ann.bbox_2d,
+                mask_image=_mask_to_png_bytes(ann.mask_2d),
+                pixel_count=ann.pixel_count,
+                point_indices=ann.point_indices,
+            )
+            for coord in ann.point_coords:
+                item.point_coords.append(lifting_pb2.FloatRow(values=coord))
+            if ann.region_cloud is not None:
+                item.region_cloud_ply = _o3d_point_cloud_to_ply_bytes(ann.region_cloud)
             response.annotations.append(item)
 
         if result.annotated_cloud is not None:

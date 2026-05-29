@@ -15,6 +15,7 @@ has a direct Python facade and, where available, REST and gRPC adapters.
 | Task | Python import | REST |
 |---|---|---|
 | [Object Mask Annotation 3D](../annotation/object_mask_annotation_3d.md) | `vizion3d.annotation.ObjectMaskAnnotation3D` | `/annotation/object-mask-annotation-3d` |
+| [Scene Mask Annotation 3D](../annotation/scene_mask_annotation_3d.md) | `vizion3d.annotation.SceneMaskAnnotation3D` | `/annotation/scene-mask-annotation-3d` |
 
 ## Observation
 

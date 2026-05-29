@@ -36,6 +36,7 @@ nav:
           - Depth Estimation vs Stereo Depth: features/depth_estimation_vs_stereo_depth.md
       - Annotation:
           - Object Mask Annotation 3D: annotation/object_mask_annotation_3d.md
+          - Scene Mask Annotation 3D: annotation/scene_mask_annotation_3d.md
           - YOLOE-26L Prompt-Free Classes: annotation/yoloe_26l_prompt_free_classes.md
       - Observation:
           - Scale Observation: observation/scale_observation.md

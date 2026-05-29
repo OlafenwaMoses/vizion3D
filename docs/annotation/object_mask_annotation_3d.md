@@ -628,10 +628,12 @@ Recommended use:
   and higher closed-set COCO segmentation accuracy is preferred.
 - Use `yoloe-26l-seg-pf.pt` when broad prompt-free annotation is more important
   than COCO-only precision.
-- Treat `yoloe-26l-seg-pf.pt` as an annotation model for now. It is not yet a
-  strong fit for ScaleObservation, because most of its 4,585 labels do not yet
-  have calibrated metric object-size priors. ScaleObservation-specific guidance
-  will be documented separately.
+- For ScaleObservation, `yoloe-26l-seg-pf.pt` can provide additional useful
+  labels such as desks, cabinets, monitors, doors, and appliances. Most of its
+  4,585 labels still do not have calibrated metric priors, so unsupported labels
+  are ignored by the scale estimator. See
+  [Scale Observation](../observation/scale_observation.md#supported-scale-priors)
+  for the current prior list.
 
 The supported prompt-free labels are listed and grouped here:
 

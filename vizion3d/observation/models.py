@@ -13,22 +13,20 @@ from pydantic import BaseModel, ConfigDict, Field
 class ScaleObservationConfig(BaseModel):
     """Runtime configuration for the promoted ScaleObservation estimator."""
 
-    name: str = "v4_iter_402_lower_quantile_mean_blend"
-    candidate_source: str = "strong"
-    aggregate: str = "lower_quantile_mean_blend"
+    name: str = "v4_1_yoloe_strong_dimension_class_trimmed_huber"
+    candidate_source: str = "yoloe_strong"
+    aggregate: str = "dimension_class_trimmed_huber"
     prior: float = 0.30
-    prior_weight: float = 0.02
-    quality_power: float = 0.15
+    prior_weight: float = 0.015
+    quality_power: float = 0.20
     confidence_power: float = 1.0
     min_candidate_weight: float = 1e-6
     no_candidate: str = "prior"
-    prior_weight_power: float = 1.5
+    prior_weight_power: float = 1.75
     winsor_quantile: float = 0.08
     huber_delta: float = 0.12
     object_weight_power: float = 1.1
     min_object_weight: float = 0.02
-    max_scene_extent_m: float | None = 5.8
-    scene_extent_guard_strength: float = 0.0
 
 
 class ScaleObservationAdvancedConfig(BaseModel):
@@ -46,6 +44,8 @@ class ScaleCandidate(BaseModel):
     """Single object/dimension-derived scale candidate."""
 
     label: str
+    canonical_label: str | None = None
+    prior_source: str = "unknown"
     dimension: str
     observed_relative: float
     prior_m: float
@@ -73,6 +73,8 @@ class ObjectScaleObservation(BaseModel):
 
     instance_id: int
     label: str
+    canonical_label: str | None = None
+    prior_source: str = "unknown"
     class_id: int | None
     confidence: float
     bbox_2d: list[float]
