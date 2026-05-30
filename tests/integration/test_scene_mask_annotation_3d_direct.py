@@ -86,7 +86,15 @@ def test_direct_default_model(
         elapsed = time.perf_counter() - t0
         timings.append(elapsed)
         _save_outputs(result, run_dir, run)
-        timing_collector.add("Direct", "Scene default", run, elapsed, str(run_dir))
+        timing_collector.add(
+            "Direct",
+            "Scene default",
+            run,
+            elapsed,
+            str(run_dir),
+            task="Scene Mask Annotation 3D",
+            model="SegFormer-B4 ADE20K",
+        )
 
         assert isinstance(result.annotations, list)
         assert len(result.annotations) >= 1

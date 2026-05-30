@@ -191,7 +191,16 @@ def test_scale_observation_direct_outputs_params_advanced_config_and_timing(
         )
         elapsed = time.perf_counter() - t0
         timings.append(elapsed)
-        timing_collector.add("Scale Direct", "Indoor asset", run, elapsed, str(run_dir))
+        timing_collector.add(
+            "Direct",
+            "Indoor asset",
+            run,
+            elapsed,
+            str(run_dir),
+            task="Scale Observation",
+            model="V4.1",
+            device="CPU",
+        )
         _save_direct_outputs(result, run_dir, run)
 
         _assert_scale_output(result)
@@ -244,7 +253,16 @@ def test_scale_observation_rest_outputs_params_advanced_config_and_timing(
         )
         elapsed = time.perf_counter() - t0
         timings.append(elapsed)
-        timing_collector.add("Scale REST", "Indoor asset", run, elapsed, str(run_dir))
+        timing_collector.add(
+            "REST",
+            "Indoor asset",
+            run,
+            elapsed,
+            str(run_dir),
+            task="Scale Observation",
+            model="V4.1",
+            device="CPU",
+        )
 
         assert response.status_code == 200, response.text[:300]
         data = response.json()
@@ -303,7 +321,16 @@ def test_scale_observation_grpc_outputs_params_advanced_config_and_timing(
         response = grpc_client_stub.RunScaleObservation(request)
         elapsed = time.perf_counter() - t0
         timings.append(elapsed)
-        timing_collector.add("Scale gRPC", "Indoor asset", run, elapsed, str(run_dir))
+        timing_collector.add(
+            "gRPC",
+            "Indoor asset",
+            run,
+            elapsed,
+            str(run_dir),
+            task="Scale Observation",
+            model="V4.1",
+            device="CPU",
+        )
 
         Path(run_dir / f"run_{run:02d}.json").write_text(
             json.dumps(

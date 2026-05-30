@@ -93,7 +93,15 @@ def test_rest_default_model(
         assert response.status_code == 200, response.text[:300]
         data = response.json()
         _save_outputs(data, run_dir, run)
-        timing_collector.add("REST", "Scene default", run, elapsed, str(run_dir))
+        timing_collector.add(
+            "REST",
+            "Scene default",
+            run,
+            elapsed,
+            str(run_dir),
+            task="Scene Mask Annotation 3D",
+            model="SegFormer-B4 ADE20K",
+        )
 
         assert "annotations" in data and "backend_used" in data
         assert len(data["annotations"]) >= 1

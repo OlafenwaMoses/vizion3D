@@ -89,7 +89,15 @@ def _run_group(
         timings.append(elapsed)
 
         _save_outputs(result, run_dir, run)
-        timing_collector.add(entry_point, scenario, run, elapsed, str(run_dir))
+        timing_collector.add(
+            entry_point,
+            scenario,
+            run,
+            elapsed,
+            str(run_dir),
+            task="Stereo Depth",
+            model=scenario,
+        )
 
         assert isinstance(result.depth_map, list) and len(result.depth_map) > 0
         assert all(isinstance(row, list) for row in result.depth_map)

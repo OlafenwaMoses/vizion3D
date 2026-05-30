@@ -88,7 +88,15 @@ def _run_group(
         assert response.status_code == 200, response.text[:300]
         data = response.json()
         _save_outputs(data, run_dir, run)
-        timing_collector.add("REST", scenario, run, elapsed, str(run_dir))
+        timing_collector.add(
+            "REST",
+            scenario,
+            run,
+            elapsed,
+            str(run_dir),
+            task="Object Mask Annotation 3D",
+            model=scenario,
+        )
 
         assert "annotations" in data and "backend_used" in data
         for ann in data["annotations"]:

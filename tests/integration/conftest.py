@@ -42,7 +42,10 @@ ASSETS_DIR = Path(__file__).parent.parent / "assets"
 
 @dataclass
 class TimingRecord:
+    task: str
+    model: str
     entry_point: str
+    device: str
     scenario: str
     run: int
     duration: float
@@ -60,8 +63,48 @@ class InferenceTimingCollector:
         run: int,
         duration: float,
         output_dir: str = "",
+        *,
+        task: str | None = None,
+        model: str | None = None,
+        device: str | None = None,
     ) -> None:
-        self.records.append(TimingRecord(entry_point, scenario, run, duration, output_dir))
+        resolved_task, resolved_entry_point = _normalise_task_entrypoint(task, entry_point)
+        self.records.append(
+            TimingRecord(
+                task=resolved_task,
+                model=model or scenario,
+                entry_point=resolved_entry_point,
+                device=device or _default_device_for_task(resolved_task),
+                scenario=scenario,
+                run=run,
+                duration=duration,
+                output_dir=output_dir,
+            )
+        )
+
+
+def _normalise_task_entrypoint(task: str | None, entry_point: str) -> tuple[str, str]:
+    if task:
+        return task, entry_point
+    if entry_point.startswith("Scale "):
+        return "Scale Observation", entry_point.removeprefix("Scale ")
+    if entry_point.startswith("Stereo "):
+        return "Stereo Depth", entry_point.removeprefix("Stereo ")
+    return "Unknown", entry_point
+
+
+def _default_device_for_task(task: str) -> str:
+    if task == "Scale Observation":
+        return "CPU"
+    try:
+        import torch
+    except ImportError:
+        return "CPU"
+    if torch.cuda.is_available():
+        return "CUDA"
+    if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+        return "MPS"
+    return "CPU"
 
 
 # Module-level singleton — pytest_terminal_summary reads from it after the session
@@ -315,12 +358,14 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):  # noqa: ARG0
     if not records:
         return
 
-    W = 82
-    EP = 10  # entry-point col width
-    SC = 16  # scenario col width
-    RN = 4  # run col width
-    DU = 10  # duration col width
-    ST = 20  # status col width
+    W = 120
+    TASK = 28
+    MODEL = 16
+    EP = 10
+    DEV = 7
+    COLD = 17
+    WARM = 17
+    FPS = 13
 
     def _write(line: str = "") -> None:
         terminalreporter.write_line(line)
@@ -329,24 +374,38 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):  # noqa: ARG0
         _write("━" * W)
 
     def _thin() -> None:
-        _write(f"  {'─' * EP}─┼─{'─' * SC}─┼─{'─' * RN}─┼─{'─' * (DU)}─┼─{'─' * ST}")
+        _write(
+            f"  {'─' * TASK}─┼─{'─' * MODEL}─┼─{'─' * EP}─┼─{'─' * DEV}─┼─"
+            f"{'─' * COLD}─┼─{'─' * WARM}─┼─{'─' * FPS}"
+        )
 
-    def _row(ep="", sc="", run="", dur="", status="") -> None:
-        _write(f"  {ep:<{EP}} │ {sc:<{SC}} │ {run:^{RN}} │ {dur:>{DU}} │ {status}")
+    def _row(task="", model="", entrypoint="", device="", cold="", warm="", fps="") -> None:
+        _write(
+            f"  {task:<{TASK}} │ {model:<{MODEL}} │ {entrypoint:<{EP}} │ {device:<{DEV}} │ "
+            f"{cold:>{COLD}} │ {warm:>{WARM}} │ {fps:>{FPS}}"
+        )
 
     _write()
     _thick()
     _write(f"  {'VIZION3D  ·  INTEGRATION INFERENCE TIMING REPORT':^{W - 4}}")
     _thick()
     _write()
-    _row("Entry Point", "Scenario", "Run", "Duration", "Status")
+    _row(
+        "Task",
+        "Model",
+        "Entrypoint",
+        "Device",
+        "Cold run duration",
+        "Warm run duration",
+        "Estimated FPS",
+    )
     _thin()
 
     def sort_key(r):
-        return (r.entry_point, r.scenario, r.run)
+        return (r.task, r.model, r.entry_point, r.device, r.run)
 
     def group_key(r):
-        return (r.entry_point, r.scenario)
+        return (r.task, r.model, r.entry_point, r.device)
 
     first_loads: list[float] = []
     warm_times: list[float] = []
@@ -354,27 +413,28 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):  # noqa: ARG0
     sorted_records = sorted(records, key=sort_key)
     groups = [(k, list(v)) for k, v in groupby(sorted_records, key=group_key)]
 
-    for g_idx, ((ep, sc), recs) in enumerate(groups):
+    for g_idx, ((task, model, entrypoint, device), recs) in enumerate(groups):
+        recs = sorted(recs, key=lambda r: r.run)
+        cold_runs = [r.duration for r in recs if r.run == 1]
+        warm_runs = [r.duration for r in recs if r.run != 1]
+        cold = min(cold_runs) if cold_runs else recs[0].duration
+        warm = sum(warm_runs) / len(warm_runs) if warm_runs else 0.0
+        fps = 1.0 / warm if warm > 0 else 0.0
+        first_loads.append(cold)
+        if warm_runs:
+            warm_times.extend(warm_runs)
+
         if g_idx > 0:
             _thin()
-
-        recs = sorted(recs, key=lambda r: r.run)
-        first_dur = recs[0].duration
-
-        for i, rec in enumerate(recs):
-            ep_label = ep if i == 0 else ""
-            sc_label = sc if i == 0 else ""
-            dur_str = f"{rec.duration:7.3f}s"
-
-            if rec.run == 1:
-                status = "◉ COLD LOAD"
-                first_loads.append(rec.duration)
-            else:
-                pct = (1.0 - rec.duration / first_dur) * 100.0
-                status = f"⚡ {pct:4.1f}% faster"
-                warm_times.append(rec.duration)
-
-            _row(ep_label, sc_label, str(rec.run), dur_str, status)
+        _row(
+            task,
+            model,
+            entrypoint,
+            device,
+            f"{cold:.3f}s",
+            f"{warm:.3f}s" if warm_runs else "n/a",
+            f"{fps:.2f}" if warm_runs else "n/a",
+        )
 
     _write()
     _thick()

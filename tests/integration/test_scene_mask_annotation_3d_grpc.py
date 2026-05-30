@@ -59,7 +59,15 @@ def test_grpc_basic_scene_annotation(
         response = grpc_client_stub.RunSceneMaskAnnotation3D(request)
         elapsed = time.perf_counter() - t0
         timings.append(elapsed)
-        timing_collector.add("gRPC", "Scene default", run, elapsed, str(tmp_path))
+        timing_collector.add(
+            "gRPC",
+            "Scene default",
+            run,
+            elapsed,
+            str(tmp_path),
+            task="Scene Mask Annotation 3D",
+            model="SegFormer-B4 ADE20K",
+        )
 
         assert isinstance(response.backend_used, str) and response.backend_used
         assert len(response.annotations) >= 1

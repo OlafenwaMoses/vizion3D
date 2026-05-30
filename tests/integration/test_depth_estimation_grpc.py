@@ -76,7 +76,15 @@ def _run_group(
         timings.append(elapsed)
 
         _save_outputs(response, run_dir, run)
-        timing_collector.add("gRPC", scenario, run, elapsed, str(run_dir))
+        timing_collector.add(
+            "gRPC",
+            scenario,
+            run,
+            elapsed,
+            str(run_dir),
+            task="Depth Estimation",
+            model=scenario,
+        )
 
         # ── per-run assertions ────────────────────────────────────────────────
         assert len(response.depth_map) > 0, "depth_map rows are missing"
