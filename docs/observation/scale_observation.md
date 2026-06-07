@@ -209,6 +209,78 @@ Common aliases are normalised before lookup. Examples include `sofa` → `couch`
 
 ---
 
+## How the Priors Were Generated
+
+ScaleObservation relies on two distinct per-class tables, derived in two
+different ways. Both live in
+[`vizion3d/observation/defaults.py`](https://github.com/OlafenwaMoses/vizion3D/blob/main/vizion3d/observation/defaults.py).
+
+### 1. Size priors — hand-authored physical references
+
+The size priors (`SCALE_SIZE_PRIORS_M`, made up of the COCO and YOLOE tables)
+are **not fitted from any dataset**. Each class stores, per dimension, a
+`(mean_m, sigma_m)` pair plus a coarse per-class reliability weight `r`:
+
+- `mean_m` — a representative real-world size in metres.
+- `sigma_m` — a deliberately wide spread, because these are *priors*, not exact
+  measurements. High-variance classes (vase, potted plant, box) get large sigmas
+  and low `r`.
+- `r` — how much the class is trusted to drive scene scale at all.
+
+The means and sigmas are taken from public reference catalogues, and the source
+for each class is recorded inline in `defaults.py`. The families used are:
+
+| Class group | Reference source |
+|---|---|
+| `person` | CDC/NCHS adult stature tables (height); broad body-envelope for width/depth |
+| `chair` | BIFMA / ergonomic chair ranges and product dimensions |
+| `couch`, `bed`, `dining table`, `sink` | Dimensions.com collections and common product sizes |
+| `toilet` | Rempros / Angi toilet dimension guides |
+| `tv` | Dimensions.com display references (43–55 in) |
+| `refrigerator` | RTINGS refrigerator size guide |
+| `microwave`, `oven`, electronics | KitchenAid / Wayfair guides and common product specifications |
+| Expanded YOLOE furniture, fixtures, appliances | Common product-dimension references, authored the same way |
+
+A per-class/per-dimension **reliability table**
+(`DIMENSION_RELIABILITY_BY_LABEL`) is likewise hand-tuned. It encodes which axes
+of a class are stable enough to influence scene scale — for example a person's
+height is trusted while their depth is not, and a TV's thin depth is treated as
+near-useless.
+
+### 2. Calibration corrections — learned from ground truth
+
+The calibration table (`CALIBRATED_SCALE_CORRECTION_BY_LABEL_DIM`) **is** learned
+from data. It is applied as a per-class/per-dimension multiplier on each
+candidate's proposed scale, correcting systematic biases in how the monocular
+depth backend sizes objects.
+
+It was derived from a full **SUN RGB-D** pipeline run (originally the first
+object-consensus pass). For every accepted object/dimension candidate:
+
+1. Recover the candidate's uncalibrated scale.
+2. Compare it to the ground-truth **dimension-specific scene scale**, i.e.
+   `gt_bounds[dim] / generated_bounds[dim]` for that axis.
+3. Take the per-`(label, dimension)` correction as the robust **median** of
+   those ratios.
+4. **Shrink toward 1.0** when a class has little support, so rarely-seen classes
+   do not receive over-confident corrections.
+
+Because the depth backend systematically over-sizes objects, most learned
+factors are below `1.0` (for example `tv` height ≈ `0.46`, `chair` height ≈
+`0.57`). Classes and dimensions without an entry default to `1.0`
+(uncalibrated) — this currently includes all the expanded YOLOE classes.
+
+The derivation is reproducible (and extensible to new classes) with the research
+script:
+
+```bash
+uv run python research/SCALE_OBSERVATION_RESEARCH/derive_scale_calibration.py \
+    research/SCALE_OBSERVATION_RESEARCH/outputs/scale_observation_v4_current \
+    --min-support 8 --shrink-k 12
+```
+
+---
+
 ## Command Parameters
 
 `ScaleObservationCommand` is the direct Python input contract.

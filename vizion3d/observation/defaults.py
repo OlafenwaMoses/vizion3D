@@ -1,37 +1,86 @@
-"""Defaults and semantic priors for ScaleObservation."""
+"""Defaults and semantic priors for ScaleObservation.
+
+How these tables were generated
+-------------------------------
+ScaleObservation uses two distinct kinds of per-class knowledge, derived two
+different ways:
+
+1. **Size priors** (``SCALE_SIZE_PRIORS_M`` = COCO + YOLOE tables below). These
+   are *hand-authored* broad physical priors, NOT fitted from any dataset. Each
+   entry is ``{dimension: (mean_m, sigma_m), ..., "r": reliability}`` where
+   ``mean_m``/``sigma_m`` are a real-world size estimate and its spread in
+   metres, and ``r`` is a coarse per-class trust weight. Means/sigmas are taken
+   from public reference catalogues (anthropometric stature tables, furniture
+   and appliance size guides, common product specifications); the per-class
+   ``# Source:`` comments record where each came from. Sigmas are intentionally
+   wide -- these are size *priors*, not exact dimensions.
+
+2. **Calibration corrections** (``CALIBRATED_SCALE_CORRECTION_BY_LABEL_DIM``).
+   These ARE learned from data -- see the comment on that table for the method
+   and the reproduction script.
+
+The per-dimension reliability weights (``DIMENSION_RELIABILITY_BY_LABEL``) are
+also hand-tuned: they encode which axes of a class are stable enough to drive
+scene scale (e.g. a person's height is trustworthy, their depth is not).
+"""
 
 from __future__ import annotations
 
+# COCO-aligned size priors, in metres. Intentionally broad physical priors, not
+# exact object dimensions. Each value is ``(mean_m, sigma_m)``; ``r`` is the
+# per-class reliability weight. Sources are cited per class below.
 COCO_SIZE_PRIORS_M: dict[str, dict[str, object]] = {
+    # Source: CDC/NCHS adult stature references for height; width/depth are broad
+    # body-envelope priors, not a fixed anthropometric standard.
     "person": {"height": (1.70, 0.15), "width": (0.45, 0.10), "depth": (0.30, 0.10), "r": 0.80},
+    # Source: BIFMA/ergonomic chair ranges and common dining/office chair product dimensions.
     "chair": {"height": (0.85, 0.18), "width": (0.50, 0.12), "depth": (0.55, 0.14), "r": 0.70},
+    # Source: Dimensions.com sofa/couch references and common 2-3 seat sofa product ranges.
     "couch": {"height": (0.85, 0.18), "width": (2.00, 0.45), "depth": (0.90, 0.20), "r": 0.65},
+    # Source: Dimensions.com queen bed / Sleep Foundation queen mattress dimensions;
+    # height includes a broad mattress/frame allowance.
     "bed": {"height": (0.60, 0.18), "width": (1.60, 0.35), "depth": (2.05, 0.30), "r": 0.75},
+    # Source: Dimensions.com dining table collection and common 4-person table dimensions.
     "dining table": {
         "height": (0.75, 0.08),
         "width": (1.40, 0.40),
         "depth": (0.90, 0.25),
         "r": 0.65,
     },
+    # Source: Rempros/Angi toilet dimension guides; height/depth cover tank and bowl envelope.
     "toilet": {"height": (0.75, 0.10), "width": (0.38, 0.08), "depth": (0.70, 0.12), "r": 0.80},
+    # Source: Dimensions.com TV display references and common 43-55 inch TV sizes.
     "tv": {"height": (0.65, 0.25), "width": (1.10, 0.40), "depth": (0.08, 0.05), "r": 0.60},
+    # Source: common 13-15 inch laptop product specifications; very weak height prior.
     "laptop": {"height": (0.02, 0.01), "width": (0.34, 0.06), "depth": (0.24, 0.04), "r": 0.45},
+    # Source: common full-size keyboard specifications, approximately 17 x 5.5 inches.
     "keyboard": {"height": (0.03, 0.01), "width": (0.43, 0.08), "depth": (0.14, 0.04), "r": 0.45},
+    # Source: common desktop mouse product specifications.
     "mouse": {"height": (0.04, 0.02), "width": (0.065, 0.02), "depth": (0.11, 0.03), "r": 0.35},
+    # Source: ISO/US common book trim sizes; intentionally broad due to high variation.
     "book": {"height": (0.03, 0.02), "width": (0.18, 0.08), "depth": (0.25, 0.08), "r": 0.35},
+    # Source: RTINGS refrigerator size guide and common full-size fridge product ranges.
     "refrigerator": {
         "height": (1.70, 0.25),
         "width": (0.75, 0.15),
         "depth": (0.75, 0.15),
         "r": 0.80,
     },
+    # Source: KitchenAid/Wayfair microwave size guides; typical countertop/OTR envelope.
     "microwave": {"height": (0.30, 0.08), "width": (0.50, 0.10), "depth": (0.40, 0.08), "r": 0.65},
+    # Source: common 24 inch built-in/range oven product dimensions.
     "oven": {"height": (0.75, 0.15), "width": (0.60, 0.10), "depth": (0.60, 0.10), "r": 0.70},
+    # Source: Dimensions.com kitchen sink collection and common 22 x 30 inch sink guides.
     "sink": {"height": (0.20, 0.10), "width": (0.55, 0.18), "depth": (0.45, 0.15), "r": 0.45},
+    # Source: common decorative vase product dimensions; high variance, low reliability.
     "vase": {"height": (0.30, 0.18), "width": (0.16, 0.10), "depth": (0.16, 0.10), "r": 0.30},
+    # Source: common beverage bottle dimensions; high category variance.
     "bottle": {"height": (0.25, 0.12), "width": (0.08, 0.04), "depth": (0.08, 0.04), "r": 0.35},
+    # Source: Dimensions.com coffee mug/cup references and common mug product dimensions.
     "cup": {"height": (0.10, 0.04), "width": (0.08, 0.03), "depth": (0.08, 0.03), "r": 0.30},
+    # Source: common cereal/soup bowl product dimensions; high category variance.
     "bowl": {"height": (0.08, 0.04), "width": (0.18, 0.08), "depth": (0.18, 0.08), "r": 0.30},
+    # Source: common indoor potted plant product ranges; intentionally weak prior.
     "potted plant": {
         "height": (0.70, 0.45),
         "width": (0.45, 0.30),
@@ -42,6 +91,10 @@ COCO_SIZE_PRIORS_M: dict[str, dict[str, object]] = {
 
 DEFAULT_DIMENSION_RELIABILITY = {"height": 0.75, "width": 0.65, "depth": 0.35}
 
+# Hand-tuned per-class/per-dimension trust weights in [0, 1]. The prior means
+# above stay as broad size references; these weights control whether a given
+# axis is stable enough to drive scene scale (e.g. person height is reliable,
+# person depth is not; a tv's thin depth is near-useless).
 DIMENSION_RELIABILITY_BY_LABEL: dict[str, dict[str, float]] = {
     "person": {"height": 0.90, "width": 0.25, "depth": 0.10},
     "chair": {"height": 0.65, "width": 0.55, "depth": 0.45},
@@ -68,6 +121,13 @@ DIMENSION_RELIABILITY_BY_LABEL: dict[str, dict[str, float]] = {
 COCO_PRIOR_LABELS = frozenset(COCO_SIZE_PRIORS_M)
 
 
+# Expanded prompt-free YOLOE size priors, in metres. Same authoring method and
+# format as COCO_SIZE_PRIORS_M above: hand-set ``(mean_m, sigma_m)`` from common
+# furniture/fixture/appliance/electronics product-dimension references, not
+# fitted from data. These are consumed only when ObjectMaskAnnotation3D is run
+# with the YOLOE prompt-free checkpoint, which emits this wider label set.
+# NOTE: these classes have no entry in CALIBRATED_SCALE_CORRECTION_BY_LABEL_DIM
+# yet, so their calibration factor defaults to 1.0 (uncalibrated).
 YOLOE_SIZE_PRIORS_M: dict[str, dict[str, object]] = {
     "armchair": {"height": (0.90, 0.18), "width": (0.78, 0.22), "depth": (0.82, 0.20), "r": 0.62},
     "office chair": {
@@ -315,6 +375,20 @@ DIMENSION_RELIABILITY_BY_LABEL = {
 }
 
 
+# Learned (not hand-authored) per-class/per-dimension scale corrections, applied
+# as multipliers on each candidate's proposed scale at
+# scale.py:calibration_factor(). Derivation: from a full SUN RGB-D pipeline run
+# (originally the first v2_scene_object_consensus pass), each accepted
+# object/dimension candidate's *uncalibrated* scale was compared to the
+# ground-truth dimension-specific scene scale (gt_bounds[dim] / generated_bounds[dim]);
+# the per-(label, dimension) correction is the robust median of those ratios,
+# shrunk toward 1.0 when class support is low. Values < 1.0 dominate because the
+# monocular-depth backend systematically over-sizes objects. Classes/dimensions
+# absent here default to 1.0.
+#
+# Reproduce / extend (e.g. to add the YOLOE classes) with:
+#   uv run python research/SCALE_OBSERVATION_RESEARCH/derive_scale_calibration.py \
+#       research/SCALE_OBSERVATION_RESEARCH/outputs/scale_observation_v4_current
 CALIBRATED_SCALE_CORRECTION_BY_LABEL_DIM: dict[str, dict[str, float]] = {
     "bed": {"depth": 0.6757},
     "book": {"height": 1.0, "width": 0.6788, "depth": 0.4039},
