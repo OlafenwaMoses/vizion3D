@@ -210,6 +210,13 @@ Each task lives in its own module under `vizion3d/<category>/` and exposes exact
 | Task | Status | Docs |
 |---|---|---|
 | Object mask annotation 3D | Stable | [Object Mask Annotation 3D](annotation/object_mask_annotation_3d.md) |
+| Scene mask annotation 3D | Stable | [Scene Mask Annotation 3D](annotation/scene_mask_annotation_3d.md) |
+
+### Observation
+
+| Task | Status | Docs |
+|---|---|---|
+| Scale Observation | Stable | [Scale Observation](observation/scale_observation.md) |
 
 ---
 

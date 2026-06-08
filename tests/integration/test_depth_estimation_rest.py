@@ -81,7 +81,15 @@ def _run_group(
 
         data = response.json()
         _save_outputs(data, run_dir, run)
-        timing_collector.add("REST", scenario, run, elapsed, str(run_dir))
+        timing_collector.add(
+            "REST",
+            scenario,
+            run,
+            elapsed,
+            str(run_dir),
+            task="Depth Estimation",
+            model=scenario,
+        )
 
         # ── per-run assertions ────────────────────────────────────────────────
         assert isinstance(data["depth_map"], list) and len(data["depth_map"]) > 0

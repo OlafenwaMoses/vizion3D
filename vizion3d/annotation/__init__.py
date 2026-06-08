@@ -1,14 +1,19 @@
 from vizion3d.core.container import command_bus, register_command_handler
 
-from .commands import ObjectMaskAnnotation3DCommand
+from .commands import ObjectMaskAnnotation3DCommand, SceneMaskAnnotation3DCommand
 from .handlers import ObjectMaskAnnotation3DHandler
 from .models import (
     MaskAnnotation3D,
     ObjectMaskAnnotation3DConfig,
     ObjectMaskAnnotation3DResult,
+    SceneMaskAnnotation3DConfig,
+    SceneMaskAnnotation3DResult,
+    SemanticMaskAnnotation3D,
 )
+from .scene_handlers import SceneMaskAnnotation3DHandler
 
 register_command_handler(ObjectMaskAnnotation3DCommand, ObjectMaskAnnotation3DHandler)
+register_command_handler(SceneMaskAnnotation3DCommand, SceneMaskAnnotation3DHandler)
 
 
 class ObjectMaskAnnotation3D:
@@ -43,10 +48,44 @@ class ObjectMaskAnnotation3D:
         return command_bus.dispatch(command)
 
 
+class SceneMaskAnnotation3D:
+    """Facade for the SceneMaskAnnotation3D task.
+
+    Runs SegFormer semantic segmentation (ADE20K, 150 classes) on a 2D image
+    (or a synthesised front-view of the point cloud when no image is supplied),
+    then groups the matching 3D points by semantic class via camera
+    back-projection.  The result has one entry per *class* present in the scene
+    (walls, floor, furniture, …), plus an optional annotated cloud recoloured by
+    the ADE20K palette.
+
+    Example::
+
+        import open3d as o3d
+        from vizion3d.annotation import SceneMaskAnnotation3D, SceneMaskAnnotation3DCommand
+
+        pcd = o3d.io.read_point_cloud("scene.ply")
+        result = SceneMaskAnnotation3D().run(
+            SceneMaskAnnotation3DCommand(
+                point_cloud=pcd,
+                image_input="scene.png",
+                return_annotated_cloud=True,
+            )
+        )
+    """
+
+    def run(self, command: SceneMaskAnnotation3DCommand) -> SceneMaskAnnotation3DResult:
+        return command_bus.dispatch(command)
+
+
 __all__ = [
     "ObjectMaskAnnotation3D",
     "ObjectMaskAnnotation3DCommand",
     "ObjectMaskAnnotation3DConfig",
     "ObjectMaskAnnotation3DResult",
     "MaskAnnotation3D",
+    "SceneMaskAnnotation3D",
+    "SceneMaskAnnotation3DCommand",
+    "SceneMaskAnnotation3DConfig",
+    "SceneMaskAnnotation3DResult",
+    "SemanticMaskAnnotation3D",
 ]
