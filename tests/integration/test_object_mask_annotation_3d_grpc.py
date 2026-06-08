@@ -59,7 +59,15 @@ def test_grpc_basic_annotation(
         response = grpc_client_stub.RunObjectMaskAnnotation3D(request)
         elapsed = time.perf_counter() - t0
         timings.append(elapsed)
-        timing_collector.add("gRPC", "Default model", run, elapsed, str(tmp_path))
+        timing_collector.add(
+            "gRPC",
+            "Default model",
+            run,
+            elapsed,
+            str(tmp_path),
+            task="Object Mask Annotation 3D",
+            model="Default model",
+        )
 
         assert isinstance(response.backend_used, str) and response.backend_used
         for item in response.annotations:

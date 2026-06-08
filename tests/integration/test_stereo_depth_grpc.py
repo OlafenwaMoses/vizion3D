@@ -86,7 +86,15 @@ def _run_group(
         timings.append(elapsed)
 
         _save_outputs(response, run_dir, run)
-        timing_collector.add("Stereo gRPC", scenario, run, elapsed, str(run_dir))
+        timing_collector.add(
+            "gRPC",
+            scenario,
+            run,
+            elapsed,
+            str(run_dir),
+            task="Stereo Depth",
+            model=scenario,
+        )
 
         assert len(response.depth_map) > 0
         assert len(response.disparity_map) > 0

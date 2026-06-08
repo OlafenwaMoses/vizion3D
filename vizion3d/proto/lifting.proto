@@ -6,6 +6,8 @@ service LiftingService {
   rpc RunDepthEstimation (DepthEstimationRequest) returns (DepthEstimationResponse);
   rpc RunStereoDepth (StereoDepthRequest) returns (StereoDepthResponse);
   rpc RunObjectMaskAnnotation3D (ObjectMaskAnnotation3DRequest) returns (ObjectMaskAnnotation3DResponse);
+  rpc RunSceneMaskAnnotation3D (SceneMaskAnnotation3DRequest) returns (SceneMaskAnnotation3DResponse);
+  rpc RunScaleObservation (ScaleObservationRequest) returns (ScaleObservationResponse);
 }
 
 // ── Depth Estimation ──────────────────────────────────────────────────────────
@@ -110,4 +112,89 @@ message ObjectMaskAnnotation3DResponse {
   repeated MaskAnnotation3DItem annotations = 1;
   bytes annotated_cloud_ply = 2;  // optional full cloud with object colours
   string backend_used = 3;
+}
+
+// ── SceneMaskAnnotation3D (semantic) ──────────────────────────────────────────
+
+message SceneMaskAnnotation3DConfig {
+  optional float fx = 1;
+  optional float fy = 2;
+  optional float cx = 3;
+  optional float cy = 4;
+  optional int32 inference_size = 5;
+}
+
+message SceneMaskAnnotation3DRequest {
+  bytes image_bytes = 1;          // optional: empty = synthesise from point cloud
+  bytes point_cloud_ply = 2;
+  string model_backend = 3;
+  bool return_region_clouds = 4;
+  bool return_annotated_cloud = 5;
+  optional SceneMaskAnnotation3DConfig advanced_config = 6;
+}
+
+// Per-class semantic mask annotation entry in the response.
+message SemanticMaskAnnotation3DItem {
+  string label = 1;
+  int32 class_id = 2;                 // ADE20K class index (0..149)
+  repeated float bbox_2d = 3;         // [x1, y1, x2, y2] of the class region
+  bytes mask_image = 4;               // PNG-encoded uint8 grayscale mask (255=class)
+  int32 pixel_count = 5;
+  repeated int32 point_indices = 6;   // indices into the input point cloud
+  repeated FloatRow point_coords = 7; // Nx3 [x, y, z] coordinates in metres
+  bytes region_cloud_ply = 8;         // optional extracted PLY for this class
+}
+
+message SceneMaskAnnotation3DResponse {
+  repeated SemanticMaskAnnotation3DItem annotations = 1;
+  bytes annotated_cloud_ply = 2;  // optional full cloud with class palette colours
+  string backend_used = 3;
+}
+
+// ── ScaleObservation ─────────────────────────────────────────────────────────
+
+message ScaleObservationAnnotation {
+  string label = 1;
+  int32 class_id = 2;
+  float confidence = 3;
+  repeated float bbox_2d = 4;
+  repeated FloatRow point_coords = 5;
+  bytes mask_image = 6;               // PNG-encoded uint8 grayscale mask (255=object)
+}
+
+message ScaleObservationRequest {
+  bytes point_cloud_ply = 1;
+  repeated ScaleObservationAnnotation annotations = 2;
+  bool return_scaled_point_cloud = 3;
+  bool return_scaled_depth = 4;
+  bool return_report = 5;
+  optional int32 image_width = 6;
+  optional int32 image_height = 7;
+  optional float fx = 8;
+  optional float fy = 9;
+  optional float cx = 10;
+  optional float cy = 11;
+}
+
+message ScaleCandidateItem {
+  string label = 1;
+  string dimension = 2;
+  float observed_relative = 3;
+  float prior_m = 4;
+  float scale = 5;
+  float weight = 6;
+  bool accepted = 7;
+  string rejection_reason = 8;
+}
+
+message ScaleObservationResponse {
+  float scale_factor = 1;
+  float scale_confidence = 2;
+  string scale_confidence_reason = 3;
+  string algorithm_version = 4;
+  int32 accepted_candidates = 5;
+  int32 rejected_candidates = 6;
+  repeated ScaleCandidateItem candidates = 7;
+  bytes scaled_point_cloud_ply = 8;
+  bytes scaled_depth_png = 9;
 }

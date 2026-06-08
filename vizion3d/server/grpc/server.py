@@ -1,11 +1,14 @@
 """
 gRPC server for the vizion3d Lifting service.
 
-Exposes three RPC methods:
+Exposes the LiftingService RPC methods:
 - ``RunDepthEstimation``   — monocular depth from a single image.
 - ``RunStereoDepth``       — metric depth from a rectified stereo image pair.
 - ``RunObjectMaskAnnotation3D``— detect, instance-segment, and mask-annotate
                                objects in a point cloud (image optional).
+- ``RunSceneMaskAnnotation3D`` — semantic-segment a scene and group point-cloud
+                               points by class (image optional).
+- ``RunScaleObservation``  — estimate metric scale from annotations.
 
 Start with::
 
@@ -22,13 +25,24 @@ import grpc
 import numpy as np
 from PIL import Image
 
-from vizion3d.annotation import ObjectMaskAnnotation3D, ObjectMaskAnnotation3DCommand
+from vizion3d.annotation import (
+    ObjectMaskAnnotation3D,
+    ObjectMaskAnnotation3DCommand,
+    SceneMaskAnnotation3D,
+    SceneMaskAnnotation3DCommand,
+)
 from vizion3d.annotation.defaults import DEFAULT_ANNOTATION_MODEL_URL
-from vizion3d.annotation.models import ObjectMaskAnnotation3DConfig
+from vizion3d.annotation.models import ObjectMaskAnnotation3DConfig, SceneMaskAnnotation3DConfig
+from vizion3d.annotation.scene_defaults import DEFAULT_SCENE_MODEL_URL
 from vizion3d.lifting import DepthEstimation, DepthEstimationCommand
 from vizion3d.lifting.defaults import DEFAULT_DEPTH_MODEL_URL
 from vizion3d.lifting.models import DepthEstimationAdvanceConfig
 from vizion3d.lifting.utils import create_ply_binary
+from vizion3d.observation import (
+    ScaleObservation,
+    ScaleObservationAdvancedConfig,
+    ScaleObservationCommand,
+)
 from vizion3d.proto import lifting_pb2, lifting_pb2_grpc
 from vizion3d.stereo import StereoDepth, StereoDepthCommand
 from vizion3d.stereo.defaults import DEFAULT_STEREO_MODEL_URL
@@ -40,6 +54,9 @@ from vizion3d.stereo.models import StereoDepthAdvancedConfig
 def _o3d_depth_image_to_png_bytes(o3d_image) -> bytes:
     """Encode an Open3D uint16 depth image as a PNG byte string."""
     arr = np.asarray(o3d_image)
+    if np.issubdtype(arr.dtype, np.floating):
+        arr = np.nan_to_num(arr, nan=0.0, posinf=0.0, neginf=0.0)
+        arr = np.clip(arr * 1000.0, 0, np.iinfo(np.uint16).max).astype(np.uint16)
     buf = io.BytesIO()
     Image.fromarray(arr).save(buf, format="PNG")
     return buf.getvalue()
@@ -57,6 +74,13 @@ def _mask_to_png_bytes(mask: np.ndarray) -> bytes:
     buf = io.BytesIO()
     Image.fromarray((mask.astype(np.uint8) * 255)).save(buf, format="PNG")
     return buf.getvalue()
+
+
+def _mask_from_png_bytes(mask_bytes: bytes) -> np.ndarray:
+    """Decode a PNG mask into a boolean 2-D array."""
+    if not mask_bytes:
+        return np.zeros((1, 1), dtype=bool)
+    return np.asarray(Image.open(io.BytesIO(mask_bytes)).convert("L")) > 0
 
 
 def _ply_bytes_to_o3d_point_cloud(ply_bytes: bytes):
@@ -256,6 +280,144 @@ class LiftingServiceServicer(lifting_pb2_grpc.LiftingServiceServicer):
         if result.annotated_cloud is not None:
             response.annotated_cloud_ply = _o3d_point_cloud_to_ply_bytes(result.annotated_cloud)
 
+        return response
+
+    # ── RunSceneMaskAnnotation3D ──────────────────────────────────────────────
+
+    def RunSceneMaskAnnotation3D(self, request, context):
+        """Handle a 3D semantic scene annotation request.
+
+        Deserialises the input point cloud from PLY bytes, unmarshals the proto
+        config, dispatches through the CQRS command bus, and packs the per-class
+        semantic annotation results back into a proto response.
+
+        Args:
+            request: ``SceneMaskAnnotation3DRequest`` proto message.
+            context: gRPC server context.
+
+        Returns:
+            ``SceneMaskAnnotation3DResponse`` proto message.
+        """
+        point_cloud = _ply_bytes_to_o3d_point_cloud(request.point_cloud_ply)
+
+        base_cfg = SceneMaskAnnotation3DConfig()
+        if request.HasField("advanced_config"):
+            proto_cfg = request.advanced_config
+
+            def _f(field: str, default):
+                return getattr(proto_cfg, field) if proto_cfg.HasField(field) else default
+
+            base_cfg = SceneMaskAnnotation3DConfig(
+                fx=_f("fx", base_cfg.fx),
+                fy=_f("fy", base_cfg.fy),
+                cx=_f("cx", base_cfg.cx),
+                cy=_f("cy", base_cfg.cy),
+                inference_size=_f("inference_size", base_cfg.inference_size),
+            )
+
+        image_input = request.image_bytes if request.image_bytes else None
+
+        cmd = SceneMaskAnnotation3DCommand(
+            point_cloud=point_cloud,
+            image_input=image_input,
+            model_backend=request.model_backend or DEFAULT_SCENE_MODEL_URL,
+            return_region_clouds=request.return_region_clouds,
+            return_annotated_cloud=request.return_annotated_cloud,
+            advanced_config=base_cfg,
+        )
+        result = SceneMaskAnnotation3D().run(cmd)
+
+        response = lifting_pb2.SceneMaskAnnotation3DResponse(
+            backend_used=result.backend_used,
+        )
+
+        for ann in result.annotations:
+            item = lifting_pb2.SemanticMaskAnnotation3DItem(
+                label=ann.label,
+                class_id=ann.class_id,
+                bbox_2d=ann.bbox_2d,
+                mask_image=_mask_to_png_bytes(ann.mask_2d),
+                pixel_count=ann.pixel_count,
+                point_indices=ann.point_indices,
+            )
+            for coord in ann.point_coords:
+                item.point_coords.append(lifting_pb2.FloatRow(values=coord))
+            if ann.region_cloud is not None:
+                item.region_cloud_ply = _o3d_point_cloud_to_ply_bytes(ann.region_cloud)
+            response.annotations.append(item)
+
+        if result.annotated_cloud is not None:
+            response.annotated_cloud_ply = _o3d_point_cloud_to_ply_bytes(result.annotated_cloud)
+
+        return response
+
+    # ── RunScaleObservation ─────────────────────────────────────────────────
+
+    def RunScaleObservation(self, request, context):
+        """Handle a ScaleObservation request."""
+        from vizion3d.annotation.models import MaskAnnotation3D
+
+        point_cloud = _ply_bytes_to_o3d_point_cloud(request.point_cloud_ply)
+        annotations = []
+        for item in request.annotations:
+            annotations.append(
+                MaskAnnotation3D(
+                    label=item.label,
+                    class_id=item.class_id,
+                    confidence=item.confidence,
+                    bbox_2d=list(item.bbox_2d),
+                    mask_2d=_mask_from_png_bytes(item.mask_image),
+                    point_indices=[],
+                    point_coords=[list(row.values) for row in item.point_coords],
+                )
+            )
+
+        def _field(name: str):
+            return getattr(request, name) if request.HasField(name) else None
+
+        cmd = ScaleObservationCommand(
+            point_cloud=point_cloud,
+            annotations=annotations,
+            return_scaled_point_cloud=request.return_scaled_point_cloud,
+            return_scaled_depth=request.return_scaled_depth,
+            return_report=request.return_report,
+            advanced_config=ScaleObservationAdvancedConfig(
+                image_width=_field("image_width"),
+                image_height=_field("image_height"),
+                fx=_field("fx"),
+                fy=_field("fy"),
+                cx=_field("cx"),
+                cy=_field("cy"),
+            ),
+        )
+        result = ScaleObservation().run(cmd)
+        response = lifting_pb2.ScaleObservationResponse(
+            scale_factor=result.scale_factor,
+            scale_confidence=result.scale_confidence,
+            scale_confidence_reason=result.scale_confidence_reason,
+            algorithm_version=result.algorithm_version,
+            accepted_candidates=result.accepted_candidates,
+            rejected_candidates=result.rejected_candidates,
+        )
+        for candidate in result.candidates:
+            response.candidates.append(
+                lifting_pb2.ScaleCandidateItem(
+                    label=candidate.label,
+                    dimension=candidate.dimension,
+                    observed_relative=candidate.observed_relative,
+                    prior_m=candidate.prior_m,
+                    scale=candidate.scale,
+                    weight=candidate.weight,
+                    accepted=candidate.accepted,
+                    rejection_reason=candidate.rejection_reason or "",
+                )
+            )
+        if result.scaled_point_cloud is not None:
+            response.scaled_point_cloud_ply = _o3d_point_cloud_to_ply_bytes(
+                result.scaled_point_cloud
+            )
+        if result.scaled_depth_image is not None:
+            response.scaled_depth_png = _o3d_depth_image_to_png_bytes(result.scaled_depth_image)
         return response
 
 

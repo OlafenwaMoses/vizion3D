@@ -91,7 +91,15 @@ def _run_group(
         elapsed = time.perf_counter() - t0
         timings.append(elapsed)
         _save_outputs(result, run_dir, run)
-        timing_collector.add(entry_point, scenario, run, elapsed, str(run_dir))
+        timing_collector.add(
+            entry_point,
+            scenario,
+            run,
+            elapsed,
+            str(run_dir),
+            task="Object Mask Annotation 3D",
+            model=scenario,
+        )
 
         assert isinstance(result.annotations, list)
         assert isinstance(result.backend_used, str) and result.backend_used

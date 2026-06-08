@@ -85,7 +85,15 @@ def _run_group(
         )
         data = response.json()
         _save_outputs(data, run_dir, run)
-        timing_collector.add("Stereo REST", scenario, run, elapsed, str(run_dir))
+        timing_collector.add(
+            "REST",
+            scenario,
+            run,
+            elapsed,
+            str(run_dir),
+            task="Stereo Depth",
+            model=scenario,
+        )
 
         assert isinstance(data["depth_map"], list) and len(data["depth_map"]) > 0
         assert isinstance(data["disparity_map"], list) and len(data["disparity_map"]) > 0
