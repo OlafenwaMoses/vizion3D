@@ -34,6 +34,12 @@ def o3d_point_cloud_to_ply_bytes(pcd) -> bytes:
     return create_ply_binary(points, colors)
 
 
+def trimesh_to_ply_bytes(mesh) -> bytes:
+    """Serialise a trimesh.Trimesh as binary PLY bytes."""
+    data = mesh.export(file_type="ply", encoding="binary_little_endian")
+    return data if isinstance(data, bytes) else data.encode()
+
+
 def b64(data: bytes | None) -> str | None:
     """Base64-encode *data*, or return ``None`` if *data* is ``None``."""
     return base64.b64encode(data).decode() if data is not None else None

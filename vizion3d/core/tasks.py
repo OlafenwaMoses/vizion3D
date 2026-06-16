@@ -74,6 +74,28 @@ PROMOTED_TASKS: tuple[TaskDescriptor, ...] = (
         grpc_method="RunScaleObservation",
         docs_path="observation/scale_observation.md",
     ),
+    TaskDescriptor(
+        name="Object 3D Reconstruction",
+        slug="object-3d-reconstruction",
+        category="Reconstruction",
+        status="promoted",
+        experimental=False,
+        python_import="vizion3d.reconstruction.Object3DReconstruction",
+        rest_endpoint="/reconstruction/object-3d-reconstruction",
+        grpc_method="RunObject3DReconstruction",
+        docs_path="reconstruction/object_3d_reconstruction.md",
+    ),
+    TaskDescriptor(
+        name="Scene Components 3D Reconstruction",
+        slug="scene-components-3d-reconstruction",
+        category="Reconstruction",
+        status="promoted",
+        experimental=False,
+        python_import="vizion3d.reconstruction.SceneComponents3DReconstruction",
+        rest_endpoint="/reconstruction/scene-components-3d-reconstruction",
+        grpc_method="RunSceneComponents3DReconstruction",
+        docs_path="reconstruction/scene_components_3d_reconstruction.md",
+    ),
 )
 
 

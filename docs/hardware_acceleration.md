@@ -124,7 +124,7 @@ uv add "vizion3d[cuda]"
 
 Because `vizion3d[cuda]` declares no torch dependency, pip will not touch the CUDA wheel installed in step 1.
 
-vizion3d detects CUDA via `torch.cuda.is_available()` at runtime and moves models and tensors to the GPU automatically.
+vizion3d detects CUDA via `torch.cuda.is_available()` at runtime and moves models and tensors to the GPU automatically. For reconstruction workloads, combine the extras as `vizion3d[cuda,reconstruction]`; the CUDA extra also installs `onnxruntime-gpu` so mandatory `rembg` background removal can use ONNX Runtime's CUDA provider when available.
 
 ---
 

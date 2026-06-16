@@ -9,6 +9,8 @@ Exposes the LiftingService RPC methods:
 - ``RunSceneMaskAnnotation3D`` — semantic-segment a scene and group point-cloud
                                points by class (image optional).
 - ``RunScaleObservation``  — estimate metric scale from annotations.
+- ``RunObject3DReconstruction`` — reconstruct one object as gray mesh and cloud.
+- ``RunSceneComponents3DReconstruction`` — reconstruct detected scene objects.
 
 Start with::
 
@@ -44,6 +46,15 @@ from vizion3d.observation import (
     ScaleObservationCommand,
 )
 from vizion3d.proto import lifting_pb2, lifting_pb2_grpc
+from vizion3d.reconstruction import (
+    Object3DReconstruction,
+    Object3DReconstructionCommand,
+    Object3DReconstructionConfig,
+    SceneComponents3DReconstruction,
+    SceneComponents3DReconstructionCommand,
+    SceneComponents3DReconstructionConfig,
+)
+from vizion3d.server.rest.serialisation import trimesh_to_ply_bytes
 from vizion3d.stereo import StereoDepth, StereoDepthCommand
 from vizion3d.stereo.defaults import DEFAULT_STEREO_MODEL_URL
 from vizion3d.stereo.models import StereoDepthAdvancedConfig
@@ -98,6 +109,34 @@ def _ply_bytes_to_o3d_point_cloud(ply_bytes: bytes):
     finally:
         os.unlink(path)
     return pcd
+
+
+def _object_reconstruction_config(proto=None) -> Object3DReconstructionConfig:
+    base = Object3DReconstructionConfig()
+    if proto is None:
+        return base
+
+    def _f(field: str, default):
+        return getattr(proto, field) if proto.HasField(field) else default
+
+    return Object3DReconstructionConfig(
+        max_input_dimension=_f(
+            "max_input_dimension", base.max_input_dimension
+        ),
+        marching_cubes_resolution=_f(
+            "marching_cubes_resolution", base.marching_cubes_resolution
+        ),
+        density_threshold=_f("density_threshold", base.density_threshold),
+        point_count=_f("point_count", base.point_count),
+        device=_f("device", base.device),
+        foreground_ratio=_f("foreground_ratio", base.foreground_ratio),
+        smoothing_iterations=_f(
+            "smoothing_iterations", base.smoothing_iterations
+        ),
+        min_component_area_ratio=_f(
+            "min_component_area_ratio", base.min_component_area_ratio
+        ),
+    )
 
 
 # ── gRPC Servicer ─────────────────────────────────────────────────────────────
@@ -418,6 +457,87 @@ class LiftingServiceServicer(lifting_pb2_grpc.LiftingServiceServicer):
             )
         if result.scaled_depth_image is not None:
             response.scaled_depth_png = _o3d_depth_image_to_png_bytes(result.scaled_depth_image)
+        return response
+
+    def RunObject3DReconstruction(self, request, context):
+        """Reconstruct a close-range object image as gray mesh and point cloud."""
+        config = _object_reconstruction_config(
+            request.advanced_config
+            if request.HasField("advanced_config")
+            else None
+        )
+        result = Object3DReconstruction().run(
+            Object3DReconstructionCommand(
+                image_input=request.image_bytes,
+                model_bundle=request.model_bundle or None,
+                advanced_config=config,
+            )
+        )
+        return lifting_pb2.Object3DReconstructionResponse(
+            mesh_ply=trimesh_to_ply_bytes(result.mesh),
+            point_cloud_ply=_o3d_point_cloud_to_ply_bytes(result.point_cloud),
+            vertex_count=result.vertex_count,
+            face_count=result.face_count,
+            point_count=result.point_count,
+            backend_used=result.backend_used,
+        )
+
+    def RunSceneComponents3DReconstruction(self, request, context):
+        """Reconstruct detected objects from one scene image."""
+        base = SceneComponents3DReconstructionConfig()
+        if request.HasField("advanced_config"):
+            proto = request.advanced_config
+
+            def _f(field: str, default):
+                return getattr(proto, field) if proto.HasField(field) else default
+
+            base = SceneComponents3DReconstructionConfig(
+                max_input_dimension=_f(
+                    "max_input_dimension", base.max_input_dimension
+                ),
+                max_objects=_f("max_objects", base.max_objects),
+                confidence_threshold=_f(
+                    "confidence_threshold", base.confidence_threshold
+                ),
+                padding_ratio=_f("padding_ratio", base.padding_ratio),
+                object_config=_object_reconstruction_config(
+                    proto.object_config
+                    if proto.HasField("object_config")
+                    else None
+                ),
+            )
+        result = SceneComponents3DReconstruction().run(
+            SceneComponents3DReconstructionCommand(
+                image_input=request.image_bytes,
+                model_bundle=request.model_bundle or None,
+                depth_model_backend=request.depth_model_backend or None,
+                annotation_model_backend=request.annotation_model_backend or None,
+                advanced_config=base,
+            )
+        )
+        response = lifting_pb2.SceneComponents3DReconstructionResponse(
+            source_image_size=result.source_image_size,
+            analysis_image_size=result.analysis_image_size,
+            depth_backend_used=result.depth_backend_used,
+            annotation_backend_used=result.annotation_backend_used,
+            reconstruction_backend_used=result.reconstruction_backend_used,
+        )
+        for component in result.components:
+            response.components.append(
+                lifting_pb2.SceneComponent3DItem(
+                    label=component.label,
+                    class_id=component.class_id,
+                    confidence=component.confidence,
+                    bbox_2d=component.bbox_2d,
+                    mesh_ply=trimesh_to_ply_bytes(component.mesh),
+                    point_cloud_ply=_o3d_point_cloud_to_ply_bytes(
+                        component.point_cloud
+                    ),
+                    vertex_count=component.vertex_count,
+                    face_count=component.face_count,
+                    point_count=component.point_count,
+                )
+            )
         return response
 
 
