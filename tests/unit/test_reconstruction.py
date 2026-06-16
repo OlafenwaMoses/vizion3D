@@ -8,29 +8,36 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 import numpy as np
-import open3d as o3d
 import pytest
 import torch
-import trimesh
 from fastapi.testclient import TestClient
 from PIL import Image
 
-from vizion3d.proto import lifting_pb2
-from vizion3d.reconstruction import (
-    Object3DReconstructionCommand,
-    Object3DReconstructionConfig,
-    Object3DReconstructionResult,
-    SceneComponents3DReconstructionCommand,
-    SceneComponents3DReconstructionConfig,
-)
-from vizion3d.reconstruction.defaults import extract_model_bundle
-from vizion3d.reconstruction.handlers import (
-    Object3DReconstructionHandler,
-    SceneComponents3DReconstructionHandler,
-    _rembg_providers,
-)
-from vizion3d.server.grpc.server import LiftingServiceServicer
-from vizion3d.server.rest.app import create_app
+try:
+    import open3d as o3d
+    import trimesh
+
+    from vizion3d.proto import lifting_pb2
+    from vizion3d.reconstruction import (
+        Object3DReconstructionCommand,
+        Object3DReconstructionConfig,
+        Object3DReconstructionResult,
+        SceneComponents3DReconstructionCommand,
+        SceneComponents3DReconstructionConfig,
+    )
+    from vizion3d.reconstruction.defaults import extract_model_bundle
+    from vizion3d.reconstruction.handlers import (
+        Object3DReconstructionHandler,
+        SceneComponents3DReconstructionHandler,
+        _rembg_providers,
+    )
+    from vizion3d.server.grpc.server import LiftingServiceServicer
+    from vizion3d.server.rest.app import create_app
+except ModuleNotFoundError as exc:
+    optional_modules = {"open3d", "trimesh"}
+    if exc.name in optional_modules:
+        pytest.skip(f"{exc.name} is required for reconstruction tests", allow_module_level=True)
+    raise
 
 
 def _image_bytes(size=(64, 64), mode="RGBA") -> bytes:
