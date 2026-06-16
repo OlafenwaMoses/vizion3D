@@ -38,8 +38,8 @@ from vizion3d.reconstruction.handlers import Object3DReconstructionHandler  # no
 
 OBJECT_LIMIT = float(os.environ.get("VIZION3D_TEST_RECON_OBJECT_LIMIT", "240.0"))
 SCENE_LIMIT = float(os.environ.get("VIZION3D_TEST_RECON_SCENE_LIMIT", "420.0"))
-TEST_IMAGE_MAX_DIMENSION = 480
-RECONSTRUCTION_IMAGE = "reconstruction_scene_480.jpg"
+TEST_IMAGE_MAX_DIMENSION = 1080
+RECONSTRUCTION_IMAGE = "reconstruction_scene_1080.jpg"
 
 
 @pytest.fixture(scope="session")
@@ -158,7 +158,7 @@ def test_scene_components_3d_reconstruction_runs_real_image(
     config = SceneComponents3DReconstructionConfig(
         max_input_dimension=640,
         max_objects=1,
-        confidence_threshold=0.05,
+        confidence_threshold=0.01,
         padding_ratio=0.1,
         object_config=object_config,
     )

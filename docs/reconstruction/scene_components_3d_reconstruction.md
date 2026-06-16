@@ -17,14 +17,15 @@ already a close-range view of one object.
 
 <figure>
   <img src="../../assets/reconstruction/scene_components_input.jpg" alt="Scene-components reconstruction sample input" style="width:100%;border-radius:6px;">
-  <figcaption style="color:#aaa;font-size:0.8em;margin-top:0.3rem;">Sample scene input used for component reconstruction</figcaption>
+  <figcaption style="color:#aaa;font-size:0.8em;margin-top:0.3rem;">Sample 1080x810 scene input used for component reconstruction</figcaption>
 </figure>
 
-This sample detects and reconstructs one high-confidence component:
+This sample uses `confidence_threshold=0.01`, analyzes the scene at 640x480,
+and reconstructs one high-confidence component:
 
 | Component | Class ID | Confidence | Mesh vertices | Mesh faces | Point-cloud points |
 |---|---:|---:|---:|---:|---:|
-| chair | 56 | 0.932 | 3,560 | 7,136 | 4,096 |
+| chair | 56 | 0.933 | 2,866 | 5,736 | 4,096 |
 
 <figure>
   <div id="scene-component-mesh-viewer" style="width:105%;margin-left:-3.5%;margin-right:-3.5%;height:440px;overflow:hidden;border-radius:6px;background:#d8d8d8;"></div>
@@ -180,7 +181,7 @@ command = SceneComponents3DReconstructionCommand(
     advanced_config=SceneComponents3DReconstructionConfig(
         max_input_dimension=1080,
         max_objects=3,
-        confidence_threshold=0.25,
+        confidence_threshold=0.01,
         padding_ratio=0.15,
         object_config=Object3DReconstructionConfig(
             max_input_dimension=1080,
@@ -249,6 +250,7 @@ curl -X POST http://localhost:8000/reconstruction/scene-components-3d-reconstruc
   -F "image=@scene.jpg" \
   -F "model_bundle=scene-components-3d-models.zip" \
   -F "max_objects=3" \
+  -F "confidence_threshold=0.01" \
   -F "device=auto"
 ```
 
