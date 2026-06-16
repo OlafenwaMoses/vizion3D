@@ -1,0 +1,38 @@
+{
+  "object_sample": {
+    "mesh": "object_sample_mesh.ply",
+    "point_cloud": "object_sample_point_cloud.ply",
+    "vertex_count": 2452,
+    "face_count": 4900,
+    "point_count": 4096
+  },
+  "scene_component_01": {
+    "mesh": "scene_component_01_mesh.ply",
+    "point_cloud": "scene_component_01_point_cloud.ply",
+    "vertex_count": 3560,
+    "face_count": 7136,
+    "point_count": 4096,
+    "label": "chair",
+    "class_id": 56,
+    "confidence": 0.9316641688346863,
+    "bbox_2d": [
+      316.1939697265625,
+      210.19436645507812,
+      420.68292236328125,
+      332.73773193359375
+    ]
+  },
+  "scene": {
+    "source_image_size": [
+      480,
+      360
+    ],
+    "analysis_image_size": [
+      480,
+      360
+    ],
+    "depth_backend_used": "/Users/moses/.cache/vizion3d/models/depth_anything_v2_vitb.pth",
+    "annotation_backend_used": "/Users/moses/.cache/vizion3d/models/yolo26l-seg.pt",
+    "reconstruction_backend_used": "/Users/moses/.cache/vizion3d/models/scene-components-3d-models"
+  }
+}
