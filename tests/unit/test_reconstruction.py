@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import sys
+import time
 import zipfile
 from pathlib import Path
 from types import SimpleNamespace
@@ -286,14 +287,22 @@ def test_reconstruction_rest_endpoint_serializes_geometry():
             },
         )
 
-    assert response.status_code == 200
-    assert response.json()["mesh_ply"]
-    assert response.json()["point_cloud_ply"]
+    assert response.status_code == 201
+    job_id = response.json()["job_id"]
+    for _ in range(20):
+        result_response = client.get(f"/reconstruction/object-3d-reconstruction/{job_id}")
+        if result_response.status_code != 202:
+            break
+        time.sleep(0.01)
+    assert result_response.status_code == 200
+    result = result_response.json()["result"]
+    assert result["mesh_ply"]
+    assert result["point_cloud_ply"]
     command = task.return_value.run.call_args.args[0]
     assert command.advanced_config.max_input_dimension == 720
 
 
-def test_reconstruction_grpc_forwards_config_and_serializes_geometry():
+def test_reconstruction_grpc_submits_job_and_serializes_geometry():
     request = lifting_pb2.Object3DReconstructionRequest(
         image_bytes=_image_bytes(),
         model_bundle="/models.zip",
@@ -304,14 +313,27 @@ def test_reconstruction_grpc_forwards_config_and_serializes_geometry():
     )
     with patch("vizion3d.server.grpc.server.Object3DReconstruction") as task:
         task.return_value.run.return_value = _result()
-        response = LiftingServiceServicer().RunObject3DReconstruction(request, None)
+        servicer = LiftingServiceServicer()
+        submission = servicer.RunObject3DReconstruction(request, None)
+        for _ in range(20):
+            response = servicer.GetObject3DReconstructionResult(
+                lifting_pb2.ReconstructionJobResultRequest(job_id=submission.job_id),
+                None,
+            )
+            if response.status not in {
+                lifting_pb2.RECONSTRUCTION_JOB_STATUS_QUEUED,
+                lifting_pb2.RECONSTRUCTION_JOB_STATUS_RUNNING,
+            }:
+                break
+            time.sleep(0.01)
 
     command = task.return_value.run.call_args.args[0]
     assert command.model_bundle == "/models.zip"
     assert command.advanced_config.point_count == 12
     assert command.advanced_config.max_input_dimension == 720
-    assert response.mesh_ply.startswith(b"ply")
-    assert response.point_cloud_ply.startswith(b"ply")
+    assert response.status == lifting_pb2.RECONSTRUCTION_JOB_STATUS_SUCCEEDED
+    assert response.result.mesh_ply.startswith(b"ply")
+    assert response.result.point_cloud_ply.startswith(b"ply")
 
 
 def test_reconstruction_configs_reject_invalid_geometry_settings():

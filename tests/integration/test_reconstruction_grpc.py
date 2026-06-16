@@ -88,6 +88,24 @@ def _assert_object_response(response) -> None:
     assert response.point_cloud_ply.startswith(b"ply\n")
 
 
+def _poll_grpc_result(grpc_client_stub, method_name: str, job_id: str, timeout: float):
+    deadline = time.monotonic() + timeout
+    method = getattr(grpc_client_stub, method_name)
+    request = lifting_pb2.ReconstructionJobResultRequest(job_id=job_id)
+    pending = {
+        lifting_pb2.RECONSTRUCTION_JOB_STATUS_QUEUED,
+        lifting_pb2.RECONSTRUCTION_JOB_STATUS_RUNNING,
+    }
+    while time.monotonic() < deadline:
+        response = method(request)
+        if response.status == lifting_pb2.RECONSTRUCTION_JOB_STATUS_SUCCEEDED:
+            assert response.HasField("result")
+            return response.result
+        assert response.status in pending, response
+        time.sleep(1.0)
+    pytest.fail(f"Timed out waiting for reconstruction job {job_id}")
+
+
 def test_grpc_object_3d_reconstruction_runs_real_image(
     reconstruction_image_bytes,
     reconstruction_model_bundle,
@@ -103,7 +121,13 @@ def test_grpc_object_3d_reconstruction_runs_real_image(
     )
 
     t0 = time.perf_counter()
-    response = grpc_client_stub.RunObject3DReconstruction(request)
+    submission = grpc_client_stub.RunObject3DReconstruction(request)
+    response = _poll_grpc_result(
+        grpc_client_stub,
+        "GetObject3DReconstructionResult",
+        submission.job_id,
+        OBJECT_LIMIT,
+    )
     elapsed = time.perf_counter() - t0
 
     _assert_object_response(response)
@@ -148,7 +172,13 @@ def test_grpc_scene_components_3d_reconstruction_runs_real_image(
     )
 
     t0 = time.perf_counter()
-    response = grpc_client_stub.RunSceneComponents3DReconstruction(request)
+    submission = grpc_client_stub.RunSceneComponents3DReconstruction(request)
+    response = _poll_grpc_result(
+        grpc_client_stub,
+        "GetSceneComponents3DReconstructionResult",
+        submission.job_id,
+        SCENE_LIMIT,
+    )
     elapsed = time.perf_counter() - t0
 
     assert response.source_image_size

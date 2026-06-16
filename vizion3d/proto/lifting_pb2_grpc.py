@@ -62,12 +62,22 @@ class LiftingServiceStub(object):
         self.RunObject3DReconstruction = channel.unary_unary(
                 '/vizion3d.lifting.LiftingService/RunObject3DReconstruction',
                 request_serializer=vizion3d_dot_proto_dot_lifting__pb2.Object3DReconstructionRequest.SerializeToString,
-                response_deserializer=vizion3d_dot_proto_dot_lifting__pb2.Object3DReconstructionResponse.FromString,
+                response_deserializer=vizion3d_dot_proto_dot_lifting__pb2.ReconstructionJobSubmission.FromString,
+                _registered_method=True)
+        self.GetObject3DReconstructionResult = channel.unary_unary(
+                '/vizion3d.lifting.LiftingService/GetObject3DReconstructionResult',
+                request_serializer=vizion3d_dot_proto_dot_lifting__pb2.ReconstructionJobResultRequest.SerializeToString,
+                response_deserializer=vizion3d_dot_proto_dot_lifting__pb2.Object3DReconstructionJobResponse.FromString,
                 _registered_method=True)
         self.RunSceneComponents3DReconstruction = channel.unary_unary(
                 '/vizion3d.lifting.LiftingService/RunSceneComponents3DReconstruction',
                 request_serializer=vizion3d_dot_proto_dot_lifting__pb2.SceneComponents3DReconstructionRequest.SerializeToString,
-                response_deserializer=vizion3d_dot_proto_dot_lifting__pb2.SceneComponents3DReconstructionResponse.FromString,
+                response_deserializer=vizion3d_dot_proto_dot_lifting__pb2.ReconstructionJobSubmission.FromString,
+                _registered_method=True)
+        self.GetSceneComponents3DReconstructionResult = channel.unary_unary(
+                '/vizion3d.lifting.LiftingService/GetSceneComponents3DReconstructionResult',
+                request_serializer=vizion3d_dot_proto_dot_lifting__pb2.ReconstructionJobResultRequest.SerializeToString,
+                response_deserializer=vizion3d_dot_proto_dot_lifting__pb2.SceneComponents3DReconstructionJobResponse.FromString,
                 _registered_method=True)
 
 
@@ -110,7 +120,19 @@ class LiftingServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def GetObject3DReconstructionResult(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def RunSceneComponents3DReconstruction(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetSceneComponents3DReconstructionResult(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -147,12 +169,22 @@ def add_LiftingServiceServicer_to_server(servicer, server):
             'RunObject3DReconstruction': grpc.unary_unary_rpc_method_handler(
                     servicer.RunObject3DReconstruction,
                     request_deserializer=vizion3d_dot_proto_dot_lifting__pb2.Object3DReconstructionRequest.FromString,
-                    response_serializer=vizion3d_dot_proto_dot_lifting__pb2.Object3DReconstructionResponse.SerializeToString,
+                    response_serializer=vizion3d_dot_proto_dot_lifting__pb2.ReconstructionJobSubmission.SerializeToString,
+            ),
+            'GetObject3DReconstructionResult': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetObject3DReconstructionResult,
+                    request_deserializer=vizion3d_dot_proto_dot_lifting__pb2.ReconstructionJobResultRequest.FromString,
+                    response_serializer=vizion3d_dot_proto_dot_lifting__pb2.Object3DReconstructionJobResponse.SerializeToString,
             ),
             'RunSceneComponents3DReconstruction': grpc.unary_unary_rpc_method_handler(
                     servicer.RunSceneComponents3DReconstruction,
                     request_deserializer=vizion3d_dot_proto_dot_lifting__pb2.SceneComponents3DReconstructionRequest.FromString,
-                    response_serializer=vizion3d_dot_proto_dot_lifting__pb2.SceneComponents3DReconstructionResponse.SerializeToString,
+                    response_serializer=vizion3d_dot_proto_dot_lifting__pb2.ReconstructionJobSubmission.SerializeToString,
+            ),
+            'GetSceneComponents3DReconstructionResult': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetSceneComponents3DReconstructionResult,
+                    request_deserializer=vizion3d_dot_proto_dot_lifting__pb2.ReconstructionJobResultRequest.FromString,
+                    response_serializer=vizion3d_dot_proto_dot_lifting__pb2.SceneComponents3DReconstructionJobResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -316,7 +348,34 @@ class LiftingService(object):
             target,
             '/vizion3d.lifting.LiftingService/RunObject3DReconstruction',
             vizion3d_dot_proto_dot_lifting__pb2.Object3DReconstructionRequest.SerializeToString,
-            vizion3d_dot_proto_dot_lifting__pb2.Object3DReconstructionResponse.FromString,
+            vizion3d_dot_proto_dot_lifting__pb2.ReconstructionJobSubmission.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetObject3DReconstructionResult(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/vizion3d.lifting.LiftingService/GetObject3DReconstructionResult',
+            vizion3d_dot_proto_dot_lifting__pb2.ReconstructionJobResultRequest.SerializeToString,
+            vizion3d_dot_proto_dot_lifting__pb2.Object3DReconstructionJobResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -343,7 +402,34 @@ class LiftingService(object):
             target,
             '/vizion3d.lifting.LiftingService/RunSceneComponents3DReconstruction',
             vizion3d_dot_proto_dot_lifting__pb2.SceneComponents3DReconstructionRequest.SerializeToString,
-            vizion3d_dot_proto_dot_lifting__pb2.SceneComponents3DReconstructionResponse.FromString,
+            vizion3d_dot_proto_dot_lifting__pb2.ReconstructionJobSubmission.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetSceneComponents3DReconstructionResult(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/vizion3d.lifting.LiftingService/GetSceneComponents3DReconstructionResult',
+            vizion3d_dot_proto_dot_lifting__pb2.ReconstructionJobResultRequest.SerializeToString,
+            vizion3d_dot_proto_dot_lifting__pb2.SceneComponents3DReconstructionJobResponse.FromString,
             options,
             channel_credentials,
             insecure,

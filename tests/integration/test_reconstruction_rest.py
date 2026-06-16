@@ -100,6 +100,19 @@ def _object_form(model_bundle: str) -> dict[str, str]:
     }
 
 
+def _poll_rest_result(path: str, job_id: str, timeout: float) -> dict:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        response = client.get(f"{path}/{job_id}")
+        if response.status_code == 200:
+            data = response.json()
+            assert data["status"] == "succeeded"
+            return data["result"]
+        assert response.status_code == 202, response.text[:300]
+        time.sleep(1.0)
+    pytest.fail(f"Timed out waiting for reconstruction job {job_id}")
+
+
 def test_rest_object_3d_reconstruction_runs_real_image(
     reconstruction_image_bytes,
     reconstruction_model_bundle,
@@ -114,10 +127,14 @@ def test_rest_object_3d_reconstruction_runs_real_image(
         files={"image": (RECONSTRUCTION_IMAGE, reconstruction_image_bytes, "image/jpeg")},
         data=_object_form(reconstruction_model_bundle),
     )
-    elapsed = time.perf_counter() - t0
 
-    assert response.status_code == 200, response.text[:300]
-    data = response.json()
+    assert response.status_code == 201, response.text[:300]
+    data = _poll_rest_result(
+        "/reconstruction/object-3d-reconstruction",
+        response.json()["job_id"],
+        OBJECT_LIMIT,
+    )
+    elapsed = time.perf_counter() - t0
     _assert_object_payload(data)
     run_dir = tmp_path / "rest_object_3d_reconstruction"
     _save_object_payload(data, run_dir, "object")
@@ -158,10 +175,14 @@ def test_rest_scene_components_3d_reconstruction_runs_real_image(
             "padding_ratio": "0.1",
         },
     )
-    elapsed = time.perf_counter() - t0
 
-    assert response.status_code == 200, response.text[:300]
-    data = response.json()
+    assert response.status_code == 201, response.text[:300]
+    data = _poll_rest_result(
+        "/reconstruction/scene-components-3d-reconstruction",
+        response.json()["job_id"],
+        SCENE_LIMIT,
+    )
+    elapsed = time.perf_counter() - t0
     assert data["source_image_size"]
     assert max(data["source_image_size"]) <= TEST_IMAGE_MAX_DIMENSION
     assert max(data["analysis_image_size"]) <= 640

@@ -27,5 +27,5 @@ has a direct Python facade and, where available, REST and gRPC adapters.
 
 | Task | Python import | REST | gRPC |
 |---|---|---|---|
-| [Object 3D Reconstruction](../reconstruction/object_3d_reconstruction.md) | `vizion3d.reconstruction.Object3DReconstruction` | `/reconstruction/object-3d-reconstruction` | `RunObject3DReconstruction` |
-| [Scene Components 3D Reconstruction](../reconstruction/scene_components_3d_reconstruction.md) | `vizion3d.reconstruction.SceneComponents3DReconstruction` | `/reconstruction/scene-components-3d-reconstruction` | `RunSceneComponents3DReconstruction` |
+| [Object 3D Reconstruction](../reconstruction/object_3d_reconstruction.md) | `vizion3d.reconstruction.Object3DReconstruction` | `/reconstruction/object-3d-reconstruction` | `RunObject3DReconstruction`, then `GetObject3DReconstructionResult` |
+| [Scene Components 3D Reconstruction](../reconstruction/scene_components_3d_reconstruction.md) | `vizion3d.reconstruction.SceneComponents3DReconstruction` | `/reconstruction/scene-components-3d-reconstruction` | `RunSceneComponents3DReconstruction`, then `GetSceneComponents3DReconstructionResult` |

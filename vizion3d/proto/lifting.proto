@@ -8,8 +8,10 @@ service LiftingService {
   rpc RunObjectMaskAnnotation3D (ObjectMaskAnnotation3DRequest) returns (ObjectMaskAnnotation3DResponse);
   rpc RunSceneMaskAnnotation3D (SceneMaskAnnotation3DRequest) returns (SceneMaskAnnotation3DResponse);
   rpc RunScaleObservation (ScaleObservationRequest) returns (ScaleObservationResponse);
-  rpc RunObject3DReconstruction (Object3DReconstructionRequest) returns (Object3DReconstructionResponse);
-  rpc RunSceneComponents3DReconstruction (SceneComponents3DReconstructionRequest) returns (SceneComponents3DReconstructionResponse);
+  rpc RunObject3DReconstruction (Object3DReconstructionRequest) returns (ReconstructionJobSubmission);
+  rpc GetObject3DReconstructionResult (ReconstructionJobResultRequest) returns (Object3DReconstructionJobResponse);
+  rpc RunSceneComponents3DReconstruction (SceneComponents3DReconstructionRequest) returns (ReconstructionJobSubmission);
+  rpc GetSceneComponents3DReconstructionResult (ReconstructionJobResultRequest) returns (SceneComponents3DReconstructionJobResponse);
 }
 
 // ── Depth Estimation ──────────────────────────────────────────────────────────
@@ -203,6 +205,29 @@ message ScaleObservationResponse {
 
 // ── 3D Reconstruction ────────────────────────────────────────────────────────
 
+enum ReconstructionJobStatus {
+  RECONSTRUCTION_JOB_STATUS_UNSPECIFIED = 0;
+  RECONSTRUCTION_JOB_STATUS_QUEUED = 1;
+  RECONSTRUCTION_JOB_STATUS_RUNNING = 2;
+  RECONSTRUCTION_JOB_STATUS_SUCCEEDED = 3;
+  RECONSTRUCTION_JOB_STATUS_FAILED = 4;
+  RECONSTRUCTION_JOB_STATUS_EXPIRED = 5;
+  RECONSTRUCTION_JOB_STATUS_UNAVAILABLE = 6;
+}
+
+message ReconstructionJobSubmission {
+  string job_id = 1;
+  ReconstructionJobStatus status = 2;
+  string created_at = 3;
+  string expires_at = 4;
+  int32 max_result_reads = 5;
+  int32 result_reads_remaining = 6;
+}
+
+message ReconstructionJobResultRequest {
+  string job_id = 1;
+}
+
 message Object3DReconstructionConfig {
   reserved 4;
   reserved 5;
@@ -230,6 +255,17 @@ message Object3DReconstructionResponse {
   int32 face_count = 4;
   int32 point_count = 5;
   string backend_used = 6;
+}
+
+message Object3DReconstructionJobResponse {
+  string job_id = 1;
+  ReconstructionJobStatus status = 2;
+  string created_at = 3;
+  string expires_at = 4;
+  int32 max_result_reads = 5;
+  int32 result_reads_remaining = 6;
+  string error = 7;
+  optional Object3DReconstructionResponse result = 8;
 }
 
 message SceneComponents3DReconstructionConfig {
@@ -267,4 +303,15 @@ message SceneComponents3DReconstructionResponse {
   string depth_backend_used = 4;
   string annotation_backend_used = 5;
   string reconstruction_backend_used = 6;
+}
+
+message SceneComponents3DReconstructionJobResponse {
+  string job_id = 1;
+  ReconstructionJobStatus status = 2;
+  string created_at = 3;
+  string expires_at = 4;
+  int32 max_result_reads = 5;
+  int32 result_reads_remaining = 6;
+  string error = 7;
+  optional SceneComponents3DReconstructionResponse result = 8;
 }

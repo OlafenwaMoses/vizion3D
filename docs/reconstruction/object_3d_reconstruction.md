@@ -26,6 +26,30 @@ point_cloud = result.point_cloud
 
 Inputs always use the bundled `rembg/u2net.onnx` model for background removal.
 
+## REST and gRPC Jobs
+
+The REST and gRPC server APIs run this task as a background job because mesh
+generation can take longer than a normal request timeout.
+
+REST:
+
+1. `POST /reconstruction/object-3d-reconstruction` returns `201` with a
+   `job_id`.
+2. `GET /reconstruction/object-3d-reconstruction/{job_id}` returns `202` while
+   queued or running, then `200` with `result.mesh_ply` and
+   `result.point_cloud_ply` when complete.
+
+gRPC:
+
+1. `RunObject3DReconstruction` submits the job and returns
+   `ReconstructionJobSubmission`.
+2. `GetObject3DReconstructionResult` polls by `job_id` and returns
+   `Object3DReconstructionJobResponse`.
+
+Completed results are stored in a small temp job folder on the server machine.
+Set `VIZION3D_JOB_DIR` to control that folder. A result can be retrieved up to
+10 times and expires after 24 hours.
+
 ## Device
 
 `Object3DReconstructionConfig(device="auto")` propagates the selected device to

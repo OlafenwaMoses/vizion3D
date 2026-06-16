@@ -22,6 +22,30 @@ result = SceneComponents3DReconstruction().run(
 )
 ```
 
+## REST and gRPC Jobs
+
+The REST and gRPC server APIs run this task as a background job because a scene
+can contain multiple object reconstructions.
+
+REST:
+
+1. `POST /reconstruction/scene-components-3d-reconstruction` returns `201` with
+   a `job_id`.
+2. `GET /reconstruction/scene-components-3d-reconstruction/{job_id}` returns
+   `202` while queued or running, then `200` with reconstructed component
+   meshes and point clouds under `result.components`.
+
+gRPC:
+
+1. `RunSceneComponents3DReconstruction` submits the job and returns
+   `ReconstructionJobSubmission`.
+2. `GetSceneComponents3DReconstructionResult` polls by `job_id` and returns
+   `SceneComponents3DReconstructionJobResponse`.
+
+Completed results are stored in a small temp job folder on the server machine.
+Set `VIZION3D_JOB_DIR` to control that folder. A result can be retrieved up to
+10 times and expires after 24 hours.
+
 ## Device
 
 The nested object config's `device` setting is propagated through the scene
