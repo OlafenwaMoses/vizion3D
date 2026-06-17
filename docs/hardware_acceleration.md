@@ -1,6 +1,6 @@
 # Hardware Acceleration
 
-vizion3d detects the best available device automatically at runtime — no code changes required. Choose the install path that matches your hardware.
+vizion3d detects the best available device automatically at runtime — no code changes required. Choose the install path that matches your hardware. These hardware extras install the runtime dependencies for the shipped task set, including reconstruction; do not install separate task-specific extras.
 
 | Backend | Hardware | Platforms | What drives inference |
 |---|---|---|---|
@@ -124,7 +124,7 @@ uv add "vizion3d[cuda]"
 
 Because `vizion3d[cuda]` declares no torch dependency, pip will not touch the CUDA wheel installed in step 1.
 
-vizion3d detects CUDA via `torch.cuda.is_available()` at runtime and moves models and tensors to the GPU automatically. For reconstruction workloads, combine the extras as `vizion3d[cuda,reconstruction]`; the CUDA extra also installs `onnxruntime-gpu` so mandatory `rembg` background removal can use ONNX Runtime's CUDA provider when available.
+vizion3d detects CUDA via `torch.cuda.is_available()` at runtime and moves models and tensors to the GPU automatically. The CUDA extra also installs `onnxruntime-gpu` so mandatory `rembg` background removal in reconstruction tasks can use ONNX Runtime's CUDA provider when available.
 
 ---
 
@@ -213,7 +213,7 @@ Install vizion3d without touching torch:
 **pip**
 ```bash
 pip install vizion3d --no-deps
-pip install fastapi "clean-ioc>=1.3.0" "pydantic>=2.0.0" grpcio grpcio-tools uvicorn python-multipart "transformers>=5.6.2" "pillow>=12.2.0" "open3d>=0.18.0"
+pip install fastapi "clean-ioc>=1.3.0" "pydantic>=2.0.0" grpcio grpcio-tools uvicorn python-multipart "transformers>=5.6.2" "pillow>=12.2.0" "open3d>=0.18.0" "orjson>=3.9.0" "ultralytics>=8.3.0" "trimesh>=4.0.0" "einops>=0.7.0" "omegaconf>=2.3.0" "PyMCubes>=0.1.6" "rembg>=2.0.67" "onnxruntime-gpu>=1.20.0" "opencv-python>=4.8.0" "basicsr>=1.4.2" "realesrgan>=0.3.0"
 ```
 
 This installs all non-torch dependencies and leaves Colab's pre-installed torch untouched.

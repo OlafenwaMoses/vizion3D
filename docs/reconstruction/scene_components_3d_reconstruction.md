@@ -159,11 +159,11 @@ The output geometry is uniformly gray. Scene components are not texture-baked.
 
 ## Install and Models
 
-Install the runtime dependencies:
-
-```bash
-pip install "vizion3d[reconstruction]"
-```
+Install vizion3d with the hardware extra for your machine, for example
+`vizion3d[cpu]`, `vizion3d[mps]`, `vizion3d[cuda]`, or `vizion3d[amd]`.
+Those hardware extras include the reconstruction runtime dependencies. See
+the [Hardware Acceleration](../hardware_acceleration.md) page for the supported
+install commands.
 
 The task uses these model families:
 
