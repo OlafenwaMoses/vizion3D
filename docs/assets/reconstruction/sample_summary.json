@@ -1,5 +1,5 @@
 {
-  "sample_quality": "full-resolution source image; production-default reconstruction settings; scene max_objects=1 for docs brevity",
+  "sample_quality": "living-dining-room docs asset; production-default reconstruction settings; scene max_objects=1 for docs brevity",
   "object_sample": {
     "mesh": "object_sample_mesh.ply",
     "point_cloud": "object_sample_point_cloud.ply",
@@ -24,28 +24,29 @@
   "scene_component_01": {
     "mesh": "scene_component_01_mesh.ply",
     "point_cloud": "scene_component_01_point_cloud.ply",
-    "vertex_count": 46022,
-    "face_count": 92092,
+    "vertex_count": 60344,
+    "face_count": 120684,
     "point_count": 200000,
-    "label": "chair",
-    "class_id": 56,
-    "confidence": 0.962367832660675,
+    "label": "couch",
+    "class_id": 57,
+    "confidence": 0.9738470911979675,
     "bbox_2d": [
-      712.96044921875,
-      473.3762512207031,
-      947.2398681640625,
-      748.556640625
+      429.3312683105469,
+      397.3780822753906,
+      889.479736328125,
+      656.4822998046875
     ]
   },
   "scene": {
     "source_image_size": [
-      4000,
-      3000
+      1500,
+      1000
     ],
     "analysis_image_size": [
       1080,
-      810
+      720
     ],
+    "input_asset": "scene_components_input.jpg",
     "config": {
       "max_input_dimension": 1080,
       "max_objects": 1,

@@ -17,20 +17,20 @@ already a close-range view of one object.
 
 <figure>
   <img src="../../assets/reconstruction/scene_components_input.jpg" alt="Scene-components reconstruction sample input" style="width:100%;border-radius:6px;">
-  <figcaption style="color:#aaa;font-size:0.8em;margin-top:0.3rem;">Sample 4000x3000 full-resolution scene input used for component reconstruction</figcaption>
+  <figcaption style="color:#aaa;font-size:0.8em;margin-top:0.3rem;">Sample living/dining room scene input used for component reconstruction. The saved image is 1500x1000.</figcaption>
 </figure>
 
 This sample uses the default `confidence_threshold=0.25`, analyzes the
-4000x3000 input at the default 1080px scene-analysis cap, and reconstructs one
+1500x1000 input at the default 1080px scene-analysis cap, and reconstructs one
 high-confidence component with production-default mesh settings:
 
 | Component | Class ID | Confidence | Mesh vertices | Mesh faces | Point-cloud points |
 |---|---:|---:|---:|---:|---:|
-| chair | 56 | 0.962 | 46,022 | 92,092 | 200,000 |
+| couch | 57 | 0.974 | 60,344 | 120,684 | 200,000 |
 
 <figure>
   <div id="scene-component-mesh-viewer" style="width:105%;margin-left:-3.5%;margin-right:-3.5%;height:440px;overflow:hidden;border-radius:6px;background:#d8d8d8;"></div>
-  <figcaption style="color:#aaa;font-size:0.8em;margin-top:0.3rem;">Generated gray mesh for the detected chair component</figcaption>
+  <figcaption style="color:#aaa;font-size:0.8em;margin-top:0.3rem;">Generated gray mesh for the detected couch component</figcaption>
 </figure>
 
 <figure>
