@@ -15,12 +15,12 @@ or a single object occupying most of the frame. For broader scene images, use
 
 <figure>
   <img src="../../assets/reconstruction/object_input.jpg" alt="Object reconstruction sample input crop" style="width:100%;border-radius:6px;">
-  <figcaption style="color:#aaa;font-size:0.8em;margin-top:0.3rem;">Sample object-style input crop used for reconstruction. The saved input has a 1080px long edge.</figcaption>
+  <figcaption style="color:#aaa;font-size:0.8em;margin-top:0.3rem;">Sample object-style input crop from the full-resolution scene source. The saved crop is 1850x1670.</figcaption>
 </figure>
 
 <figure>
   <div id="object-mesh-viewer" style="width:105%;margin-left:-3.5%;margin-right:-3.5%;height:440px;overflow:hidden;border-radius:6px;background:#d8d8d8;"></div>
-  <figcaption style="color:#aaa;font-size:0.8em;margin-top:0.3rem;">Generated gray object mesh: 46,559 vertices and 93,126 faces</figcaption>
+  <figcaption style="color:#aaa;font-size:0.8em;margin-top:0.3rem;">Generated gray object mesh: 47,806 vertices and 95,644 faces</figcaption>
 </figure>
 
 <figure>
@@ -256,8 +256,8 @@ with:
   "result": {
     "mesh_ply": "<base64 PLY>",
     "point_cloud_ply": "<base64 PLY>",
-    "vertex_count": 46559,
-    "face_count": 93126,
+    "vertex_count": 47806,
+    "face_count": 95644,
     "point_count": 200000
   }
 }

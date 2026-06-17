@@ -17,16 +17,16 @@ already a close-range view of one object.
 
 <figure>
   <img src="../../assets/reconstruction/scene_components_input.jpg" alt="Scene-components reconstruction sample input" style="width:100%;border-radius:6px;">
-  <figcaption style="color:#aaa;font-size:0.8em;margin-top:0.3rem;">Sample 1080x810 scene input used for component reconstruction</figcaption>
+  <figcaption style="color:#aaa;font-size:0.8em;margin-top:0.3rem;">Sample 4000x3000 full-resolution scene input used for component reconstruction</figcaption>
 </figure>
 
-This sample uses `confidence_threshold=0.01`, analyzes the 1080x810 input at
-native resolution, and reconstructs one high-confidence component with
-production-default mesh settings:
+This sample uses the default `confidence_threshold=0.25`, analyzes the
+4000x3000 input at the default 1080px scene-analysis cap, and reconstructs one
+high-confidence component with production-default mesh settings:
 
 | Component | Class ID | Confidence | Mesh vertices | Mesh faces | Point-cloud points |
 |---|---:|---:|---:|---:|---:|
-| chair | 56 | 0.933 | 59,298 | 118,592 | 200,000 |
+| chair | 56 | 0.962 | 46,022 | 92,092 | 200,000 |
 
 <figure>
   <div id="scene-component-mesh-viewer" style="width:105%;margin-left:-3.5%;margin-right:-3.5%;height:440px;overflow:hidden;border-radius:6px;background:#d8d8d8;"></div>
@@ -182,7 +182,7 @@ command = SceneComponents3DReconstructionCommand(
     advanced_config=SceneComponents3DReconstructionConfig(
         max_input_dimension=1080,
         max_objects=3,
-        confidence_threshold=0.01,
+        confidence_threshold=0.25,
         padding_ratio=0.15,
         object_config=Object3DReconstructionConfig(
             max_input_dimension=1080,
@@ -251,7 +251,7 @@ curl -X POST http://localhost:8000/reconstruction/scene-components-3d-reconstruc
   -F "image=@scene.jpg" \
   -F "model_bundle=scene-components-3d-models.zip" \
   -F "max_objects=3" \
-  -F "confidence_threshold=0.01" \
+  -F "confidence_threshold=0.25" \
   -F "device=auto"
 ```
 

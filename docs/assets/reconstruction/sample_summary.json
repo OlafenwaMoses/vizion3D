@@ -1,11 +1,15 @@
 {
-  "sample_quality": "production-default mesh settings; scene max_objects=1 for docs brevity",
+  "sample_quality": "full-resolution source image; production-default reconstruction settings; scene max_objects=1 for docs brevity",
   "object_sample": {
     "mesh": "object_sample_mesh.ply",
     "point_cloud": "object_sample_point_cloud.ply",
-    "vertex_count": 46559,
-    "face_count": 93126,
+    "vertex_count": 47806,
+    "face_count": 95644,
     "point_count": 200000,
+    "input_size": [
+      1850,
+      1670
+    ],
     "config": {
       "max_input_dimension": 1080,
       "marching_cubes_resolution": 256,
@@ -14,44 +18,49 @@
       "foreground_ratio": 0.82,
       "smoothing_iterations": 5,
       "min_component_area_ratio": 0.02,
-      "device": "cpu"
+      "device": "auto"
     }
   },
   "scene_component_01": {
     "mesh": "scene_component_01_mesh.ply",
     "point_cloud": "scene_component_01_point_cloud.ply",
-    "vertex_count": 59298,
-    "face_count": 118592,
+    "vertex_count": 46022,
+    "face_count": 92092,
     "point_count": 200000,
     "label": "chair",
     "class_id": 56,
-    "confidence": 0.9333949685096741,
+    "confidence": 0.962367832660675,
     "bbox_2d": [
-      711.4476928710938,
-      473.0633850097656,
-      946.87939453125,
-      748.6041259765625
+      712.96044921875,
+      473.3762512207031,
+      947.2398681640625,
+      748.556640625
     ]
   },
   "scene": {
     "source_image_size": [
-      1080,
-      810
+      4000,
+      3000
     ],
     "analysis_image_size": [
       1080,
       810
     ],
-    "confidence_threshold": 0.01,
-    "object_config": {
+    "config": {
       "max_input_dimension": 1080,
-      "marching_cubes_resolution": 256,
-      "density_threshold": 25.0,
-      "point_count": 200000,
-      "foreground_ratio": 0.82,
-      "smoothing_iterations": 5,
-      "min_component_area_ratio": 0.02,
-      "device": "cpu"
+      "max_objects": 1,
+      "confidence_threshold": 0.25,
+      "padding_ratio": 0.15,
+      "object_config": {
+        "max_input_dimension": 1080,
+        "marching_cubes_resolution": 256,
+        "density_threshold": 25.0,
+        "point_count": 200000,
+        "foreground_ratio": 0.82,
+        "smoothing_iterations": 5,
+        "min_component_area_ratio": 0.02,
+        "device": "auto"
+      }
     },
     "depth_backend_used": "/Users/moses/.cache/vizion3d/models/depth_anything_v2_vitb.pth",
     "annotation_backend_used": "/Users/moses/.cache/vizion3d/models/yolo26l-seg.pt",
