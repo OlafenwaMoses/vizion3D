@@ -20,12 +20,13 @@ already a close-range view of one object.
   <figcaption style="color:#aaa;font-size:0.8em;margin-top:0.3rem;">Sample 1080x810 scene input used for component reconstruction</figcaption>
 </figure>
 
-This sample uses `confidence_threshold=0.01`, analyzes the scene at 640x480,
-and reconstructs one high-confidence component:
+This sample uses `confidence_threshold=0.01`, analyzes the 1080x810 input at
+native resolution, and reconstructs one high-confidence component with
+production-default mesh settings:
 
 | Component | Class ID | Confidence | Mesh vertices | Mesh faces | Point-cloud points |
 |---|---:|---:|---:|---:|---:|
-| chair | 56 | 0.933 | 2,866 | 5,736 | 4,096 |
+| chair | 56 | 0.933 | 59,298 | 118,592 | 200,000 |
 
 <figure>
   <div id="scene-component-mesh-viewer" style="width:105%;margin-left:-3.5%;margin-right:-3.5%;height:440px;overflow:hidden;border-radius:6px;background:#d8d8d8;"></div>

@@ -20,12 +20,12 @@ or a single object occupying most of the frame. For broader scene images, use
 
 <figure>
   <div id="object-mesh-viewer" style="width:105%;margin-left:-3.5%;margin-right:-3.5%;height:440px;overflow:hidden;border-radius:6px;background:#d8d8d8;"></div>
-  <figcaption style="color:#aaa;font-size:0.8em;margin-top:0.3rem;">Generated gray object mesh: 2,652 vertices and 5,300 faces</figcaption>
+  <figcaption style="color:#aaa;font-size:0.8em;margin-top:0.3rem;">Generated gray object mesh: 46,559 vertices and 93,126 faces</figcaption>
 </figure>
 
 <figure>
   <div id="object-cloud-viewer" style="width:105%;margin-left:-3.5%;margin-right:-3.5%;height:440px;overflow:hidden;border-radius:6px;background:#d8d8d8;"></div>
-  <figcaption style="color:#aaa;font-size:0.8em;margin-top:0.3rem;">Point cloud sampled from the generated mesh surface: 4,096 points</figcaption>
+  <figcaption style="color:#aaa;font-size:0.8em;margin-top:0.3rem;">Point cloud sampled from the generated mesh surface: 200,000 points</figcaption>
 </figure>
 
 <script type="importmap">
@@ -127,6 +127,10 @@ The object pipeline is:
 Background removal always runs. There is no option to disable it for this task.
 The output is intentionally gray so downstream workflows get geometry without
 texture baking or texture-job side effects.
+
+The sample above uses production-default mesh settings:
+`marching_cubes_resolution=256`, `point_count=200000`, and
+`smoothing_iterations=5`.
 
 ## Install and Models
 
@@ -252,9 +256,9 @@ with:
   "result": {
     "mesh_ply": "<base64 PLY>",
     "point_cloud_ply": "<base64 PLY>",
-    "vertex_count": 2652,
-    "face_count": 5300,
-    "point_count": 4096
+    "vertex_count": 46559,
+    "face_count": 93126,
+    "point_count": 200000
   }
 }
 ```
