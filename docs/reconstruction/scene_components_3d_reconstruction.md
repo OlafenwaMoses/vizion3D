@@ -86,6 +86,19 @@ function mountPlyViewer(containerId, plyPath, mode, pointSize = 0.01) {
     const center = new THREE.Vector3();
     geometry.boundingBox.getCenter(center);
     const size = Math.max(geometry.boundingBox.getSize(new THREE.Vector3()).length(), 0.001);
+    const applyRainbowColors = () => {
+      const positions = geometry.getAttribute('position');
+      const colors = [];
+      const minY = geometry.boundingBox.min.y;
+      const height = Math.max(geometry.boundingBox.max.y - minY, 0.001);
+      const color = new THREE.Color();
+      for (let i = 0; i < positions.count; i++) {
+        const t = (positions.getY(i) - minY) / height;
+        color.setHSL(0.72 * (1.0 - t), 0.95, 0.55);
+        colors.push(color.r, color.g, color.b);
+      }
+      geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    };
 
     let object;
     if (mode === 'mesh') {
@@ -95,6 +108,7 @@ function mountPlyViewer(containerId, plyPath, mode, pointSize = 0.01) {
         new THREE.MeshStandardMaterial({ color: 0xd3d3d3, roughness: 0.72, metalness: 0.02, side: THREE.DoubleSide })
       );
     } else {
+      applyRainbowColors();
       object = new THREE.Points(
         geometry,
         new THREE.PointsMaterial({ size: pointSize, vertexColors: true })
