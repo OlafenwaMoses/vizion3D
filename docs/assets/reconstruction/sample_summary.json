@@ -3,12 +3,17 @@
   "object_sample": {
     "mesh": "object_sample_mesh.ply",
     "point_cloud": "object_sample_point_cloud.ply",
-    "vertex_count": 47806,
-    "face_count": 95644,
+    "vertex_count": 53965,
+    "face_count": 107926,
     "point_count": 200000,
+    "input_asset": "object_input.jpg",
     "input_size": [
-      1850,
-      1670
+      1536,
+      2048
+    ],
+    "analysis_size": [
+      1536,
+      2048
     ],
     "config": {
       "max_input_dimension": 1080,
@@ -19,7 +24,8 @@
       "smoothing_iterations": 5,
       "min_component_area_ratio": 0.02,
       "device": "auto"
-    }
+    },
+    "backend_used": "/Users/moses/.cache/vizion3d/models/scene-components-3d-models"
   },
   "scene_component_01": {
     "mesh": "scene_component_01_mesh.ply",
