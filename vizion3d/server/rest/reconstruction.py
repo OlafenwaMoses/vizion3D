@@ -107,9 +107,12 @@ def _poll_job(job_id: str):
 
     try:
         job = reconstruction_jobs.consume_result(job_id)
-    except JobResultUnavailable as exc:
+    except JobResultUnavailable:
         return JSONResponse(
-            {**_job_payload(job), "detail": str(exc)},
+            {
+                **_job_payload(job),
+                "detail": "Reconstruction result is no longer available",
+            },
             status_code=410,
         )
     return JSONResponse(
