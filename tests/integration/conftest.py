@@ -275,9 +275,8 @@ def local_annotation_model_path(tmp_path_factory) -> str:
 def local_scene_model_path(tmp_path_factory) -> str:
     """Provide a local .bin path for the SegFormer-B4 scene model.
 
-    Resolution order: the vizion3d cache, then the vendored research copy at
-    ``research/2D_SEGMENTATION/segformer_b4_ade20k.bin``, then a fresh download
-    from the release URL.  Skips the test if none is available.
+    Resolution order: the vizion3d cache, then a fresh download from the release
+    URL. Skips the test if neither source is available.
     """
     from vizion3d.annotation.scene_defaults import (
         DEFAULT_SCENE_MODEL_FILENAME,
@@ -286,19 +285,11 @@ def local_scene_model_path(tmp_path_factory) -> str:
     from vizion3d.lifting.defaults import default_model_cache_dir, download_model
 
     default_cache = default_model_cache_dir() / DEFAULT_SCENE_MODEL_FILENAME
-    research_copy = (
-        Path(__file__).parent.parent.parent
-        / "research"
-        / "2D_SEGMENTATION"
-        / DEFAULT_SCENE_MODEL_FILENAME
-    )
     tmp_dir = tmp_path_factory.mktemp("local_scene_model")
     dest = tmp_dir / DEFAULT_SCENE_MODEL_FILENAME
 
     if default_cache.exists():
         dest.symlink_to(default_cache.resolve())
-    elif research_copy.exists():
-        dest.symlink_to(research_copy.resolve())
     else:
         try:
             download_model(DEFAULT_SCENE_MODEL_URL, cache_dir=tmp_dir)

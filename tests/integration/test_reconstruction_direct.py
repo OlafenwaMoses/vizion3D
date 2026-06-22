@@ -50,19 +50,6 @@ def reconstruction_model_bundle() -> str:
     return str(bundle)
 
 
-@pytest.fixture(scope="session", autouse=True)
-def triposr_source_available():
-    source = (
-        Path(__file__).resolve().parents[2]
-        / "research"
-        / "3D_Object-Reconstruction"
-        / "TripoSR"
-    )
-    if not (source / "tsr" / "system.py").is_file():
-        pytest.skip(f"TripoSR source not found: {source}")
-    os.environ["VIZION3D_TRIPOSR_SOURCE"] = str(source)
-
-
 @pytest.fixture(scope="session")
 def reconstruction_image_bytes() -> bytes:
     path = Path(__file__).parent.parent / "assets" / RECONSTRUCTION_IMAGE

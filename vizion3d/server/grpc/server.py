@@ -121,22 +121,14 @@ def _object_reconstruction_config(proto=None) -> Object3DReconstructionConfig:
         return getattr(proto, field) if proto.HasField(field) else default
 
     return Object3DReconstructionConfig(
-        max_input_dimension=_f(
-            "max_input_dimension", base.max_input_dimension
-        ),
-        marching_cubes_resolution=_f(
-            "marching_cubes_resolution", base.marching_cubes_resolution
-        ),
+        max_input_dimension=_f("max_input_dimension", base.max_input_dimension),
+        marching_cubes_resolution=_f("marching_cubes_resolution", base.marching_cubes_resolution),
         density_threshold=_f("density_threshold", base.density_threshold),
         point_count=_f("point_count", base.point_count),
         device=_f("device", base.device),
         foreground_ratio=_f("foreground_ratio", base.foreground_ratio),
-        smoothing_iterations=_f(
-            "smoothing_iterations", base.smoothing_iterations
-        ),
-        min_component_area_ratio=_f(
-            "min_component_area_ratio", base.min_component_area_ratio
-        ),
+        smoothing_iterations=_f("smoothing_iterations", base.smoothing_iterations),
+        min_component_area_ratio=_f("min_component_area_ratio", base.min_component_area_ratio),
     )
 
 
@@ -537,9 +529,7 @@ class LiftingServiceServicer(lifting_pb2_grpc.LiftingServiceServicer):
     def RunObject3DReconstruction(self, request, context):
         """Submit a close-range object reconstruction job."""
         config = _object_reconstruction_config(
-            request.advanced_config
-            if request.HasField("advanced_config")
-            else None
+            request.advanced_config if request.HasField("advanced_config") else None
         )
         command = Object3DReconstructionCommand(
             image_input=request.image_bytes,
@@ -574,18 +564,12 @@ class LiftingServiceServicer(lifting_pb2_grpc.LiftingServiceServicer):
                 return getattr(proto, field) if proto.HasField(field) else default
 
             base = SceneComponents3DReconstructionConfig(
-                max_input_dimension=_f(
-                    "max_input_dimension", base.max_input_dimension
-                ),
+                max_input_dimension=_f("max_input_dimension", base.max_input_dimension),
                 max_objects=_f("max_objects", base.max_objects),
-                confidence_threshold=_f(
-                    "confidence_threshold", base.confidence_threshold
-                ),
+                confidence_threshold=_f("confidence_threshold", base.confidence_threshold),
                 padding_ratio=_f("padding_ratio", base.padding_ratio),
                 object_config=_object_reconstruction_config(
-                    proto.object_config
-                    if proto.HasField("object_config")
-                    else None
+                    proto.object_config if proto.HasField("object_config") else None
                 ),
             )
         command = SceneComponents3DReconstructionCommand(

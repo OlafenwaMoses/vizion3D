@@ -26,9 +26,7 @@ register_command_handler(
 
 
 class Object3DReconstruction:
-    def run(
-        self, command: Object3DReconstructionCommand
-    ) -> Object3DReconstructionResult:
+    def run(self, command: Object3DReconstructionCommand) -> Object3DReconstructionResult:
         return command_bus.dispatch(command)
 
 

@@ -24,9 +24,7 @@ class Object3DReconstructionCommand(Command[Object3DReconstructionResult]):
 
 
 @dataclass
-class SceneComponents3DReconstructionCommand(
-    Command[SceneComponents3DReconstructionResult]
-):
+class SceneComponents3DReconstructionCommand(Command[SceneComponents3DReconstructionResult]):
     image_input: str | bytes
     model_bundle: str | None = None
     depth_model_backend: str | None = None

@@ -52,9 +52,7 @@ def resolve_model_bundle(value: str | os.PathLike[str] | None = None) -> Path:
     candidate = str(value or default_model_bundle())
     parsed = urllib.parse.urlparse(candidate)
     if parsed.scheme in {"http", "https"}:
-        destination = model_cache_dir() / (
-            Path(parsed.path).name or MODEL_BUNDLE_FILENAME
-        )
+        destination = model_cache_dir() / (Path(parsed.path).name or MODEL_BUNDLE_FILENAME)
         if not destination.is_file():
             with _BUNDLE_LOCK:
                 if not destination.is_file():
@@ -84,9 +82,7 @@ def extract_model_bundle(value: str | os.PathLike[str] | None = None) -> Path:
         if _is_current():
             return destination
         model_cache_dir().mkdir(parents=True, exist_ok=True)
-        temporary = Path(
-            tempfile.mkdtemp(prefix=f"{bundle.stem}.", dir=model_cache_dir())
-        )
+        temporary = Path(tempfile.mkdtemp(prefix=f"{bundle.stem}.", dir=model_cache_dir()))
         try:
             with zipfile.ZipFile(bundle) as archive:
                 root = temporary.resolve()
@@ -97,8 +93,16 @@ def extract_model_bundle(value: str | os.PathLike[str] | None = None) -> Path:
                 archive.extractall(temporary)
             if not (temporary / "TripoSR" / "model.ckpt").is_file():
                 raise ValueError("Model bundle is missing TripoSR/model.ckpt.")
+            if not (temporary / "TripoSR" / "config.yaml").is_file():
+                raise ValueError("Model bundle is missing TripoSR/config.yaml.")
+            if not (temporary / "TripoSR" / "dino-vitb16-config.json").is_file():
+                raise ValueError("Model bundle is missing TripoSR/dino-vitb16-config.json.")
+            if not (temporary / "TripoSR" / "tsr" / "system.py").is_file():
+                raise ValueError("Model bundle is missing TripoSR/tsr/system.py.")
             if not (temporary / "rembg" / "u2net.onnx").is_file():
                 raise ValueError("Model bundle is missing rembg/u2net.onnx.")
+            if not (temporary / "ESRGAN" / "RealESRGAN_x4plus.pth").is_file():
+                raise ValueError("Model bundle is missing ESRGAN/RealESRGAN_x4plus.pth.")
             (temporary / ".complete").write_text(str(bundle), encoding="utf-8")
             if destination.exists():
                 shutil.rmtree(destination)

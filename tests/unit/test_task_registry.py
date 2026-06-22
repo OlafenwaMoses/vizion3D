@@ -20,12 +20,8 @@ def test_promoted_tasks_have_unique_slugs():
 
 
 def test_reconstruction_tasks_are_promoted():
-    reconstruction = {
-        task.slug: task for task in tasks_by_category()["Reconstruction"]
-    }
-    assert reconstruction["object-3d-reconstruction"].grpc_method == (
-        "RunObject3DReconstruction"
-    )
+    reconstruction = {task.slug: task for task in tasks_by_category()["Reconstruction"]}
+    assert reconstruction["object-3d-reconstruction"].grpc_method == ("RunObject3DReconstruction")
     assert reconstruction["scene-components-3d-reconstruction"].grpc_method == (
         "RunSceneComponents3DReconstruction"
     )

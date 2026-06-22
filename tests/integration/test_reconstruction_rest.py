@@ -43,19 +43,6 @@ def reconstruction_model_bundle() -> str:
     return str(bundle)
 
 
-@pytest.fixture(scope="session", autouse=True)
-def triposr_source_available():
-    source = (
-        Path(__file__).resolve().parents[2]
-        / "research"
-        / "3D_Object-Reconstruction"
-        / "TripoSR"
-    )
-    if not (source / "tsr" / "system.py").is_file():
-        pytest.skip(f"TripoSR source not found: {source}")
-    os.environ["VIZION3D_TRIPOSR_SOURCE"] = str(source)
-
-
 @pytest.fixture(scope="session")
 def reconstruction_image_bytes() -> bytes:
     path = Path(__file__).parent.parent / "assets" / RECONSTRUCTION_IMAGE
@@ -75,9 +62,7 @@ def _decode_ply(value: str) -> bytes:
 def _save_object_payload(data: dict, run_dir: Path, stem: str) -> None:
     run_dir.mkdir(parents=True, exist_ok=True)
     (run_dir / f"{stem}_mesh.ply").write_bytes(_decode_ply(data["mesh_ply"]))
-    (run_dir / f"{stem}_point_cloud.ply").write_bytes(
-        _decode_ply(data["point_cloud_ply"])
-    )
+    (run_dir / f"{stem}_point_cloud.ply").write_bytes(_decode_ply(data["point_cloud_ply"]))
 
 
 def _assert_object_payload(data: dict) -> None:

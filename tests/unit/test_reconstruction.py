@@ -30,6 +30,7 @@ try:
     from vizion3d.reconstruction.handlers import (
         Object3DReconstructionHandler,
         SceneComponents3DReconstructionHandler,
+        _import_tsr_from_bundle,
         _rembg_providers,
     )
     from vizion3d.server.grpc.server import LiftingServiceServicer
@@ -72,13 +73,62 @@ def test_extract_model_bundle_validates_and_caches_tiny_zip(tmp_path, monkeypatc
     bundle = tmp_path / "models.zip"
     with zipfile.ZipFile(bundle, "w") as archive:
         archive.writestr("TripoSR/model.ckpt", b"x")
+        archive.writestr("TripoSR/config.yaml", b"x")
+        archive.writestr("TripoSR/dino-vitb16-config.json", b"{}")
+        archive.writestr("TripoSR/tsr/__init__.py", b"")
+        archive.writestr("TripoSR/tsr/system.py", b"class TSR:\n    pass\n")
         archive.writestr("rembg/u2net.onnx", b"x")
+        archive.writestr("ESRGAN/RealESRGAN_x4plus.pth", b"x")
     monkeypatch.setenv("VIZION3D_MODEL_CACHE", str(tmp_path / "cache"))
 
     extracted = extract_model_bundle(bundle)
 
     assert (extracted / ".complete").is_file()
     assert extract_model_bundle(bundle) == extracted
+
+
+def test_extract_model_bundle_requires_runtime_source(tmp_path, monkeypatch):
+    bundle = tmp_path / "models.zip"
+    with zipfile.ZipFile(bundle, "w") as archive:
+        archive.writestr("TripoSR/model.ckpt", b"x")
+        archive.writestr("TripoSR/config.yaml", b"x")
+        archive.writestr("TripoSR/dino-vitb16-config.json", b"{}")
+        archive.writestr("rembg/u2net.onnx", b"x")
+        archive.writestr("ESRGAN/RealESRGAN_x4plus.pth", b"x")
+    monkeypatch.setenv("VIZION3D_MODEL_CACHE", str(tmp_path / "cache"))
+
+    with pytest.raises(ValueError, match="TripoSR/tsr/system.py"):
+        extract_model_bundle(bundle)
+
+
+def test_extract_model_bundle_requires_enhancement_weights(tmp_path, monkeypatch):
+    bundle = tmp_path / "models.zip"
+    with zipfile.ZipFile(bundle, "w") as archive:
+        archive.writestr("TripoSR/model.ckpt", b"x")
+        archive.writestr("TripoSR/config.yaml", b"x")
+        archive.writestr("TripoSR/dino-vitb16-config.json", b"{}")
+        archive.writestr("TripoSR/tsr/__init__.py", b"")
+        archive.writestr("TripoSR/tsr/system.py", b"class TSR:\n    pass\n")
+        archive.writestr("rembg/u2net.onnx", b"x")
+    monkeypatch.setenv("VIZION3D_MODEL_CACHE", str(tmp_path / "cache"))
+
+    with pytest.raises(ValueError, match="ESRGAN/RealESRGAN_x4plus.pth"):
+        extract_model_bundle(bundle)
+
+
+def test_import_tsr_from_bundle_uses_extracted_runtime_source(tmp_path):
+    source = tmp_path / "TripoSR" / "tsr"
+    source.mkdir(parents=True)
+    (source / "__init__.py").write_text("", encoding="utf-8")
+    (source / "system.py").write_text(
+        "class TSR:\n    marker = 'bundle'\n",
+        encoding="utf-8",
+    )
+
+    TSR = _import_tsr_from_bundle(tmp_path)
+
+    assert TSR.marker == "bundle"
+    assert str(tmp_path / "TripoSR") == sys.path[0]
 
 
 def test_object_reconstruction_outputs_gray_mesh_and_cloud(tmp_path):
@@ -107,9 +157,7 @@ def test_object_reconstruction_outputs_gray_mesh_and_cloud(tmp_path):
         ),
     ):
         result = handler.handle(
-            Object3DReconstructionCommand(
-                image_input=_image_bytes(), advanced_config=config
-            )
+            Object3DReconstructionCommand(image_input=_image_bytes(), advanced_config=config)
         )
 
     assert result.point_count == 20
@@ -237,9 +285,7 @@ def test_scene_analysis_limit_does_not_limit_source_crop_resolution():
 
     with (
         patch("vizion3d.reconstruction.handlers.DepthEstimation") as depth_task,
-        patch(
-            "vizion3d.reconstruction.handlers.ObjectMaskAnnotation3D"
-        ) as annotation_task,
+        patch("vizion3d.reconstruction.handlers.ObjectMaskAnnotation3D") as annotation_task,
         patch.object(Object3DReconstructionHandler, "handle", side_effect=reconstruct),
         patch(
             "vizion3d.reconstruction.handlers.extract_model_bundle",
@@ -275,9 +321,7 @@ def test_scene_analysis_limit_does_not_limit_source_crop_resolution():
 
 def test_reconstruction_rest_endpoint_serializes_geometry():
     client = TestClient(create_app())
-    with patch(
-        "vizion3d.server.rest.reconstruction.Object3DReconstruction"
-    ) as task:
+    with patch("vizion3d.server.rest.reconstruction.Object3DReconstruction") as task:
         task.return_value.run.return_value = _result()
         response = client.post(
             "/reconstruction/object-3d-reconstruction",

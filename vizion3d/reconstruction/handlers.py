@@ -9,6 +9,7 @@ import os
 import sys
 import threading
 from pathlib import Path
+from types import ModuleType
 
 import numpy as np
 from PIL import Image, ImageFilter, ImageOps
@@ -93,6 +94,43 @@ def _rembg_providers(requested: str) -> list[str]:
     return ["CPUExecutionProvider"]
 
 
+def _module_file(module: ModuleType | None) -> Path | None:
+    if module is None or not getattr(module, "__file__", None):
+        return None
+    return Path(module.__file__).resolve()
+
+
+def _import_tsr_from_bundle(root: Path):
+    source = (root / "TripoSR").resolve()
+    system_py = source / "tsr" / "system.py"
+    if not system_py.is_file():
+        raise ImportError(
+            "3D reconstruction runtime source is missing from the model bundle: "
+            "expected TripoSR/tsr/system.py."
+        )
+
+    for name in list(sys.modules):
+        if name == "tsr" or name.startswith("tsr."):
+            del sys.modules[name]
+
+    source_str = str(source)
+    if source_str in sys.path:
+        sys.path.remove(source_str)
+    sys.path.insert(0, source_str)
+
+    try:
+        from tsr.system import TSR
+    except ImportError as exc:
+        raise ImportError(
+            "3D reconstruction could not import the runtime source from the model bundle."
+        ) from exc
+
+    loaded_system = _module_file(sys.modules.get("tsr.system"))
+    if loaded_system is None or not loaded_system.is_relative_to(source):
+        raise ImportError("3D reconstruction loaded runtime source from outside the model bundle.")
+    return TSR
+
+
 def _square_conditioning(rgba: Image.Image, ratio: float) -> Image.Image:
     alpha = np.asarray(rgba.getchannel("A"))
     occupied = np.argwhere(alpha > 8)
@@ -134,35 +172,12 @@ class Object3DReconstructionHandler(
                 import trimesh
             except ImportError as exc:
                 raise ImportError(
-                    "3D reconstruction requires torch, trimesh, einops, omegaconf, "
-                    "and PyMCubes."
+                    "3D reconstruction requires torch, trimesh, einops, omegaconf, and PyMCubes."
                 ) from exc
 
             triposr = root / "TripoSR"
-            os.environ["TRIPOSR_DINO_CONFIG"] = str(
-                triposr / "dino-vitb16-config.json"
-            )
-            try:
-                from tsr.system import TSR
-            except ImportError:
-                source = os.environ.get("VIZION3D_TRIPOSR_SOURCE")
-                if source is None:
-                    checkout = (
-                        Path(__file__).resolve().parents[2]
-                        / "research"
-                        / "3D_Object-Reconstruction"
-                        / "TripoSR"
-                    )
-                    source = str(checkout)
-                if source not in sys.path:
-                    sys.path.insert(0, source)
-                try:
-                    from tsr.system import TSR
-                except ImportError as exc:
-                    raise ImportError(
-                        "TripoSR runtime source is required. Set "
-                        "VIZION3D_TRIPOSR_SOURCE to the TripoSR checkout."
-                    ) from exc
+            os.environ["TRIPOSR_DINO_CONFIG"] = str(triposr / "dino-vitb16-config.json")
+            TSR = _import_tsr_from_bundle(root)
 
             device = _device(torch, requested_device)
             try:
@@ -201,12 +216,8 @@ class Object3DReconstructionHandler(
 
     def handle(self, command: Object3DReconstructionCommand):
         config = command.advanced_config
-        model, torch, trimesh, device, root = self._load_model(
-            command.model_bundle, config.device
-        )
-        image = _limit_image_dimension(
-            _load_image(command.image_input), config.max_input_dimension
-        )
+        model, torch, trimesh, device, root = self._load_model(command.model_bundle, config.device)
+        image = _limit_image_dimension(_load_image(command.image_input), config.max_input_dimension)
         conditioning = self._prepare_foreground(image, root, config)
         try:
             mesh = self._extract_mesh(model, torch, conditioning, device, config)
@@ -266,16 +277,12 @@ class Object3DReconstructionHandler(
         colors = np.tile(np.append(_GRAY, 255), (len(mesh.vertices), 1))
         mesh.visual = trimesh.visual.ColorVisuals(mesh=mesh, vertex_colors=colors)
 
-        points, _ = trimesh.sample.sample_surface(
-            mesh, max(1, config.point_count), seed=42
-        )
+        points, _ = trimesh.sample.sample_surface(mesh, max(1, config.point_count), seed=42)
         import open3d as o3d
 
         cloud = o3d.geometry.PointCloud()
         cloud.points = o3d.utility.Vector3dVector(points)
-        cloud.colors = o3d.utility.Vector3dVector(
-            np.tile(_GRAY / 255.0, (len(points), 1))
-        )
+        cloud.colors = o3d.utility.Vector3dVector(np.tile(_GRAY / 255.0, (len(points), 1)))
         return Object3DReconstructionResult(
             mesh=mesh,
             point_cloud=cloud,
@@ -322,20 +329,14 @@ def _enhance_scene_crop_with_esrgan(
     working = rgba.copy()
     working.thumbnail((512, 512), Image.Resampling.LANCZOS)
     try:
-        return _run_esrgan_crop(
-            rgba=working, root=root, cv2=cv2, torch=torch, device=device
-        )
+        return _run_esrgan_crop(rgba=working, root=root, cv2=cv2, torch=torch, device=device)
     except Exception:
         if device == _CPU_DEVICE:
             raise
-        return _run_esrgan_crop(
-            rgba=working, root=root, cv2=cv2, torch=torch, device=_CPU_DEVICE
-        )
+        return _run_esrgan_crop(rgba=working, root=root, cv2=cv2, torch=torch, device=_CPU_DEVICE)
 
 
-def _run_esrgan_crop(
-    rgba: Image.Image, root: Path, cv2, torch, device: str
-) -> Image.Image:
+def _run_esrgan_crop(rgba: Image.Image, root: Path, cv2, torch, device: str) -> Image.Image:
     _ensure_torchvision_functional_tensor_compat()
     try:
         from basicsr.archs.rrdbnet_arch import RRDBNet
@@ -366,9 +367,7 @@ def _run_esrgan_crop(
         device=torch.device(device),
     )
     rgb = np.asarray(rgba.convert("RGB"))
-    enhanced, _ = upsampler.enhance(
-        cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR), outscale=2
-    )
+    enhanced, _ = upsampler.enhance(cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR), outscale=2)
     enhanced_rgb = Image.fromarray(cv2.cvtColor(enhanced, cv2.COLOR_BGR2RGB))
     alpha = rgba.getchannel("A").resize(enhanced_rgb.size, Image.Resampling.LANCZOS)
     result = enhanced_rgb.convert("RGBA")
@@ -396,10 +395,7 @@ class SceneComponents3DReconstructionHandler(
         config = command.advanced_config
         original = _load_image(command.image_input)
         analysis = original.convert("RGB")
-        if (
-            config.max_input_dimension > 0
-            and max(analysis.size) > config.max_input_dimension
-        ):
+        if config.max_input_dimension > 0 and max(analysis.size) > config.max_input_dimension:
             scale = config.max_input_dimension / max(analysis.size)
             analysis = analysis.resize(
                 (
@@ -426,9 +422,7 @@ class SceneComponents3DReconstructionHandler(
             ObjectMaskAnnotation3DCommand(
                 point_cloud=depth.point_cloud,
                 image_input=analysis_bytes,
-                model_backend=(
-                    command.annotation_model_backend or DEFAULT_ANNOTATION_MODEL_URL
-                ),
+                model_backend=(command.annotation_model_backend or DEFAULT_ANNOTATION_MODEL_URL),
                 advanced_config=ObjectMaskAnnotation3DConfig(
                     conf_threshold=config.confidence_threshold
                 ),
@@ -444,12 +438,8 @@ class SceneComponents3DReconstructionHandler(
         sx = original.width / analysis.width
         sy = original.height / analysis.height
         for annotation in selected:
-            mask = Image.fromarray(
-                np.asarray(annotation.mask_2d, dtype=np.uint8) * 255, mode="L"
-            )
-            mask = mask.filter(ImageFilter.MaxFilter(3)).filter(
-                ImageFilter.MinFilter(3)
-            )
+            mask = Image.fromarray(np.asarray(annotation.mask_2d, dtype=np.uint8) * 255, mode="L")
+            mask = mask.filter(ImageFilter.MaxFilter(3)).filter(ImageFilter.MinFilter(3))
             box = _padded_square(annotation.bbox_2d, analysis.size, config.padding_ratio)
             source_box = (
                 math.floor(box[0] * sx),

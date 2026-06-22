@@ -74,9 +74,7 @@ def _scene_payload(result) -> dict:
                 "confidence": component.confidence,
                 "bbox_2d": component.bbox_2d,
                 "mesh_ply": b64(trimesh_to_ply_bytes(component.mesh)),
-                "point_cloud_ply": b64(
-                    o3d_point_cloud_to_ply_bytes(component.point_cloud)
-                ),
+                "point_cloud_ply": b64(o3d_point_cloud_to_ply_bytes(component.point_cloud)),
                 "vertex_count": component.vertex_count,
                 "face_count": component.face_count,
                 "point_count": component.point_count,
