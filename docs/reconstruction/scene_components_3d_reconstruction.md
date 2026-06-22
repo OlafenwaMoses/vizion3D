@@ -148,16 +148,16 @@ The scene pipeline is:
 3. Detect and segment objects.
 4. Map selected object masks back to the original image.
 5. Crop each object with padding.
-6. Enhance each crop with Real-ESRGAN.
+6. Enhance each crop before reconstruction.
 7. Run `Object3DReconstruction` on each enhanced crop.
 
-Each selected crop always goes through `rembg` background removal inside the
-nested object reconstruction task. Real-ESRGAN is always applied for the scene
+Each selected crop always goes through foreground isolation inside the nested
+object reconstruction task. Crop enhancement is always applied for the scene
 pipeline; there is no option to disable it.
 
 The output geometry is uniformly gray. Scene components are not texture-baked.
 
-## Install and Models
+## Install and Runtime Assets
 
 Install vizion3d with the hardware extra for your machine, for example
 `vizion3d[cpu]`, `vizion3d[mps]`, `vizion3d[cuda]`, or `vizion3d[amd]`.
@@ -165,17 +165,17 @@ Those hardware extras include the reconstruction runtime dependencies. See
 the [Hardware Acceleration](../hardware_acceleration.md) page for the supported
 install commands.
 
-The task uses these model families:
+The task applies these processing stages to the input image:
 
-| Stage | Default model |
+| Stage | Work done |
 |---|---|
-| Depth | Depth Anything V2 |
-| Detection/segmentation | YOLO segmentation backend |
-| Crop enhancement | Real-ESRGAN from `scene-components-3d-models.zip` |
-| Background removal | `rembg/u2net.onnx` from `scene-components-3d-models.zip` |
-| Reconstruction | TripoSR from `scene-components-3d-models.zip` |
+| Scene analysis | Estimate depth and object layout from the scene image. |
+| Object selection | Detect, segment, and rank candidate objects. |
+| Crop preparation | Map selected masks to the original image, pad each crop, and enhance it. |
+| Foreground isolation | Remove background pixels from each selected crop. |
+| Reconstruction | Generate and clean a gray mesh, then sample a gray point cloud. |
 
-The bundled reconstruction zip is resolved the same way as
+The reconstruction runtime asset bundle is resolved the same way as
 `Object3DReconstruction`: explicit `model_bundle`,
 `VIZION3D_RECONSTRUCTION_MODEL_BUNDLE`, repository root, then
 `~/.cache/vizion3d/models`.
@@ -192,7 +192,7 @@ from vizion3d.reconstruction import (
 
 command = SceneComponents3DReconstructionCommand(
     image_input="scene.jpg",
-    model_bundle="scene-components-3d-models.zip",
+    model_bundle="/path/to/reconstruction-assets.zip",
     advanced_config=SceneComponents3DReconstructionConfig(
         max_input_dimension=1080,
         max_objects=3,
@@ -217,9 +217,9 @@ for component in result.components:
 | Parameter | Type | Required | Default | Description |
 |---|---|---:|---|---|
 | `image_input` | `str \| bytes` | Yes | — | Scene image path or raw image bytes. |
-| `model_bundle` | `str \| None` | No | Auto-resolved | Path to `scene-components-3d-models.zip`. |
-| `depth_model_backend` | `str \| None` | No | Depth default | Optional depth checkpoint path or URL. |
-| `annotation_model_backend` | `str \| None` | No | Annotation default | Optional segmentation checkpoint path or URL. |
+| `model_bundle` | `str \| None` | No | Auto-resolved | Path to the reconstruction runtime asset bundle. |
+| `depth_model_backend` | `str \| None` | No | Depth default | Optional depth-analysis backend override. |
+| `annotation_model_backend` | `str \| None` | No | Annotation default | Optional object-segmentation backend override. |
 | `advanced_config` | `SceneComponents3DReconstructionConfig` | No | Defaults | Scene selection and nested object reconstruction settings. |
 
 ## Config
@@ -239,9 +239,9 @@ for component in result.components:
 | `components` | `list[SceneComponent3D]` | Reconstructed detected objects. |
 | `source_image_size` | `tuple[int, int]` | Original input image size `(width, height)`. |
 | `analysis_image_size` | `tuple[int, int]` | Image size used for depth and segmentation analysis. |
-| `depth_backend_used` | `str` | Resolved depth backend. |
-| `annotation_backend_used` | `str` | Resolved annotation backend. |
-| `reconstruction_backend_used` | `str` | Resolved reconstruction model-bundle directory. |
+| `depth_backend_used` | `str` | Resolved depth-analysis backend. |
+| `annotation_backend_used` | `str` | Resolved object-segmentation backend. |
+| `reconstruction_backend_used` | `str` | Resolved reconstruction runtime asset directory. |
 
 Each component includes:
 
@@ -263,7 +263,7 @@ REST:
 ```bash
 curl -X POST http://localhost:8000/reconstruction/scene-components-3d-reconstruction \
   -F "image=@scene.jpg" \
-  -F "model_bundle=scene-components-3d-models.zip" \
+  -F "model_bundle=/path/to/reconstruction-assets.zip" \
   -F "max_objects=3" \
   -F "confidence_threshold=0.25" \
   -F "device=auto"
@@ -293,25 +293,25 @@ Set `VIZION3D_JOB_DIR` to control that folder. A result can be retrieved up to
 ## Device
 
 The nested object config's `device` setting is propagated through the scene
-pipeline. TripoSR, `rembg`, and scene Real-ESRGAN use the requested accelerator
-when the installed runtime supports it, and retry on CPU if the accelerated
-stage fails. Mesh cleanup and point sampling remain CPU operations because they
-are handled by `trimesh`.
+pipeline. Scene analysis, crop enhancement, foreground isolation, and mesh
+generation use the requested accelerator when the installed runtime supports it,
+and retry on CPU if an accelerated stage fails. Mesh cleanup and point sampling
+remain CPU operations.
 
 ## Input Resolution
 
 The scene-level `max_input_dimension=1080` applies to depth and segmentation
-analysis. Object crops are still taken from the original image, enhanced with
-Real-ESRGAN, then independently capped at 1080 pixels by
-`Object3DReconstruction` before foreground processing. TripoSR ultimately
-conditions every crop at its required 512 by 512 input size. Set the
-scene-level limit to `0` to disable only the depth and segmentation resize.
+analysis. Object crops are still taken from the original image, enhanced, then
+independently capped at 1080 pixels by `Object3DReconstruction` before
+foreground processing. Each crop is then normalized into the conditioning image
+used for mesh generation. Set the scene-level limit to `0` to disable only the
+depth and segmentation resize.
 
 ## Practical Notes
 
 - Detection quality controls what gets reconstructed. If an object is missed by
   segmentation, it will not appear in `components`.
 - `max_objects` is useful for latency control. Reconstructing many scene objects
-  means multiple TripoSR runs.
+  means multiple object reconstruction passes.
 - Component geometry is inferred from one crop. Occluded surfaces and backsides
-  are model predictions, not measured geometry.
+  are predicted, not measured geometry.

@@ -25,7 +25,7 @@
       "min_component_area_ratio": 0.02,
       "device": "auto"
     },
-    "backend_used": "/Users/moses/.cache/vizion3d/models/scene-components-3d-models"
+    "backend_used": "<resolved reconstruction runtime asset directory>"
   },
   "scene_component_01": {
     "mesh": "scene_component_01_mesh.ply",
@@ -69,8 +69,8 @@
         "device": "auto"
       }
     },
-    "depth_backend_used": "/Users/moses/.cache/vizion3d/models/depth_anything_v2_vitb.pth",
-    "annotation_backend_used": "/Users/moses/.cache/vizion3d/models/yolo26l-seg.pt",
-    "reconstruction_backend_used": "/Users/moses/.cache/vizion3d/models/scene-components-3d-models"
+    "depth_backend_used": "<resolved depth-analysis backend>",
+    "annotation_backend_used": "<resolved object-segmentation backend>",
+    "reconstruction_backend_used": "<resolved reconstruction runtime asset directory>"
   }
 }

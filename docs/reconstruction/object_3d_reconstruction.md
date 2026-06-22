@@ -133,9 +133,9 @@ mountPlyViewer('object-cloud-viewer', '../../assets/reconstruction/object_sample
 The object pipeline is:
 
 1. Load the image and cap the longest side to `max_input_dimension`.
-2. Remove the background with the bundled `rembg/u2net.onnx` model.
-3. Normalize the foreground image for TripoSR.
-4. Run TripoSR to generate a mesh.
+2. Isolate the foreground object from the background.
+3. Normalize the foreground into a centered square conditioning image.
+4. Generate a 3D mesh from the conditioned object image.
 5. Clean the mesh, force a uniform gray material, and sample a gray point cloud.
 
 Background removal always runs. There is no option to disable it for this task.
@@ -146,7 +146,7 @@ The sample above uses production-default mesh settings:
 `marching_cubes_resolution=256`, `point_count=200000`, and
 `smoothing_iterations=5`.
 
-## Install and Models
+## Install and Runtime Assets
 
 Install vizion3d with the hardware extra for your machine, for example
 `vizion3d[cpu]`, `vizion3d[mps]`, `vizion3d[cuda]`, or `vizion3d[amd]`.
@@ -154,21 +154,16 @@ Those hardware extras include the reconstruction runtime dependencies. See
 the [Hardware Acceleration](../hardware_acceleration.md) page for the supported
 install commands.
 
-The task resolves `scene-components-3d-models.zip` from:
+The task resolves the reconstruction runtime asset bundle from:
 
 1. the explicit `model_bundle` command field;
 2. `VIZION3D_RECONSTRUCTION_MODEL_BUNDLE`;
 3. the repository root;
 4. `~/.cache/vizion3d/models`.
 
-The bundle is extracted into the model cache and should contain:
-
-- `ESRGAN/RealESRGAN_x4plus.pth`
-- `rembg/*`
-- `TripoSR/*`
-
-Set `VIZION3D_TRIPOSR_SOURCE` when the TripoSR Python source is outside the
-repository's `research/3D_Object-Reconstruction/TripoSR` directory.
+The bundle is extracted into the cache directory before reconstruction. It
+contains the runtime assets needed for foreground isolation, mesh generation,
+and optional accelerated execution.
 
 ## Python Usage
 
@@ -181,7 +176,7 @@ from vizion3d.reconstruction import (
 
 command = Object3DReconstructionCommand(
     image_input="object.png",
-    model_bundle="scene-components-3d-models.zip",
+    model_bundle="/path/to/reconstruction-assets.zip",
     advanced_config=Object3DReconstructionConfig(
         max_input_dimension=1080,
         marching_cubes_resolution=256,
@@ -202,7 +197,7 @@ print(result.vertex_count, result.face_count, result.point_count)
 | Parameter | Type | Required | Default | Description |
 |---|---|---:|---|---|
 | `image_input` | `str \| bytes` | Yes | — | Object image path or raw image bytes. |
-| `model_bundle` | `str \| None` | No | Auto-resolved | Path to `scene-components-3d-models.zip`. |
+| `model_bundle` | `str \| None` | No | Auto-resolved | Path to the reconstruction runtime asset bundle. |
 | `advanced_config` | `Object3DReconstructionConfig` | No | Defaults | Mesh, point-cloud, image-size, and device settings. |
 
 ## Config
@@ -210,7 +205,7 @@ print(result.vertex_count, result.face_count, result.point_count)
 | Field | Default | Description |
 |---|---:|---|
 | `max_input_dimension` | `1080` | Caps the longest source-image side before background removal. Values above `1080` are rejected. |
-| `marching_cubes_resolution` | `256` | TripoSR mesh extraction resolution. Higher values can preserve more detail and cost more memory/time. |
+| `marching_cubes_resolution` | `256` | Mesh extraction resolution. Higher values can preserve more detail and cost more memory/time. |
 | `density_threshold` | `25.0` | Mesh extraction density threshold. |
 | `point_count` | `200000` | Number of surface points sampled from the cleaned mesh. |
 | `device` | `"auto"` | Device preference. `auto` prefers available acceleration and falls back to CPU by stage. |
@@ -224,7 +219,7 @@ print(result.vertex_count, result.face_count, result.point_count)
 |---|---|---|
 | `mesh` | `trimesh.Trimesh` | Cleaned uniformly gray mesh. |
 | `point_cloud` | `open3d.geometry.PointCloud` | Uniformly gray point cloud sampled from the mesh surface. |
-| `backend_used` | `str` | Resolved model-bundle extraction directory. |
+| `backend_used` | `str` | Resolved runtime asset extraction directory. |
 | `vertex_count` | `int` | Mesh vertex count. |
 | `face_count` | `int` | Mesh face count. |
 | `point_count` | `int` | Sampled point-cloud size. |
@@ -239,7 +234,7 @@ REST:
 ```bash
 curl -X POST http://localhost:8000/reconstruction/object-3d-reconstruction \
   -F "image=@object.png" \
-  -F "model_bundle=scene-components-3d-models.zip" \
+  -F "model_bundle=/path/to/reconstruction-assets.zip" \
   -F "device=auto"
 ```
 
@@ -291,17 +286,16 @@ Set `VIZION3D_JOB_DIR` to control that folder. A result can be retrieved up to
 ## Device
 
 `Object3DReconstructionConfig(device="auto")` propagates the selected device to
-TripoSR and to `rembg` where the installed ONNX Runtime providers support it.
-`auto` prefers CUDA, then Apple/CoreML-compatible acceleration for `rembg`, then
-CPU. If an accelerated TripoSR or `rembg` run fails, the task retries that stage
-on CPU.
+the foreground-isolation and mesh-generation stages where the installed runtime
+supports acceleration. `auto` prefers available acceleration and falls back to
+CPU. If an accelerated stage fails, the task retries that stage on CPU.
 
 ## Input Resolution
 
 The task limits the longest input-image dimension to 1080 pixels before
 background removal. The resize preserves aspect ratio. This avoids spending
-memory and inference time on source pixels that cannot pass through TripoSR's
-final 512 by 512 conditioning input. The config may lower this limit, but
+memory and inference time on source pixels that will be normalized into the
+fixed-size conditioning image. The config may lower this limit, but
 values above 1080 are rejected.
 
 ## Practical Notes
@@ -309,6 +303,6 @@ values above 1080 are rejected.
 - Use object-centric images. Small or cluttered objects in a full room image are
   better handled by `SceneComponents3DReconstruction`.
 - The task estimates geometry from one image; hidden backsides are inferred by
-  the model and should not be treated as measured ground truth.
+  the reconstruction stage and should not be treated as measured ground truth.
 - Output colors are uniform gray by design. Texture generation is not part of
   this task.
