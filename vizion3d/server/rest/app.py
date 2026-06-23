@@ -38,6 +38,7 @@ from fastapi.responses import JSONResponse
 from vizion3d.server.rest import (
     depth_estimation,
     object_mask_annotation_3d,
+    reconstruction,
     scale_observation,
     scene_mask_annotation_3d,
     stereo_depth,
@@ -53,6 +54,7 @@ def create_app(
     enable_object_mask_annotation_3d: bool = True,
     enable_scene_mask_annotation_3d: bool = True,
     enable_scale_observation: bool = True,
+    enable_reconstruction: bool = True,
 ) -> FastAPI:
     """Build and return a FastAPI application with the selected feature routers.
 
@@ -61,6 +63,8 @@ def create_app(
         enable_stereo_depth: Register ``POST /lifting/stereo-depth``.
         enable_object_mask_annotation_3d: Register
             ``POST /annotation/object-mask-annotation-3d``.
+        enable_reconstruction: Register the object and scene-component
+            reconstruction endpoints.
 
     Returns:
         A fully configured :class:`FastAPI` instance.
@@ -96,6 +100,11 @@ def create_app(
         observation_router.include_router(scale_observation.router)
     _app.include_router(observation_router)
 
+    reconstruction_router = APIRouter(prefix="/reconstruction", tags=["Reconstruction"])
+    if enable_reconstruction:
+        reconstruction_router.include_router(reconstruction.router)
+    _app.include_router(reconstruction_router)
+
     return _app
 
 
@@ -115,6 +124,7 @@ feature/model flags (omit all to enable all features):
   --object_mask_annotation_3d     enable POST /annotation/object-mask-annotation-3d
   --scene_mask_annotation_3d      enable POST /annotation/scene-mask-annotation-3d
   --scale_observation             enable POST /observation/scale-observation
+  --reconstruction               enable POST /reconstruction/*-3d-reconstruction
 
 model pre-loading (also enables that feature):
   --depth_model PATH        use PATH as the default depth-estimation model
@@ -134,6 +144,7 @@ model pre-loading (also enables that feature):
     parser.add_argument("--object_mask_annotation_3d", action="store_true")
     parser.add_argument("--scene_mask_annotation_3d", action="store_true")
     parser.add_argument("--scale_observation", action="store_true")
+    parser.add_argument("--reconstruction", action="store_true")
     return parser.parse_args(argv)
 
 
@@ -150,6 +161,7 @@ def run(argv=None) -> None:
         or args.stereo_model
         or args.annotation_model
         or args.scene_model
+        or args.reconstruction
     )
     enable_depth = args.depth_estimation or bool(args.depth_model) or not any_selector
     enable_stereo = args.stereo_depth or bool(args.stereo_model) or not any_selector
@@ -158,6 +170,7 @@ def run(argv=None) -> None:
     )
     enable_scene = args.scene_mask_annotation_3d or bool(args.scene_model) or not any_selector
     enable_scale_observation = args.scale_observation or not any_selector
+    enable_reconstruction = args.reconstruction or not any_selector
 
     if args.depth_model and enable_depth:
         depth_estimation.configure_model(args.depth_model)
@@ -174,6 +187,7 @@ def run(argv=None) -> None:
         enable_object_mask_annotation_3d=enable_annotation,
         enable_scene_mask_annotation_3d=enable_scene,
         enable_scale_observation=enable_scale_observation,
+        enable_reconstruction=enable_reconstruction,
     )
     uvicorn.run(_app, host=args.host, port=args.port)
 

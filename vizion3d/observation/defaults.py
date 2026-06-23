@@ -386,9 +386,8 @@ DIMENSION_RELIABILITY_BY_LABEL = {
 # monocular-depth backend systematically over-sizes objects. Classes/dimensions
 # absent here default to 1.0.
 #
-# Reproduce / extend (e.g. to add the YOLOE classes) with:
-#   uv run python research/SCALE_OBSERVATION_RESEARCH/derive_scale_calibration.py \
-#       research/SCALE_OBSERVATION_RESEARCH/outputs/scale_observation_v4_current
+# Calibration values are stored here so runtime scale estimation does not depend
+# on an external experiment directory.
 CALIBRATED_SCALE_CORRECTION_BY_LABEL_DIM: dict[str, dict[str, float]] = {
     "bed": {"depth": 0.6757},
     "book": {"height": 1.0, "width": 0.6788, "depth": 0.4039},

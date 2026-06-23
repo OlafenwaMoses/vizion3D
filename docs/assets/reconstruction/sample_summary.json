@@ -1,0 +1,76 @@
+{
+  "sample_quality": "living-dining-room docs asset; production-default reconstruction settings; scene max_objects=1 for docs brevity",
+  "object_sample": {
+    "mesh": "object_sample_mesh.ply",
+    "point_cloud": "object_sample_point_cloud.ply",
+    "vertex_count": 53965,
+    "face_count": 107926,
+    "point_count": 200000,
+    "input_asset": "object_input.jpg",
+    "input_size": [
+      1536,
+      2048
+    ],
+    "analysis_size": [
+      1536,
+      2048
+    ],
+    "config": {
+      "max_input_dimension": 1080,
+      "marching_cubes_resolution": 256,
+      "density_threshold": 25.0,
+      "point_count": 200000,
+      "foreground_ratio": 0.82,
+      "smoothing_iterations": 5,
+      "min_component_area_ratio": 0.02,
+      "device": "auto"
+    },
+    "backend_used": "<resolved reconstruction runtime asset directory>"
+  },
+  "scene_component_01": {
+    "mesh": "scene_component_01_mesh.ply",
+    "point_cloud": "scene_component_01_point_cloud.ply",
+    "vertex_count": 60344,
+    "face_count": 120684,
+    "point_count": 200000,
+    "label": "couch",
+    "class_id": 57,
+    "confidence": 0.9738470911979675,
+    "bbox_2d": [
+      429.3312683105469,
+      397.3780822753906,
+      889.479736328125,
+      656.4822998046875
+    ]
+  },
+  "scene": {
+    "source_image_size": [
+      1500,
+      1000
+    ],
+    "analysis_image_size": [
+      1080,
+      720
+    ],
+    "input_asset": "scene_components_input.jpg",
+    "config": {
+      "max_input_dimension": 1080,
+      "max_objects": 1,
+      "confidence_threshold": 0.25,
+      "padding_ratio": 0.15,
+      "object_config": {
+        "max_input_dimension": 1080,
+        "marching_cubes_resolution": 256,
+        "density_threshold": 25.0,
+        "point_count": 200000,
+        "foreground_ratio": 0.82,
+        "smoothing_iterations": 5,
+        "min_component_area_ratio": 0.02,
+        "device": "auto"
+      }
+    },
+    "depth_backend_used": "<resolved depth-analysis backend>",
+    "annotation_backend_used": "<resolved object-segmentation backend>",
+    "reconstruction_backend_used": "<resolved reconstruction runtime asset directory>"
+  }
+}

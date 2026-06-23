@@ -379,7 +379,7 @@ for item in response.annotations:
 
 ## Inference performance
 
-Warm inference (mean of 5 runs after model load) on Apple Silicon (MPS), measured with `research/2D_SEGMENTATION/benchmark_tasks.py`. Warm time is end-to-end per call including back-projection and mask assembly, not just the network forward pass.
+Warm inference (mean of 5 runs after model load) on Apple Silicon (MPS). Warm time is end-to-end per call including back-projection and mask assembly, not just the network forward pass.
 
 | Task | Device | Input | Cold load (ms) | Warm (ms) | FPS |
 |------|--------|-------|----------------|-----------|-----|

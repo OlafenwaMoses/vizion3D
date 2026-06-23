@@ -161,7 +161,7 @@ object is reliable enough to produce metric scale candidates.
 
 ## Inference Features
 
-The runtime estimator follows the promoted V4.1 research path:
+The runtime estimator uses the V4.1 scale pipeline:
 `v4_1_yoloe_strong_dimension_class_trimmed_huber`. V4.1 preserves the promoted
 V4 results while removing the dormant scene-extent cap, so the final scale flows
 from object evidence, trimmed Huber aggregation, and prior blending without an
@@ -270,14 +270,9 @@ factors are below `1.0` (for example `tv` height ≈ `0.46`, `chair` height ≈
 `0.57`). Classes and dimensions without an entry default to `1.0`
 (uncalibrated) — this currently includes all the expanded YOLOE classes.
 
-The derivation is reproducible (and extensible to new classes) with the research
-script:
-
-```bash
-uv run python research/SCALE_OBSERVATION_RESEARCH/derive_scale_calibration.py \
-    research/SCALE_OBSERVATION_RESEARCH/outputs/scale_observation_v4_current \
-    --min-support 8 --shrink-k 12
-```
+The resulting correction table is committed in
+`vizion3d/observation/defaults.py` so runtime scale estimation is self-contained
+inside the package.
 
 ---
 
