@@ -9,6 +9,8 @@ Exposes the LiftingService RPC methods:
 - ``RunSceneMaskAnnotation3D`` — semantic-segment a scene and group point-cloud
                                points by class (image optional).
 - ``RunScaleObservation``  — estimate metric scale from annotations.
+- ``RunObject3DReconstruction`` — reconstruct one object as gray mesh and cloud.
+- ``RunSceneComponents3DReconstruction`` — reconstruct detected scene objects.
 
 Start with::
 
@@ -44,6 +46,16 @@ from vizion3d.observation import (
     ScaleObservationCommand,
 )
 from vizion3d.proto import lifting_pb2, lifting_pb2_grpc
+from vizion3d.reconstruction import (
+    Object3DReconstruction,
+    Object3DReconstructionCommand,
+    Object3DReconstructionConfig,
+    SceneComponents3DReconstruction,
+    SceneComponents3DReconstructionCommand,
+    SceneComponents3DReconstructionConfig,
+)
+from vizion3d.server.jobs import JobResultUnavailable, JobStatus, reconstruction_jobs
+from vizion3d.server.rest.serialisation import trimesh_to_ply_bytes
 from vizion3d.stereo import StereoDepth, StereoDepthCommand
 from vizion3d.stereo.defaults import DEFAULT_STEREO_MODEL_URL
 from vizion3d.stereo.models import StereoDepthAdvancedConfig
@@ -98,6 +110,100 @@ def _ply_bytes_to_o3d_point_cloud(ply_bytes: bytes):
     finally:
         os.unlink(path)
     return pcd
+
+
+def _object_reconstruction_config(proto=None) -> Object3DReconstructionConfig:
+    base = Object3DReconstructionConfig()
+    if proto is None:
+        return base
+
+    def _f(field: str, default):
+        return getattr(proto, field) if proto.HasField(field) else default
+
+    return Object3DReconstructionConfig(
+        max_input_dimension=_f("max_input_dimension", base.max_input_dimension),
+        marching_cubes_resolution=_f("marching_cubes_resolution", base.marching_cubes_resolution),
+        density_threshold=_f("density_threshold", base.density_threshold),
+        point_count=_f("point_count", base.point_count),
+        device=_f("device", base.device),
+        foreground_ratio=_f("foreground_ratio", base.foreground_ratio),
+        smoothing_iterations=_f("smoothing_iterations", base.smoothing_iterations),
+        min_component_area_ratio=_f("min_component_area_ratio", base.min_component_area_ratio),
+    )
+
+
+_JOB_STATUS_TO_PROTO = {
+    JobStatus.QUEUED: lifting_pb2.RECONSTRUCTION_JOB_STATUS_QUEUED,
+    JobStatus.RUNNING: lifting_pb2.RECONSTRUCTION_JOB_STATUS_RUNNING,
+    JobStatus.SUCCEEDED: lifting_pb2.RECONSTRUCTION_JOB_STATUS_SUCCEEDED,
+    JobStatus.FAILED: lifting_pb2.RECONSTRUCTION_JOB_STATUS_FAILED,
+    JobStatus.EXPIRED: lifting_pb2.RECONSTRUCTION_JOB_STATUS_EXPIRED,
+}
+
+
+def _job_submission(job):
+    return lifting_pb2.ReconstructionJobSubmission(
+        job_id=job.job_id,
+        status=_JOB_STATUS_TO_PROTO.get(
+            job.status,
+            lifting_pb2.RECONSTRUCTION_JOB_STATUS_UNSPECIFIED,
+        ),
+        created_at=job.created_at.isoformat(),
+        expires_at=job.expires_at.isoformat(),
+        max_result_reads=job.max_result_reads,
+        result_reads_remaining=job.result_reads_remaining,
+    )
+
+
+def _job_response_fields(job) -> dict:
+    return {
+        "job_id": job.job_id,
+        "status": _JOB_STATUS_TO_PROTO.get(
+            job.status,
+            lifting_pb2.RECONSTRUCTION_JOB_STATUS_UNSPECIFIED,
+        ),
+        "created_at": job.created_at.isoformat(),
+        "expires_at": job.expires_at.isoformat(),
+        "max_result_reads": job.max_result_reads,
+        "result_reads_remaining": job.result_reads_remaining,
+        "error": job.error,
+    }
+
+
+def _object_reconstruction_response(result):
+    return lifting_pb2.Object3DReconstructionResponse(
+        mesh_ply=trimesh_to_ply_bytes(result.mesh),
+        point_cloud_ply=_o3d_point_cloud_to_ply_bytes(result.point_cloud),
+        vertex_count=result.vertex_count,
+        face_count=result.face_count,
+        point_count=result.point_count,
+        backend_used=result.backend_used,
+    )
+
+
+def _scene_reconstruction_response(result):
+    response = lifting_pb2.SceneComponents3DReconstructionResponse(
+        source_image_size=result.source_image_size,
+        analysis_image_size=result.analysis_image_size,
+        depth_backend_used=result.depth_backend_used,
+        annotation_backend_used=result.annotation_backend_used,
+        reconstruction_backend_used=result.reconstruction_backend_used,
+    )
+    for component in result.components:
+        response.components.append(
+            lifting_pb2.SceneComponent3DItem(
+                label=component.label,
+                class_id=component.class_id,
+                confidence=component.confidence,
+                bbox_2d=component.bbox_2d,
+                mesh_ply=trimesh_to_ply_bytes(component.mesh),
+                point_cloud_ply=_o3d_point_cloud_to_ply_bytes(component.point_cloud),
+                vertex_count=component.vertex_count,
+                face_count=component.face_count,
+                point_count=component.point_count,
+            )
+        )
+    return response
 
 
 # ── gRPC Servicer ─────────────────────────────────────────────────────────────
@@ -419,6 +525,125 @@ class LiftingServiceServicer(lifting_pb2_grpc.LiftingServiceServicer):
         if result.scaled_depth_image is not None:
             response.scaled_depth_png = _o3d_depth_image_to_png_bytes(result.scaled_depth_image)
         return response
+
+    def RunObject3DReconstruction(self, request, context):
+        """Submit a close-range object reconstruction job."""
+        config = _object_reconstruction_config(
+            request.advanced_config if request.HasField("advanced_config") else None
+        )
+        command = Object3DReconstructionCommand(
+            image_input=request.image_bytes,
+            model_bundle=request.model_bundle or None,
+            advanced_config=config,
+        )
+        job = reconstruction_jobs.submit(
+            "object_3d_reconstruction",
+            lambda: _object_reconstruction_response(
+                Object3DReconstruction().run(command)
+            ).SerializeToString(),
+        )
+        return _job_submission(job)
+
+    def GetObject3DReconstructionResult(self, request, context):
+        """Poll or retrieve a completed object reconstruction job."""
+        return self._poll_reconstruction_job(
+            request.job_id,
+            context,
+            lifting_pb2.Object3DReconstructionJobResponse,
+            lifting_pb2.Object3DReconstructionResponse,
+            "result",
+        )
+
+    def RunSceneComponents3DReconstruction(self, request, context):
+        """Submit a scene-components reconstruction job."""
+        base = SceneComponents3DReconstructionConfig()
+        if request.HasField("advanced_config"):
+            proto = request.advanced_config
+
+            def _f(field: str, default):
+                return getattr(proto, field) if proto.HasField(field) else default
+
+            base = SceneComponents3DReconstructionConfig(
+                max_input_dimension=_f("max_input_dimension", base.max_input_dimension),
+                max_objects=_f("max_objects", base.max_objects),
+                confidence_threshold=_f("confidence_threshold", base.confidence_threshold),
+                padding_ratio=_f("padding_ratio", base.padding_ratio),
+                object_config=_object_reconstruction_config(
+                    proto.object_config if proto.HasField("object_config") else None
+                ),
+            )
+        command = SceneComponents3DReconstructionCommand(
+            image_input=request.image_bytes,
+            model_bundle=request.model_bundle or None,
+            depth_model_backend=request.depth_model_backend or None,
+            annotation_model_backend=request.annotation_model_backend or None,
+            advanced_config=base,
+        )
+        job = reconstruction_jobs.submit(
+            "scene_components_3d_reconstruction",
+            lambda: _scene_reconstruction_response(
+                SceneComponents3DReconstruction().run(command)
+            ).SerializeToString(),
+        )
+        return _job_submission(job)
+
+    def GetSceneComponents3DReconstructionResult(self, request, context):
+        """Poll or retrieve a completed scene-components reconstruction job."""
+        return self._poll_reconstruction_job(
+            request.job_id,
+            context,
+            lifting_pb2.SceneComponents3DReconstructionJobResponse,
+            lifting_pb2.SceneComponents3DReconstructionResponse,
+            "result",
+        )
+
+    @staticmethod
+    def _poll_reconstruction_job(job_id, context, job_response_cls, result_cls, result_field):
+        job = reconstruction_jobs.get(job_id)
+        if job is None:
+            if context is not None:
+                context.set_code(grpc.StatusCode.NOT_FOUND)
+                context.set_details("Reconstruction job not found")
+            return job_response_cls(
+                job_id=job_id,
+                status=lifting_pb2.RECONSTRUCTION_JOB_STATUS_UNAVAILABLE,
+                error="Reconstruction job not found",
+            )
+        if job.status in {JobStatus.QUEUED, JobStatus.RUNNING, JobStatus.FAILED}:
+            return job_response_cls(**_job_response_fields(job))
+        if job.status == JobStatus.EXPIRED:
+            if context is not None:
+                context.set_code(grpc.StatusCode.FAILED_PRECONDITION)
+                context.set_details("Reconstruction job expired")
+            return job_response_cls(
+                **{
+                    **_job_response_fields(job),
+                    "status": lifting_pb2.RECONSTRUCTION_JOB_STATUS_EXPIRED,
+                    "error": "Reconstruction job expired",
+                }
+            )
+
+        try:
+            job = reconstruction_jobs.consume_result(job_id)
+        except JobResultUnavailable as exc:
+            if context is not None:
+                context.set_code(grpc.StatusCode.RESOURCE_EXHAUSTED)
+                context.set_details(str(exc))
+            return job_response_cls(
+                **{
+                    **_job_response_fields(job),
+                    "status": lifting_pb2.RECONSTRUCTION_JOB_STATUS_UNAVAILABLE,
+                    "error": str(exc),
+                }
+            )
+        result = result_cls()
+        result.ParseFromString(job.result)
+        return job_response_cls(
+            **{
+                **_job_response_fields(job),
+                result_field: result,
+            }
+        )
 
 
 # ── Server bootstrap ──────────────────────────────────────────────────────────

@@ -639,5 +639,5 @@ The supported prompt-free labels are listed and grouped here:
 
 - [YOLOE-26L Prompt-Free Supported Classes](./yoloe_26l_prompt_free_classes.md)
 
-The source runtime label files used to build that class reference are also kept
-under `research/instance_segmentation/`.
+The class reference is generated from the packaged runtime label metadata used
+by the annotation task.

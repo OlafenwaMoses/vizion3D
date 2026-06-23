@@ -236,9 +236,5 @@ image.png
 image2.png
 sample.py
 
-# Research workspace and generated research outputs are intentionally excluded
-# from product lint/format checks and version control.
-research/
-
 # uv python pin (library — consumers choose their own Python)
 .python-version

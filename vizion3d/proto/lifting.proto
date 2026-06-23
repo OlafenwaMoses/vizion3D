@@ -8,6 +8,10 @@ service LiftingService {
   rpc RunObjectMaskAnnotation3D (ObjectMaskAnnotation3DRequest) returns (ObjectMaskAnnotation3DResponse);
   rpc RunSceneMaskAnnotation3D (SceneMaskAnnotation3DRequest) returns (SceneMaskAnnotation3DResponse);
   rpc RunScaleObservation (ScaleObservationRequest) returns (ScaleObservationResponse);
+  rpc RunObject3DReconstruction (Object3DReconstructionRequest) returns (ReconstructionJobSubmission);
+  rpc GetObject3DReconstructionResult (ReconstructionJobResultRequest) returns (Object3DReconstructionJobResponse);
+  rpc RunSceneComponents3DReconstruction (SceneComponents3DReconstructionRequest) returns (ReconstructionJobSubmission);
+  rpc GetSceneComponents3DReconstructionResult (ReconstructionJobResultRequest) returns (SceneComponents3DReconstructionJobResponse);
 }
 
 // ── Depth Estimation ──────────────────────────────────────────────────────────
@@ -197,4 +201,117 @@ message ScaleObservationResponse {
   repeated ScaleCandidateItem candidates = 7;
   bytes scaled_point_cloud_ply = 8;
   bytes scaled_depth_png = 9;
+}
+
+// ── 3D Reconstruction ────────────────────────────────────────────────────────
+
+enum ReconstructionJobStatus {
+  RECONSTRUCTION_JOB_STATUS_UNSPECIFIED = 0;
+  RECONSTRUCTION_JOB_STATUS_QUEUED = 1;
+  RECONSTRUCTION_JOB_STATUS_RUNNING = 2;
+  RECONSTRUCTION_JOB_STATUS_SUCCEEDED = 3;
+  RECONSTRUCTION_JOB_STATUS_FAILED = 4;
+  RECONSTRUCTION_JOB_STATUS_EXPIRED = 5;
+  RECONSTRUCTION_JOB_STATUS_UNAVAILABLE = 6;
+}
+
+message ReconstructionJobSubmission {
+  string job_id = 1;
+  ReconstructionJobStatus status = 2;
+  string created_at = 3;
+  string expires_at = 4;
+  int32 max_result_reads = 5;
+  int32 result_reads_remaining = 6;
+}
+
+message ReconstructionJobResultRequest {
+  string job_id = 1;
+}
+
+message Object3DReconstructionConfig {
+  reserved 4;
+  reserved 5;
+
+  optional int32 marching_cubes_resolution = 1;
+  optional float density_threshold = 2;
+  optional int32 point_count = 3;
+  optional string device = 6;
+  optional float foreground_ratio = 7;
+  optional int32 smoothing_iterations = 8;
+  optional float min_component_area_ratio = 9;
+  optional int32 max_input_dimension = 10;
+}
+
+message Object3DReconstructionRequest {
+  bytes image_bytes = 1;
+  string model_bundle = 2;
+  optional Object3DReconstructionConfig advanced_config = 3;
+}
+
+message Object3DReconstructionResponse {
+  bytes mesh_ply = 1;
+  bytes point_cloud_ply = 2;
+  int32 vertex_count = 3;
+  int32 face_count = 4;
+  int32 point_count = 5;
+  string backend_used = 6;
+}
+
+message Object3DReconstructionJobResponse {
+  string job_id = 1;
+  ReconstructionJobStatus status = 2;
+  string created_at = 3;
+  string expires_at = 4;
+  int32 max_result_reads = 5;
+  int32 result_reads_remaining = 6;
+  string error = 7;
+  optional Object3DReconstructionResponse result = 8;
+}
+
+message SceneComponents3DReconstructionConfig {
+  optional int32 max_input_dimension = 1;
+  optional int32 max_objects = 2;
+  optional float confidence_threshold = 3;
+  optional float padding_ratio = 4;
+  optional Object3DReconstructionConfig object_config = 5;
+}
+
+message SceneComponents3DReconstructionRequest {
+  bytes image_bytes = 1;
+  string model_bundle = 2;
+  string depth_model_backend = 3;
+  string annotation_model_backend = 4;
+  optional SceneComponents3DReconstructionConfig advanced_config = 5;
+}
+
+message SceneComponent3DItem {
+  string label = 1;
+  int32 class_id = 2;
+  float confidence = 3;
+  repeated float bbox_2d = 4;
+  bytes mesh_ply = 5;
+  bytes point_cloud_ply = 6;
+  int32 vertex_count = 7;
+  int32 face_count = 8;
+  int32 point_count = 9;
+}
+
+message SceneComponents3DReconstructionResponse {
+  repeated SceneComponent3DItem components = 1;
+  repeated int32 source_image_size = 2;
+  repeated int32 analysis_image_size = 3;
+  string depth_backend_used = 4;
+  string annotation_backend_used = 5;
+  string reconstruction_backend_used = 6;
+}
+
+message SceneComponents3DReconstructionJobResponse {
+  string job_id = 1;
+  ReconstructionJobStatus status = 2;
+  string created_at = 3;
+  string expires_at = 4;
+  int32 max_result_reads = 5;
+  int32 result_reads_remaining = 6;
+  string error = 7;
+  optional SceneComponents3DReconstructionResponse result = 8;
 }

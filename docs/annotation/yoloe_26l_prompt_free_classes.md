@@ -2,7 +2,7 @@
 
 Source checkpoint: `https://github.com/OlafenwaMoses/vizion3D/releases/download/essentials-v1/yoloe-26l-seg-pf.pt`
 
-Source runtime label file: `research/instance_segmentation/yoloe_26l_seg_pf_runtime_labels.txt`
+Source runtime labels: packaged annotation metadata used by `ObjectMaskAnnotation3D`
 
 Total runtime labels: **4585**
 

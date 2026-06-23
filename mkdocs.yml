@@ -40,8 +40,12 @@ nav:
           - YOLOE-26L Prompt-Free Classes: annotation/yoloe_26l_prompt_free_classes.md
       - Observation:
           - Scale Observation: observation/scale_observation.md
+      - Reconstruction:
+          - Object 3D Reconstruction: reconstruction/object_3d_reconstruction.md
+          - Scene Components 3D Reconstruction: reconstruction/scene_components_3d_reconstruction.md
   - Concepts:
       - Camera Intrinsics Matrix: concepts/camera_intrinsics.md
   - API Reference:
       - Lifting (2D → 3D): api/lifting.md
       - Observation: api/observation.md
+      - Reconstruction: api/reconstruction.md
