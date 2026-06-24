@@ -12,6 +12,10 @@ import zipfile
 from pathlib import Path
 
 MODEL_BUNDLE_FILENAME = "scene-components-3d-models.zip"
+DEFAULT_MODEL_BUNDLE_URL = (
+    "https://github.com/OlafenwaMoses/vizion3D/releases/download/"
+    f"essentials-v1/{MODEL_BUNDLE_FILENAME}"
+)
 _BUNDLE_LOCK = threading.Lock()
 
 
@@ -22,7 +26,7 @@ def model_cache_dir() -> Path:
     return Path.home() / ".cache" / "vizion3d" / "models"
 
 
-def default_model_bundle() -> Path:
+def default_model_bundle() -> str | Path:
     configured = os.environ.get("VIZION3D_RECONSTRUCTION_MODEL_BUNDLE")
     if configured:
         return Path(configured).expanduser()
@@ -30,7 +34,9 @@ def default_model_bundle() -> Path:
     if cached.is_file():
         return cached
     checkout = Path(__file__).resolve().parents[2] / MODEL_BUNDLE_FILENAME
-    return checkout
+    if checkout.is_file():
+        return checkout
+    return DEFAULT_MODEL_BUNDLE_URL
 
 
 def _download(url: str, destination: Path) -> None:

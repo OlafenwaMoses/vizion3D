@@ -27,6 +27,7 @@ try:
         SceneComponents3DReconstructionConfig,
     )
     from vizion3d.reconstruction.defaults import extract_model_bundle
+    from vizion3d.reconstruction.defaults import resolve_model_bundle
     from vizion3d.reconstruction.handlers import (
         Object3DReconstructionHandler,
         SceneComponents3DReconstructionHandler,
@@ -67,6 +68,30 @@ def _result(point_count=12):
         face_count=len(mesh.faces),
         point_count=point_count,
     )
+
+
+def test_reconstruction_model_bundle_auto_downloads_default_when_missing(
+    tmp_path, monkeypatch
+):
+    monkeypatch.delenv("VIZION3D_RECONSTRUCTION_MODEL_BUNDLE", raising=False)
+    monkeypatch.setenv("VIZION3D_MODEL_CACHE", str(tmp_path / "cache"))
+    monkeypatch.setattr(
+        "vizion3d.reconstruction.defaults.Path.is_file",
+        lambda path: False,
+    )
+    seen = {}
+
+    def download(url, destination):
+        seen["url"] = url
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(b"zip")
+
+    monkeypatch.setattr("vizion3d.reconstruction.defaults._download", download)
+
+    bundle = resolve_model_bundle()
+
+    assert seen["url"].endswith("/scene-components-3d-models.zip")
+    assert bundle == tmp_path / "cache" / "scene-components-3d-models.zip"
 
 
 def test_extract_model_bundle_validates_and_caches_tiny_zip(tmp_path, monkeypatch):

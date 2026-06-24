@@ -177,8 +177,11 @@ The task applies these processing stages to the input image:
 
 The reconstruction runtime asset bundle is resolved the same way as
 `Object3DReconstruction`: explicit `model_bundle`,
-`VIZION3D_RECONSTRUCTION_MODEL_BUNDLE`, repository root, then
-`~/.cache/vizion3d/models`.
+`VIZION3D_RECONSTRUCTION_MODEL_BUNDLE`, `~/.cache/vizion3d/models`,
+repository root, then the default `essentials-v1` GitHub release asset URL.
+
+Direct download:
+[scene-components-3d-models.zip](https://github.com/OlafenwaMoses/vizion3D/releases/download/essentials-v1/scene-components-3d-models.zip)
 
 ## Python Usage
 
