@@ -26,8 +26,7 @@ try:
         SceneComponents3DReconstructionCommand,
         SceneComponents3DReconstructionConfig,
     )
-    from vizion3d.reconstruction.defaults import extract_model_bundle
-    from vizion3d.reconstruction.defaults import resolve_model_bundle
+    from vizion3d.reconstruction.defaults import extract_model_bundle, resolve_model_bundle
     from vizion3d.reconstruction.handlers import (
         Object3DReconstructionHandler,
         SceneComponents3DReconstructionHandler,
@@ -70,9 +69,7 @@ def _result(point_count=12):
     )
 
 
-def test_reconstruction_model_bundle_auto_downloads_default_when_missing(
-    tmp_path, monkeypatch
-):
+def test_reconstruction_model_bundle_auto_downloads_default_when_missing(tmp_path, monkeypatch):
     monkeypatch.delenv("VIZION3D_RECONSTRUCTION_MODEL_BUNDLE", raising=False)
     monkeypatch.setenv("VIZION3D_MODEL_CACHE", str(tmp_path / "cache"))
     monkeypatch.setattr(
