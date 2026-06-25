@@ -1877,9 +1877,14 @@ dependencies = [
     { name = "protobuf" },
 ]
 wheels = [
+    { url = "https://files.pythonhosted.org/packages/23/9b/2f31fa1d95dbe4e16522d76ec4d6db7f05ae7fb2c59f40bac414203aa0f8/onnxruntime_gpu-1.27.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:b2b8d6afabf3c23c2c698639a16388816dc7298f388a9ddddf504b283990ea01", size = 220305746, upload-time = "2026-06-18T18:27:22.319Z" },
     { url = "https://files.pythonhosted.org/packages/91/65/cf76bd5b261a295f2257a39d9cd89876e5544531bc97f45732d9cb9ddff2/onnxruntime_gpu-1.27.0-cp312-cp312-win_amd64.whl", hash = "sha256:9f92c12578433cffa6017ec843f4b4c500b9ebaf65f6c4497ddec01af5cd5396", size = 213631079, upload-time = "2026-06-15T22:43:01.35Z" },
+    { url = "https://files.pythonhosted.org/packages/8f/8d/6509743801131f1d3791f638ae31edef7701e93c7a4523d74115247dd7d1/onnxruntime_gpu-1.27.0-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:7e6eb554d35706ee154b583dd32e4167a93aa55d3670f59754f43860fd649b92", size = 220304092, upload-time = "2026-06-18T18:27:31.18Z" },
     { url = "https://files.pythonhosted.org/packages/ac/86/8865182eba89cde187163daacfa7f1eb64958616cd080dfb3482be4c8a36/onnxruntime_gpu-1.27.0-cp313-cp313-win_amd64.whl", hash = "sha256:ac352199fb6ac3e366b45a690bb47c9b1c92b1be0e3958149dd1a30285832b9f", size = 213623636, upload-time = "2026-06-15T22:43:10.548Z" },
+    { url = "https://files.pythonhosted.org/packages/cf/e6/16f5ba0f91bd8db5b2881ef1ec57d532c8f297b31b6a95ceab606f471c0a/onnxruntime_gpu-1.27.0-cp313-cp313t-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:3b5652761f14bc74729ffbc8fdc01767e541e163459f2e10aa65af61d5db64c8", size = 220331411, upload-time = "2026-06-18T18:27:39.738Z" },
+    { url = "https://files.pythonhosted.org/packages/d7/97/5584057e355e5d8de3ae5cdd81e946ad2c9d8253626614eac805750645af/onnxruntime_gpu-1.27.0-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:209caede76604509fb7451178f56daa5292a933478864aaff87c6c29d1257593", size = 220303692, upload-time = "2026-06-18T18:27:48.183Z" },
     { url = "https://files.pythonhosted.org/packages/93/7f/6446c80d38ee2c8ec82365f44f1a842993f497da9ebf46a6b37c2ef4d2b7/onnxruntime_gpu-1.27.0-cp314-cp314-win_amd64.whl", hash = "sha256:986b94d513b052dc06b93c5a424f072f07f40d66be40ce2d6320d76d84fa4919", size = 214270425, upload-time = "2026-06-15T22:43:20.017Z" },
+    { url = "https://files.pythonhosted.org/packages/83/06/e1b690df1c70772d76464c5d8b2d11b436ade1cf93a061303cdf9d72b3bf/onnxruntime_gpu-1.27.0-cp314-cp314t-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:42696d6137d6974325a67c88a65dd41625e49bf076da79c658514b498b297142", size = 220327139, upload-time = "2026-06-18T18:27:59.096Z" },
 ]
 
 [[package]]
@@ -3536,18 +3541,42 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+amd = [
+    { name = "basicsr" },
+    { name = "einops" },
+    { name = "omegaconf" },
+    { name = "onnxruntime" },
+    { name = "opencv-python" },
+    { name = "pymcubes" },
+    { name = "realesrgan" },
+    { name = "rembg" },
+    { name = "trimesh" },
+]
 cpu = [
+    { name = "basicsr" },
+    { name = "einops" },
+    { name = "omegaconf" },
+    { name = "onnxruntime" },
+    { name = "opencv-python" },
+    { name = "pymcubes" },
+    { name = "realesrgan" },
+    { name = "rembg" },
     { name = "torch" },
     { name = "torchvision" },
+    { name = "trimesh" },
 ]
 cuda = [
+    { name = "basicsr" },
+    { name = "einops" },
+    { name = "omegaconf" },
     { name = "onnxruntime-gpu" },
+    { name = "opencv-python" },
+    { name = "pymcubes" },
+    { name = "realesrgan" },
+    { name = "rembg" },
+    { name = "trimesh" },
 ]
 mps = [
-    { name = "torch" },
-    { name = "torchvision" },
-]
-reconstruction = [
     { name = "basicsr" },
     { name = "einops" },
     { name = "omegaconf" },
@@ -3573,36 +3602,60 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "basicsr", marker = "extra == 'reconstruction'", specifier = ">=1.4.2" },
+    { name = "basicsr", marker = "extra == 'amd'", specifier = ">=1.4.2" },
+    { name = "basicsr", marker = "extra == 'cpu'", specifier = ">=1.4.2" },
+    { name = "basicsr", marker = "extra == 'cuda'", specifier = ">=1.4.2" },
+    { name = "basicsr", marker = "extra == 'mps'", specifier = ">=1.4.2" },
     { name = "clean-ioc", specifier = ">=1.3.0" },
-    { name = "einops", marker = "extra == 'reconstruction'", specifier = ">=0.7.0" },
+    { name = "einops", marker = "extra == 'amd'", specifier = ">=0.7.0" },
+    { name = "einops", marker = "extra == 'cpu'", specifier = ">=0.7.0" },
+    { name = "einops", marker = "extra == 'cuda'", specifier = ">=0.7.0" },
+    { name = "einops", marker = "extra == 'mps'", specifier = ">=0.7.0" },
     { name = "fastapi", specifier = ">=0.115.0" },
     { name = "grpcio", specifier = ">=1.80.0" },
     { name = "grpcio-tools", specifier = ">=1.80.0" },
-    { name = "omegaconf", marker = "extra == 'reconstruction'", specifier = ">=2.3.0" },
-    { name = "onnxruntime", marker = "extra == 'reconstruction'", specifier = ">=1.20.0" },
+    { name = "omegaconf", marker = "extra == 'amd'", specifier = ">=2.3.0" },
+    { name = "omegaconf", marker = "extra == 'cpu'", specifier = ">=2.3.0" },
+    { name = "omegaconf", marker = "extra == 'cuda'", specifier = ">=2.3.0" },
+    { name = "omegaconf", marker = "extra == 'mps'", specifier = ">=2.3.0" },
+    { name = "onnxruntime", marker = "extra == 'amd'", specifier = ">=1.20.0" },
+    { name = "onnxruntime", marker = "extra == 'cpu'", specifier = ">=1.20.0" },
+    { name = "onnxruntime", marker = "extra == 'mps'", specifier = ">=1.20.0" },
     { name = "onnxruntime-gpu", marker = "extra == 'cuda'", specifier = ">=1.20.0" },
     { name = "open3d", specifier = ">=0.18.0" },
-    { name = "opencv-python", marker = "extra == 'reconstruction'", specifier = ">=4.8.0" },
+    { name = "opencv-python", marker = "extra == 'amd'", specifier = ">=4.8.0" },
+    { name = "opencv-python", marker = "extra == 'cpu'", specifier = ">=4.8.0" },
+    { name = "opencv-python", marker = "extra == 'cuda'", specifier = ">=4.8.0" },
+    { name = "opencv-python", marker = "extra == 'mps'", specifier = ">=4.8.0" },
     { name = "orjson", specifier = ">=3.9.0" },
     { name = "pillow", specifier = ">=12.2.0" },
     { name = "pydantic", specifier = ">=2.0.0" },
-    { name = "pymcubes", marker = "extra == 'reconstruction'", specifier = ">=0.1.6" },
+    { name = "pymcubes", marker = "extra == 'amd'", specifier = ">=0.1.6" },
+    { name = "pymcubes", marker = "extra == 'cpu'", specifier = ">=0.1.6" },
+    { name = "pymcubes", marker = "extra == 'cuda'", specifier = ">=0.1.6" },
+    { name = "pymcubes", marker = "extra == 'mps'", specifier = ">=0.1.6" },
     { name = "python-multipart", specifier = ">=0.0.6" },
-    { name = "realesrgan", marker = "extra == 'reconstruction'", specifier = ">=0.3.0" },
-    { name = "rembg", marker = "extra == 'reconstruction'", specifier = ">=2.0.67" },
+    { name = "realesrgan", marker = "extra == 'amd'", specifier = ">=0.3.0" },
+    { name = "realesrgan", marker = "extra == 'cpu'", specifier = ">=0.3.0" },
+    { name = "realesrgan", marker = "extra == 'cuda'", specifier = ">=0.3.0" },
+    { name = "realesrgan", marker = "extra == 'mps'", specifier = ">=0.3.0" },
+    { name = "rembg", marker = "extra == 'amd'", specifier = ">=2.0.67" },
+    { name = "rembg", marker = "extra == 'cpu'", specifier = ">=2.0.67" },
+    { name = "rembg", marker = "extra == 'cuda'", specifier = ">=2.0.67" },
+    { name = "rembg", marker = "extra == 'mps'", specifier = ">=2.0.67" },
     { name = "torch", marker = "extra == 'cpu'", specifier = ">=2.4.0" },
     { name = "torch", marker = "extra == 'mps'", specifier = ">=2.4.0" },
-    { name = "torch", marker = "extra == 'reconstruction'", specifier = ">=2.4.0" },
     { name = "torchvision", marker = "extra == 'cpu'", specifier = ">=0.19.0" },
     { name = "torchvision", marker = "extra == 'mps'", specifier = ">=0.19.0" },
-    { name = "torchvision", marker = "extra == 'reconstruction'", specifier = ">=0.19.0" },
     { name = "transformers", specifier = ">=5.6.2" },
-    { name = "trimesh", marker = "extra == 'reconstruction'", specifier = ">=4.0.0" },
+    { name = "trimesh", marker = "extra == 'amd'", specifier = ">=4.0.0" },
+    { name = "trimesh", marker = "extra == 'cpu'", specifier = ">=4.0.0" },
+    { name = "trimesh", marker = "extra == 'cuda'", specifier = ">=4.0.0" },
+    { name = "trimesh", marker = "extra == 'mps'", specifier = ">=4.0.0" },
     { name = "ultralytics", specifier = ">=8.3.0" },
     { name = "uvicorn", specifier = ">=0.23.0" },
 ]
-provides-extras = ["cpu", "mps", "cuda", "amd", "reconstruction"]
+provides-extras = ["cpu", "mps", "cuda", "amd"]
 
 [package.metadata.requires-dev]
 dev = [

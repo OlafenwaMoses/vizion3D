@@ -158,12 +158,16 @@ The task resolves the reconstruction runtime asset bundle from:
 
 1. the explicit `model_bundle` command field;
 2. `VIZION3D_RECONSTRUCTION_MODEL_BUNDLE`;
-3. the repository root;
-4. `~/.cache/vizion3d/models`.
+3. `~/.cache/vizion3d/models`;
+4. the repository root;
+5. the default `essentials-v1` GitHub release asset URL.
 
-The bundle is extracted into the cache directory before reconstruction. It
-contains the runtime assets needed for foreground isolation, mesh generation,
-and optional accelerated execution.
+If no local bundle exists, the default release asset is downloaded and cached
+before extraction. The bundle contains the runtime assets needed for foreground
+isolation, mesh generation, and optional accelerated execution.
+
+Direct download:
+[scene-components-3d-models.zip](https://github.com/OlafenwaMoses/vizion3D/releases/download/essentials-v1/scene-components-3d-models.zip)
 
 ## Python Usage
 
