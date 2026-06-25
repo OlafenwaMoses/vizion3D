@@ -7,6 +7,7 @@ reconstruction image and low-cost mesh settings.
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 import time
@@ -15,14 +16,11 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-pytest.importorskip("open3d", reason="open3d required")
-pytest.importorskip("trimesh", reason="trimesh required")
-pytest.importorskip("rembg", reason="rembg required")
-pytest.importorskip("mcubes", reason="PyMCubes required")
-pytest.importorskip("omegaconf", reason="omegaconf required")
-pytest.importorskip("einops", reason="einops required")
+for module_name in ("open3d", "trimesh", "rembg", "mcubes", "omegaconf", "einops"):
+    assert importlib.util.find_spec(module_name), f"{module_name} is required"
 
 from vizion3d.proto import lifting_pb2  # noqa: E402
+from vizion3d.reconstruction.defaults import resolve_model_bundle  # noqa: E402
 from vizion3d.reconstruction.handlers import Object3DReconstructionHandler  # noqa: E402
 
 OBJECT_LIMIT = float(os.environ.get("VIZION3D_TEST_RECON_GRPC_OBJECT_LIMIT", "260.0"))
@@ -33,17 +31,13 @@ RECONSTRUCTION_IMAGE = "reconstruction_scene_1080.jpg"
 
 @pytest.fixture(scope="session")
 def reconstruction_model_bundle() -> str:
-    bundle = Path(__file__).resolve().parents[2] / "scene-components-3d-models.zip"
-    if not bundle.is_file():
-        pytest.skip(f"Reconstruction model bundle not found: {bundle}")
-    return str(bundle)
+    return str(resolve_model_bundle())
 
 
 @pytest.fixture(scope="session")
 def reconstruction_image_bytes() -> bytes:
     path = Path(__file__).parent.parent / "assets" / RECONSTRUCTION_IMAGE
-    if not path.is_file():
-        pytest.skip(f"Reconstruction integration image not found: {path}")
+    assert path.is_file(), f"Reconstruction integration image not found: {path}"
     image = Image.open(path)
     assert max(image.size) <= TEST_IMAGE_MAX_DIMENSION
     return path.read_bytes()
