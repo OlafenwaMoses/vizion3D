@@ -3285,6 +3285,15 @@ wheels = [
 ]
 
 [[package]]
+name = "torchmcubes"
+version = "0.1.0"
+source = { git = "https://github.com/tatsy/torchmcubes.git#3381600ddc3d2e4d74222f8495866be5fafbace4" }
+dependencies = [
+    { name = "numpy" },
+    { name = "torch" },
+]
+
+[[package]]
 name = "torchvision"
 version = "0.26.0"
 source = { registry = "https://pypi.org/simple" }
@@ -3599,6 +3608,9 @@ dev = [
     { name = "ruff" },
     { name = "twine" },
 ]
+torchmcubes = [
+    { name = "torchmcubes" },
+]
 
 [package.metadata]
 requires-dist = [
@@ -3666,6 +3678,7 @@ dev = [
     { name = "ruff", specifier = ">=0.9.0" },
     { name = "twine", specifier = ">=6.0.0" },
 ]
+torchmcubes = [{ name = "torchmcubes", git = "https://github.com/tatsy/torchmcubes.git" }]
 
 [[package]]
 name = "watchdog"

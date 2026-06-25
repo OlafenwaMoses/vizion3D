@@ -8,6 +8,7 @@ import math
 import os
 import sys
 import threading
+import types
 from pathlib import Path
 from types import ModuleType
 
@@ -100,6 +101,35 @@ def _module_file(module: ModuleType | None) -> Path | None:
     return Path(module.__file__).resolve()
 
 
+def _ensure_torchmcubes_compat() -> None:
+    try:
+        import torchmcubes  # noqa: F401
+
+        return
+    except ImportError:
+        pass
+
+    try:
+        import mcubes
+        import torch
+    except ImportError as exc:
+        raise ImportError(
+            "3D reconstruction requires torchmcubes or PyMCubes for marching cubes."
+        ) from exc
+
+    module = types.ModuleType("torchmcubes")
+
+    def marching_cubes(volume, threshold):
+        vertices, faces = mcubes.marching_cubes(volume.detach().cpu().numpy(), threshold)
+        return (
+            torch.as_tensor(vertices, dtype=volume.dtype, device=volume.device),
+            torch.as_tensor(faces, dtype=torch.long, device=volume.device),
+        )
+
+    module.marching_cubes = marching_cubes
+    sys.modules["torchmcubes"] = module
+
+
 def _import_tsr_from_bundle(root: Path):
     source = (root / "TripoSR").resolve()
     system_py = source / "tsr" / "system.py"
@@ -117,6 +147,7 @@ def _import_tsr_from_bundle(root: Path):
     if source_str in sys.path:
         sys.path.remove(source_str)
     sys.path.insert(0, source_str)
+    _ensure_torchmcubes_compat()
 
     try:
         from tsr.system import TSR
@@ -172,7 +203,8 @@ class Object3DReconstructionHandler(
                 import trimesh
             except ImportError as exc:
                 raise ImportError(
-                    "3D reconstruction requires torch, trimesh, einops, omegaconf, and PyMCubes."
+                    "3D reconstruction requires torch, trimesh, einops, omegaconf, "
+                    "and PyMCubes or torchmcubes."
                 ) from exc
 
             triposr = root / "TripoSR"
