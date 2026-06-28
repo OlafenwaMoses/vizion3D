@@ -10,7 +10,7 @@ Point-cloud inputs and outputs use OpenGL/viewer camera space: `X+` right, `Y+` 
 
 ![input image](https://docs.vizion3d.org/assets/images/roomhd.jpg)
 
-![depth map](https://docs.vizion3d.org/assets/images/roomhd_depth.png)
+![input image scene 3d](https://docs.vizion3d.org/assets/images/vizion3d-gen.jpg)
 
 ---
 
